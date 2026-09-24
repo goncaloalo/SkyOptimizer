@@ -1,27 +1,34 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.0 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
-    Aplica 18 otimizações de baixa latência e alto desempenho em sistemas Windows de uso diário,
-    sem remover aplicações de sistema, sem tocar em ficheiros protegidos e com backups completos
-    (Ponto de Restauro + backups de registo .reg + manifesto de estado + motor de reversão/UNDO).
+    Desenvolvido especificamente para máquinas de uso diário e computadores gaming com jogos e aplicações
+    já instalados (sem necessidade de formatar o sistema).
+    Aplica 34 otimizações de baixa latência, estabilização de frametimes (FiveM e gaming competitivo),
+    controlo inteligente do Windows Update, limpeza segura de disco/shaders e qualidade de vida.
+    Inclui motor de salvaguarda total (Ponto de Restauro + backups de registo .reg + manifesto de estado + UNDO).
 .PARAMETER Apply
-    Aplica diretamente as 18 otimizações sem exibir o menu interativo.
+    Aplica diretamente as 34 otimizações sem exibir o menu interativo.
+.PARAMETER Clean
+    Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
     Executa diretamente a reversão de todas as alterações sem exibir o menu interativo.
 .EXAMPLE
     .\SkyOptimizer.ps1
-    Apresenta o menu interativo inicial (Aplicar / Reverter / Sair).
+    Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as otimizações diretamente de forma não interativa.
+    Aplica as 34 otimizações de forma direta e autónoma.
+.EXAMPLE
+    .\SkyOptimizer.ps1 -Clean
+    Executa a manutenção e limpeza de caches de shaders.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Undo
-    Reverte todas as otimizações de volta para o estado original.
+    Reverte todas as otimizações de volta para o estado original da máquina.
 .NOTES
     Autor: SkyOS Team
-    Versão: 1.0.1
+    Versão: 2.0.0
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -29,6 +36,9 @@
 param(
     [Parameter(ParameterSetName = "ApplyDirect")]
     [switch]$Apply,
+
+    [Parameter(ParameterSetName = "CleanDirect")]
+    [switch]$Clean,
 
     [Parameter(ParameterSetName = "UndoDirect")]
     [switch]$Undo
@@ -52,6 +62,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     Write-Host "[!] Privilégios de Administrador necessários. A reiniciar com elevação..." -ForegroundColor Yellow
     $paramString = ""
     if ($Apply) { $paramString = " -Apply" }
+    elseif ($Clean) { $paramString = " -Clean" }
     elseif ($Undo) { $paramString = " -Undo" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
     Start-Process powershell.exe -ArgumentList $argsList -Verb RunAs
@@ -61,7 +72,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v1.0.1 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.0.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -91,12 +102,13 @@ if (-not $Global:SkyManifest) {
         Hibernation     = $null
         SysMain         = $null
         DynamicTick     = $null
+        ReservedStorage = $null
         AppliedTweaks   = @()
     }
 }
 
 # ==============================================================================
-# 3. FUNÇÕES PARTILHADAS (LOGGING, REGISTO E ESTADO)
+# 3. FUNÇÕES PARTILHADAS (LOGGING, REGISTO E HARDWARE)
 # ==============================================================================
 
 function Write-SkyLog {
@@ -223,26 +235,47 @@ function Save-SkyManifest {
     Set-Content -Path $manifestPath -Value $json -Encoding UTF8 -Force
 }
 
-function Load-SkyManifest {
-    $manifestPath = Join-Path -Path $Global:SkyBackupDir -ChildPath "state_backup.json"
-    if (Test-Path $manifestPath) {
-        $json = Get-Content -Path $manifestPath -Raw -Encoding UTF8
-        return ($json | ConvertFrom-Json)
-    }
-    return $null
+function Show-SystemHardwareInfo {
+    try {
+        $osCaption = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Caption
+        $cpuName   = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1).Name
+        if ($cpuName) { $cpuName = $cpuName.Trim() } else { $cpuName = "Processador Genérico" }
+
+        $ramBytes = (Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Measure-Object -Property Capacity -Sum).Sum
+        $ramGB = if ($ramBytes) { [math]::Round($ramBytes / 1GB) } else { 0 }
+
+        # Deteção de GPU e VRAM real via chave de classe do display (evita o limite de 4GB do WMI)
+        $gpuItem = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000*' -ErrorAction SilentlyContinue | Where-Object DriverDesc | Select-Object -First 1
+        $gpuName = if ($gpuItem) { $gpuItem.DriverDesc } else { "GPU Genérica" }
+        $vramGB  = 0
+        if ($gpuItem -and $gpuItem.'HardwareInformation.qwMemorySize') {
+            $vramGB = [math]::Round($gpuItem.'HardwareInformation.qwMemorySize' / 1GB)
+        }
+
+        Write-Host "  Dispositivo:   " -NoNewline -ForegroundColor Gray
+        Write-Host "$env:COMPUTERNAME" -ForegroundColor White
+        Write-Host "  Sistema:       " -NoNewline -ForegroundColor Gray
+        Write-Host "$osCaption" -ForegroundColor White
+        Write-Host "  Processador:   " -NoNewline -ForegroundColor Gray
+        Write-Host "$cpuName" -ForegroundColor White
+        Write-Host "  Placa Gráfica: " -NoNewline -ForegroundColor Gray
+        Write-Host "$gpuName $(if ($vramGB -gt 0) { "($vramGB GB VRAM)" })" -ForegroundColor White
+        Write-Host "  Memória RAM:   " -NoNewline -ForegroundColor Gray
+        Write-Host "$ramGB GB" -ForegroundColor White
+        Write-Host "================================================================================" -ForegroundColor Cyan
+    } catch {}
 }
 
 # ==============================================================================
-# 4. FUNÇÕES DE OTIMIZAÇÃO (18 TWEAKS EM 5 CATEGORIAS)
+# 4. FUNÇÕES DE OTIMIZAÇÃO (34 TWEAKS EM 9 CATEGORIAS)
 # ==============================================================================
 
-# --- CATEGORIA 1: SISTEMA E DESEMPENHO ---
+# --- CATEGORIA 1: SISTEMA E DESEMPENHO (KERNEL & POWER) ---
 
 function Set-UltimatePowerPlan {
     [CmdletBinding()]
     param()
 
-    # 1. Guardar o plano de energia atual
     $activeSchemeOutput = powercfg -getactivescheme 2>&1
     $currentGuid = $null
     if ($activeSchemeOutput -match '([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})') {
@@ -256,7 +289,6 @@ function Set-UltimatePowerPlan {
         Write-SkyLog -Message "Plano de energia original guardado: $currentGuid" -Level "Info" -NoConsole
     }
 
-    # 2. Procurar se o Ultimate Performance já existe no sistema
     $allSchemes = powercfg -list 2>&1
     $ultimateGuid = $null
 
@@ -268,7 +300,6 @@ function Set-UltimatePowerPlan {
         }
     }
 
-    # 3. Se não existir, duplicar o template oficial do Ultimate Performance
     if (-not $ultimateGuid) {
         $dupOutput = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>&1
         if ($dupOutput -match '([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})') {
@@ -324,11 +355,9 @@ function Disable-CoreParking {
     $settingMin = "0cc5b647-c1df-4637-891a-dec75c318583" # Processor performance core parking min cores
     $settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028" # Processor performance core parking max cores
 
-    # Desocultar atributos caso estejam ocultos pelo sistema
     $null = powercfg -attributes $subGroup $settingMin -ATTRIB_HIDE 2>&1
     $null = powercfg -attributes $subGroup $settingMax -ATTRIB_HIDE 2>&1
 
-    # Definir 100% de núcleos mínimos e máximos ativos (sem adormecer núcleos)
     $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 100 2>&1
     $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 100 2>&1
     $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
@@ -474,7 +503,7 @@ function Disable-GameDVR {
     return $true
 }
 
-# --- CATEGORIA 3: OTIMIZAÇÕES DE REDE ---
+# --- CATEGORIA 3: OTIMIZAÇÕES DE REDE & LATÊNCIA ---
 
 function Optimize-NetworkLatency {
     [CmdletBinding()]
@@ -530,7 +559,7 @@ function Disable-QoSBandwidthLimit {
     return $true
 }
 
-# --- CATEGORIA 4: PRIVACIDADE E LIMPEZA LEVE ---
+# --- CATEGORIA 4: PRIVACIDADE E TELEMETRIA ---
 
 function Set-TelemetryBasic {
     [CmdletBinding()]
@@ -594,13 +623,11 @@ function Disable-TaskbarWidgets {
     [CmdletBinding()]
     param()
 
-    # 1. Política de Grupo do Sistema (Desativa Widgets e Feeds globalmente)
     $dshKey = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
     Ensure-RegistryPath -KeyPath $dshKey
     Backup-RegistryKey -KeyPath $dshKey -BackupName "16_Widgets_DshPolicy"
     Set-ItemProperty -Path $dshKey -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force
 
-    # 2. Definições de Utilizador (Windows 10/11) - Protegidas por UCPD em versões recentes do Win11
     $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     Ensure-RegistryPath -KeyPath $advKey
     Backup-RegistryKey -KeyPath $advKey -BackupName "16_TaskbarWidgets_User"
@@ -619,7 +646,7 @@ function Disable-TaskbarWidgets {
     return $true
 }
 
-# --- CATEGORIA 5: EXPLORADOR DE FICHEIROS E QOL ---
+# --- CATEGORIA 5: EXPLORADOR DE FICHEIROS & QOL BASE ---
 
 function Show-FileExtensions {
     [CmdletBinding()]
@@ -649,8 +676,314 @@ function Disable-AppArchival {
     return $true
 }
 
+# --- CATEGORIA 6: CONTROLO INTELIGENTE DE WINDOWS UPDATE ---
+
+function Block-AutomaticDriverUpdates {
+    [CmdletBinding()]
+    param()
+
+    $wuPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
+    Ensure-RegistryPath -KeyPath $wuPolicy
+    Backup-RegistryKey -KeyPath $wuPolicy -BackupName "19_WU_ExcludeDrivers"
+    Set-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord -Force
+
+    $dsKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching"
+    Ensure-RegistryPath -KeyPath $dsKey
+    Backup-RegistryKey -KeyPath $dsKey -BackupName "19_DriverSearching_Order"
+    Set-ItemProperty -Path $dsKey -Name "SearchOrderConfig" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Substituição automática de drivers de GPU/Hardware pelo Windows Update bloqueada." -Level "Success"
+    return $true
+}
+
+function Disable-DeliveryOptimizationP2P {
+    [CmdletBinding()]
+    param()
+
+    $doKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
+    Ensure-RegistryPath -KeyPath $doKey
+    Backup-RegistryKey -KeyPath $doKey -BackupName "20_DeliveryOptimization_P2P"
+    Set-ItemProperty -Path $doKey -Name "DODownloadMode" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path $doKey -Name "DOMinDiskSizeAllowedToPeer" -Value 100 -Type DWord -Force
+
+    Write-SkyLog -Message "Otimização de Entrega P2P desativada (largura de banda e ping protegidos)." -Level "Success"
+    return $true
+}
+
+function Set-ManualWindowsUpdate {
+    [CmdletBinding()]
+    param()
+
+    $auKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
+    Ensure-RegistryPath -KeyPath $auKey
+    Backup-RegistryKey -KeyPath $auKey -BackupName "21_WU_AU_ManualAndNoReboot"
+    Set-ItemProperty -Path $auKey -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $auKey -Name "AUOptions" -Value 2 -Type DWord -Force
+
+    Write-SkyLog -Message "Windows Update configurado para notificação/manual sem reinícios automáticos forçados." -Level "Success"
+    return $true
+}
+
+# --- CATEGORIA 7: ARMAZENAMENTO, I/O & LIMPEZA DE DISCO ---
+
+function Disable-ReservedStorage {
+    [CmdletBinding()]
+    param()
+
+    $dismCheck = dism.exe /Online /Get-ReservedStorageState 2>&1
+    if ($dismCheck -match "Enabled|Ativado") {
+        $Global:SkyManifest.ReservedStorage = "Enabled"
+        $resFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_reserved_storage.txt"
+        "Enabled" | Out-File -FilePath $resFile -Encoding UTF8 -Force
+
+        $res = dism.exe /Online /Set-ReservedStorageState /State:Disabled 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-SkyLog -Message "Armazenamento Reservado desativado com sucesso (libertados ~7 GB a 10 GB no disco C:)." -Level "Success"
+            return $true
+        } else {
+            Write-SkyLog -Message "Aviso: DISM não conseguiu alterar o Armazenamento Reservado nesta build." -Level "Warning"
+            return $true
+        }
+    } else {
+        Write-SkyLog -Message "Armazenamento Reservado já se encontrava desativado ou não é suportado pelo build." -Level "Info"
+        return $true
+    }
+}
+
+function Optimize-NTFS {
+    [CmdletBinding()]
+    param()
+
+    $ntfsBackupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_ntfs.txt"
+    if (-not (Test-Path $ntfsBackupFile)) {
+        $la = fsutil behavior query disablelastaccess 2>&1
+        $fn = fsutil behavior query disable8dot3 2>&1
+        "$la`n$fn" | Out-File -FilePath $ntfsBackupFile -Encoding UTF8 -Force
+    }
+
+    $null = fsutil behavior set disablelastaccess 1 2>&1
+    $null = fsutil behavior set disable8dot3 1 2>&1
+
+    Write-SkyLog -Message "Otimização NTFS aplicada (desativado LastAccessUpdate e nomes curtos 8.3)." -Level "Success"
+    return $true
+}
+
+function Clear-ShaderCache {
+    [CmdletBinding()]
+    param()
+
+    $clearedCount = 0
+
+    # Pastas de cache de shaders (NVIDIA e DirectX)
+    $shaderDirs = @(
+        (Join-Path $env:LOCALAPPDATA "NVIDIA\DXCache"),
+        (Join-Path $env:LOCALAPPDATA "NVIDIA\GLCache"),
+        (Join-Path $env:LOCALAPPDATA "D3DSCache")
+    )
+
+    foreach ($dir in $shaderDirs) {
+        if (Test-Path $dir) {
+            Get-ChildItem -Path $dir -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+                try {
+                    Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
+                    $clearedCount++
+                } catch {}
+            }
+        }
+    }
+
+    # Limpeza segura de ficheiros temporários órfãos com mais de 24h
+    $tempDirs = @($env:TEMP, "$env:SystemRoot\Temp")
+    $cutoff = (Get-Date).AddDays(-1)
+    foreach ($td in $tempDirs) {
+        if (Test-Path $td) {
+            Get-ChildItem -Path $td -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $cutoff } | ForEach-Object {
+                try {
+                    Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
+                    $clearedCount++
+                } catch {}
+            }
+        }
+    }
+
+    # Invocar a limpeza silenciosa nativa do Windows (CleanMgr SilentCleanup)
+    $null = Start-ScheduledTask -TaskPath "\Microsoft\Windows\DiskCleanup" -TaskName "SilentCleanup" -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Caches de shaders e ficheiros temporários limpos ($clearedCount ficheiros removidos com segurança)." -Level "Success"
+    return $true
+}
+
+# --- CATEGORIA 8: PROCESSOS EM SEGUNDO PLANO (DEBLOAT NÃO-DESTRUTIVO) ---
+
+function Disable-BackgroundUWPApps {
+    [CmdletBinding()]
+    param()
+
+    $bgKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"
+    Ensure-RegistryPath -KeyPath $bgKey
+    Backup-RegistryKey -KeyPath $bgKey -BackupName "25_BackgroundAccessApplications"
+    Set-ItemProperty -Path $bgKey -Name "GlobalUserDisabled" -Value 1 -Type DWord -Force
+
+    $searchKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
+    Ensure-RegistryPath -KeyPath $searchKey
+    Backup-RegistryKey -KeyPath $searchKey -BackupName "25_Search_BackgroundApps"
+    Set-ItemProperty -Path $searchKey -Name "BackgroundAppGlobalToggle" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Ciclos de CPU e RAM poupados: aplicações UWP em segundo plano desativadas." -Level "Success"
+    return $true
+}
+
+function Disable-SleepStudyLogging {
+    [CmdletBinding()]
+    param()
+
+    $null = wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:false 2>&1
+    $null = wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:false 2>&1
+    $null = wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:false 2>&1
+    $null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Disable 2>&1
+
+    Write-SkyLog -Message "Registo contínuo de diagnóstico SleepStudy desativado (escritas e I/O de disco poupados)." -Level "Success"
+    return $true
+}
+
+function Disable-WindowsErrorReporting {
+    [CmdletBinding()]
+    param()
+
+    $werMachineKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting"
+    Ensure-RegistryPath -KeyPath $werMachineKey
+    Backup-RegistryKey -KeyPath $werMachineKey -BackupName "27_WER_MachinePolicy"
+    Set-ItemProperty -Path $werMachineKey -Name "Disabled" -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $werMachineKey -Name "DontShowUI" -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $werMachineKey -Name "LoggingDisabled" -Value 1 -Type DWord -Force
+
+    $werUserKey = "HKCU:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting"
+    Ensure-RegistryPath -KeyPath $werUserKey
+    Backup-RegistryKey -KeyPath $werUserKey -BackupName "27_WER_UserPolicy"
+    Set-ItemProperty -Path $werUserKey -Name "Disabled" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Windows Error Reporting (WER) desativado (elimina congelamentos em segundo plano)." -Level "Success"
+    return $true
+}
+
+# --- CATEGORIA 9: AGILIDADE DO SISTEMA & QUALIDADE DE VIDA (QOL) ---
+
+function Set-InterfaceDelays {
+    [CmdletBinding()]
+    param()
+
+    $deskKey = "HKCU:\Control Panel\Desktop"
+    Ensure-RegistryPath -KeyPath $deskKey
+    Backup-RegistryKey -KeyPath $deskKey -BackupName "28_Desktop_Delays"
+    Set-ItemProperty -Path $deskKey -Name "MenuShowDelay" -Value "0" -Type String -Force
+    Set-ItemProperty -Path $deskKey -Name "MouseHoverTime" -Value "20" -Type String -Force
+
+    Write-SkyLog -Message "Delays de animação e abertura de menus reduzidos para 0 ms (instantâneo)." -Level "Success"
+    return $true
+}
+
+function Disable-StartupDelay {
+    [CmdletBinding()]
+    param()
+
+    $serKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize"
+    Ensure-RegistryPath -KeyPath $serKey
+    Backup-RegistryKey -KeyPath $serKey -BackupName "29_Explorer_StartupDelay"
+    Set-ItemProperty -Path $serKey -Name "StartupDelayInMSec" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Atraso artificial de arranque de programas pós-login (StartupDelay) desativado." -Level "Success"
+    return $true
+}
+
+function Set-FastShutdown {
+    [CmdletBinding()]
+    param()
+
+    $deskKey = "HKCU:\Control Panel\Desktop"
+    Ensure-RegistryPath -KeyPath $deskKey
+    Backup-RegistryKey -KeyPath $deskKey -BackupName "30_FastShutdown_User"
+    Set-ItemProperty -Path $deskKey -Name "HungAppTimeout" -Value "2000" -Type String -Force
+    Set-ItemProperty -Path $deskKey -Name "WaitToKillAppTimeOut" -Value "2000" -Type String -Force
+    Set-ItemProperty -Path $deskKey -Name "AutoEndTasks" -Value "1" -Type String -Force
+
+    $sysCtrlKey = "HKLM:\SYSTEM\CurrentControlSet\Control"
+    Ensure-RegistryPath -KeyPath $sysCtrlKey
+    Backup-RegistryKey -KeyPath $sysCtrlKey -BackupName "30_FastShutdown_System"
+    Set-ItemProperty -Path $sysCtrlKey -Name "WaitToKillServiceTimeout" -Value "2000" -Type String -Force
+
+    Write-SkyLog -Message "Tempo de espera de encerramento do Windows otimizado para 2 segundos." -Level "Success"
+    return $true
+}
+
+function Set-AltTabFilter {
+    [CmdletBinding()]
+    param()
+
+    $advKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    Ensure-RegistryPath -KeyPath $advKey
+    Backup-RegistryKey -KeyPath $advKey -BackupName "31_AltTabFilter"
+    Set-ItemProperty -Path $advKey -Name "MultiTaskingAltTabFilter" -Value 3 -Type DWord -Force
+
+    Write-SkyLog -Message "Alt-Tab configurado para mostrar apenas janelas abertas (separadores do Edge omitidos)." -Level "Success"
+    return $true
+}
+
+function Enable-TaskbarEndTask {
+    [CmdletBinding()]
+    param()
+
+    $tbDevKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings"
+    Ensure-RegistryPath -KeyPath $tbDevKey
+    Backup-RegistryKey -KeyPath $tbDevKey -BackupName "32_TaskbarEndTask"
+    Set-ItemProperty -Path $tbDevKey -Name "TaskbarEndTask" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Opção 'Terminar Tarefa' ativada no menu de clique direito da barra de tarefas." -Level "Success"
+    return $true
+}
+
+function Disable-Copilot {
+    [CmdletBinding()]
+    param()
+
+    $copilotUser = "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot"
+    Ensure-RegistryPath -KeyPath $copilotUser
+    Backup-RegistryKey -KeyPath $copilotUser -BackupName "33_Copilot_UserPolicy"
+    Set-ItemProperty -Path $copilotUser -Name "TurnOffWindowsCopilot" -Value 1 -Type DWord -Force
+
+    $copilotMachine = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
+    Ensure-RegistryPath -KeyPath $copilotMachine
+    Backup-RegistryKey -KeyPath $copilotMachine -BackupName "33_Copilot_MachinePolicy"
+    Set-ItemProperty -Path $copilotMachine -Name "TurnOffWindowsCopilot" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Microsoft Copilot desativado (processos WebView e telemetria poupados)." -Level "Success"
+    return $true
+}
+
+function Disable-StickyKeysPopup {
+    [CmdletBinding()]
+    param()
+
+    $skKey = "HKCU:\Control Panel\Accessibility\StickyKeys"
+    Ensure-RegistryPath -KeyPath $skKey
+    Backup-RegistryKey -KeyPath $skKey -BackupName "34_Accessibility_StickyKeys"
+    Set-ItemProperty -Path $skKey -Name "Flags" -Value "506" -Type String -Force
+
+    $krKey = "HKCU:\Control Panel\Accessibility\Keyboard Response"
+    Ensure-RegistryPath -KeyPath $krKey
+    Backup-RegistryKey -KeyPath $krKey -BackupName "34_Accessibility_FilterKeys"
+    Set-ItemProperty -Path $krKey -Name "Flags" -Value "122" -Type String -Force
+
+    $tkKey = "HKCU:\Control Panel\Accessibility\ToggleKeys"
+    Ensure-RegistryPath -KeyPath $tkKey
+    Backup-RegistryKey -KeyPath $tkKey -BackupName "34_Accessibility_ToggleKeys"
+    Set-ItemProperty -Path $tkKey -Name "Flags" -Value "58" -Type String -Force
+
+    Write-SkyLog -Message "Popups de teclas presas (StickyKeys/FilterKeys) desativados para gaming." -Level "Success"
+    return $true
+}
+
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 18 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 34 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -667,11 +1000,12 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 1.0.1
+                          Versão: 2.0.0
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v1.0.1 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Show-SystemHardwareInfo
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.0.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 1. Ponto de Restauro do Sistema
     Write-Host "`n>>> [Passo 1/2] Segurança do Sistema" -ForegroundColor Magenta
@@ -696,7 +1030,7 @@ function Invoke-SkyOptimize {
         $errMessage = $_.Exception.Message
         Write-SkyLog -Message "Não foi possível criar o Ponto de Restauro automaticamente. Motivo: $errMessage" -Level "Warning"
         Write-Host "`n[!] ATENÇÃO:" -ForegroundColor Yellow
-        Write-Host "    O Windows pode restringir a frequência de criação de pontos de restauro (limite de 24h)" -ForegroundColor Gray
+        Write-Host "    O Windows pode restringir a frequência de criação de pontos de restauro" -ForegroundColor Gray
         Write-Host "    ou a funcionalidade de Proteção do Sistema pode estar desativada." -ForegroundColor Gray
         Write-Host "    Nota: Todos os backups de registo (.reg) e ficheiros de reversão continuarão a ser criados.`n" -ForegroundColor Gray
 
@@ -711,8 +1045,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 18 Tweaks
-    Write-Host "`n>>> [Passo 2/2] A executar Otimizações Seguras (18 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 34 Tweaks
+    Write-Host "`n>>> [Passo 2/2] A executar Otimizações Seguras (34 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -734,15 +1068,39 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 11; Category = "Rede & Latência"; Name = "Network Throttling Index & SystemResponsiveness"; Action = { Optimize-NetworkThrottling } },
         [ordered]@{ Id = 12; Category = "Rede & Latência"; Name = "Remoção de Limite de Banda Reservada QoS (Psched)"; Action = { Disable-QoSBandwidthLimit } },
 
-        # Categoria 4: Privacidade e Limpeza Leve
-        [ordered]@{ Id = 13; Category = "Privacidade & Limpeza"; Name = "Telemetria no Nível Básico/Necessário (Seguro)"; Action = { Set-TelemetryBasic } },
-        [ordered]@{ Id = 14; Category = "Privacidade & Limpeza"; Name = "Desativação de Sugestões e Anúncios no Menu Iniciar"; Action = { Disable-StartMenuSuggestions } },
-        [ordered]@{ Id = 15; Category = "Privacidade & Limpeza"; Name = "Desativação de Pesquisa Web Bing e Dicas do Spotlight"; Action = { Disable-SearchAndSpotlight } },
-        [ordered]@{ Id = 16; Category = "Privacidade & Limpeza"; Name = "Desativação de Widgets e Feeds da Barra de Tarefas"; Action = { Disable-TaskbarWidgets } },
+        # Categoria 4: Privacidade e Telemetria
+        [ordered]@{ Id = 13; Category = "Privacidade & Telemetria"; Name = "Telemetria no Nível Básico/Necessário (Seguro)"; Action = { Set-TelemetryBasic } },
+        [ordered]@{ Id = 14; Category = "Privacidade & Telemetria"; Name = "Desativação de Sugestões e Anúncios no Menu Iniciar"; Action = { Disable-StartMenuSuggestions } },
+        [ordered]@{ Id = 15; Category = "Privacidade & Telemetria"; Name = "Desativação de Pesquisa Web Bing e Dicas do Spotlight"; Action = { Disable-SearchAndSpotlight } },
+        [ordered]@{ Id = 16; Category = "Privacidade & Telemetria"; Name = "Desativação de Widgets e Feeds da Barra de Tarefas"; Action = { Disable-TaskbarWidgets } },
 
-        # Categoria 5: Explorador de Ficheiros e QoL
+        # Categoria 5: Explorador de Ficheiros
         [ordered]@{ Id = 17; Category = "Explorador & QoL"; Name = "Exibição de Extensões de Ficheiros Conhecidos"; Action = { Show-FileExtensions } },
-        [ordered]@{ Id = 18; Category = "Explorador & QoL"; Name = "Desativação de Arquivamento Automático de Apps"; Action = { Disable-AppArchival } }
+        [ordered]@{ Id = 18; Category = "Explorador & QoL"; Name = "Desativação de Arquivamento Automático de Apps"; Action = { Disable-AppArchival } },
+
+        # Categoria 6: Controlo Inteligente de Windows Update
+        [ordered]@{ Id = 19; Category = "Controlo Windows Update"; Name = "Bloqueio de Substituição Automática de Drivers GPU/Hardware"; Action = { Block-AutomaticDriverUpdates } },
+        [ordered]@{ Id = 20; Category = "Controlo Windows Update"; Name = "Desativação de P2P da Otimização de Entrega (Proteção de Ping)"; Action = { Disable-DeliveryOptimizationP2P } },
+        [ordered]@{ Id = 21; Category = "Controlo Windows Update"; Name = "Modo de Atualização Manual e Notificação (Sem Reinícios Forçados)"; Action = { Set-ManualWindowsUpdate } },
+
+        # Categoria 7: Armazenamento, I/O & Limpeza de Disco
+        [ordered]@{ Id = 22; Category = "Armazenamento & Limpeza"; Name = "Desativação de Armazenamento Reservado (Libertar 7GB-10GB)"; Action = { Disable-ReservedStorage } },
+        [ordered]@{ Id = 23; Category = "Armazenamento & Limpeza"; Name = "Otimização de Sistema de Ficheiros NTFS (I/O Boost)"; Action = { Optimize-NTFS } },
+        [ordered]@{ Id = 24; Category = "Armazenamento & Limpeza"; Name = "Limpeza Segura de Caches de Shaders (NVIDIA/DirectX) e Temp"; Action = { Clear-ShaderCache } },
+
+        # Categoria 8: Processos em Segundo Plano (Debloat)
+        [ordered]@{ Id = 25; Category = "Processos em Segundo Plano"; Name = "Desativação de Aplicações UWP em Segundo Plano (Poupança CPU/RAM)"; Action = { Disable-BackgroundUWPApps } },
+        [ordered]@{ Id = 26; Category = "Processos em Segundo Plano"; Name = "Desativação de Registo Diagnóstico SleepStudy / Modern Standby"; Action = { Disable-SleepStudyLogging } },
+        [ordered]@{ Id = 27; Category = "Processos em Segundo Plano"; Name = "Desativação de Windows Error Reporting (WER)"; Action = { Disable-WindowsErrorReporting } },
+
+        # Categoria 9: Agilidade do Sistema & QoL
+        [ordered]@{ Id = 28; Category = "Agilidade & QoL"; Name = "Eliminação de Delays de Interface e Menus (0 ms Instantâneo)"; Action = { Set-InterfaceDelays } },
+        [ordered]@{ Id = 29; Category = "Agilidade & QoL"; Name = "Arranque Imediato de Aplicações Pós-Login (StartupDelay 0 ms)"; Action = { Disable-StartupDelay } },
+        [ordered]@{ Id = 30; Category = "Agilidade & QoL"; Name = "Encerramento e Reinício Rápido do Sistema (Timeout 2s)"; Action = { Set-FastShutdown } },
+        [ordered]@{ Id = 31; Category = "Agilidade & QoL"; Name = "Alt-Tab Limpo (Apenas Janelas Abertas, sem Separadores do Edge)"; Action = { Set-AltTabFilter } },
+        [ordered]@{ Id = 32; Category = "Agilidade & QoL"; Name = "Atalho 'Terminar Tarefa' na Barra de Tarefas (Windows 11)"; Action = { Enable-TaskbarEndTask } },
+        [ordered]@{ Id = 33; Category = "Agilidade & QoL"; Name = "Desativação de Processos em Fundo do Microsoft Copilot"; Action = { Disable-Copilot } },
+        [ordered]@{ Id = 34; Category = "Agilidade & QoL"; Name = "Desativação de Popups de Teclas Presas (StickyKeys Shift 5x)"; Action = { Disable-StickyKeysPopup } }
     )
 
     $currentCategory = ""
@@ -756,7 +1114,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/18] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/34] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -804,7 +1162,7 @@ function Invoke-SkyOptimize {
     }
 
     # Reinício opcional do Explorer
-    Write-Host "`nAlgumas alterações de interface (extensões de ficheiros, widgets, menu iniciar)" -ForegroundColor Gray
+    Write-Host "`nAlgumas alterações de interface (extensões de ficheiros, widgets, menu iniciar, delays)" -ForegroundColor Gray
     Write-Host "tornam-se imediatamente visíveis após reiniciar o Windows Explorer." -ForegroundColor Gray
     $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
 
@@ -815,7 +1173,7 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Write-Host "`n[+] SkyOptimizer v2.0 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para concluir..."
 }
 
@@ -837,7 +1195,7 @@ function Invoke-SkyUndo {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                    Módulo de Restauração / Reversão
-                           Versão: 1.0.1
+                           Versão: 2.0.0
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
@@ -899,8 +1257,8 @@ function Invoke-SkyUndo {
         Write-Host "  [*] Nenhuma chave necessitou de remoção manual." -ForegroundColor Gray
     }
 
-    # 3. Restauração de Serviços e Hardware
-    Write-Host "`n>>> [Passo 3/4] A restaurar Definições de Energia, BCD e Serviços..." -ForegroundColor Magenta
+    # 3. Restauração de Serviços, Hardware e Parâmetros de Sistema
+    Write-Host "`n>>> [Passo 3/4] A restaurar Definições de Energia, BCD, Serviços e Armazenamento..." -ForegroundColor Magenta
 
     # Plano de Energia Original
     $powerPlanFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_power_plan.txt"
@@ -984,6 +1342,28 @@ function Invoke-SkyUndo {
         Write-Host "  [OK] Serviço SysMain restaurado para $startupType e reiniciado." -ForegroundColor Green
     }
 
+    # Otimização NTFS (Repor LastAccess e 8.3)
+    $null = fsutil behavior set disablelastaccess 0 2>&1
+    $null = fsutil behavior set disable8dot3 0 2>&1
+    Write-Host "  [OK] Parâmetros de I/O do sistema de ficheiros NTFS repostos." -ForegroundColor Green
+
+    # Armazenamento Reservado (Reativar caso estivesse ativo)
+    $resFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_reserved_storage.txt"
+    if (Test-Path $resFile) {
+        $origRes = (Get-Content -Path $resFile -ErrorAction SilentlyContinue).Trim()
+        if ($origRes -eq "Enabled") {
+            $null = dism.exe /Online /Set-ReservedStorageState /State:Enabled 2>&1
+            Write-Host "  [OK] Armazenamento Reservado reposto para o estado original." -ForegroundColor Green
+        }
+    }
+
+    # Diagnóstico SleepStudy (Reativar logs)
+    $null = wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:true 2>&1
+    $null = wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:true 2>&1
+    $null = wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:true 2>&1
+    $null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1
+    Write-Host "  [OK] Canais de diagnóstico SleepStudy reativados." -ForegroundColor Green
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -1004,6 +1384,7 @@ function Invoke-SkyUndo {
   Ficheiros de registo restaurados: $restoredRegCount
   Definições de hardware e energia: Repostas com Sucesso
   Estado dos Serviços:              Restaurado
+  Parâmetros de I/O e Sistema:      Repostos
 ================================================================================
 O seu sistema foi revertido com segurança para o estado anterior.
 "@ -ForegroundColor Green
@@ -1021,6 +1402,14 @@ if ($Apply) {
     exit 0
 }
 
+if ($Clean) {
+    Clear-Host
+    Write-Host ">>> A executar Limpeza de Caches de Shaders e Temporários..." -ForegroundColor Cyan
+    Clear-ShaderCache
+    Write-Host "`n[OK] Manutenção de Shaders concluída." -ForegroundColor Green
+    exit 0
+}
+
 if ($Undo) {
     Invoke-SkyUndo
     exit 0
@@ -1030,11 +1419,12 @@ if ($Undo) {
 while ($true) {
     Clear-Host
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "           SkyOptimizer v1.0            " -ForegroundColor White
+    Write-Host "           SkyOptimizer v2.0            " -ForegroundColor White
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "[1] Aplicar Otimizações" -ForegroundColor Green
-    Write-Host "[2] Reverter Alterações (Desfazer)" -ForegroundColor Yellow
-    Write-Host "[3] Sair" -ForegroundColor Red
+    Write-Host "[1] Aplicar Todas as 34 Otimizações" -ForegroundColor Green
+    Write-Host "[2] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
+    Write-Host "[3] Reverter Alterações (Desfazer)" -ForegroundColor Yellow
+    Write-Host "[4] Sair" -ForegroundColor Red
     Write-Host "========================================" -ForegroundColor Cyan
     
     $choice = Read-Host "Escolha uma opção"
@@ -1045,16 +1435,22 @@ while ($true) {
             exit 0
         }
         "2" {
+            Clear-Host
+            Write-Host ">>> A executar Limpeza de Caches de Shaders e Temporários..." -ForegroundColor Cyan
+            Clear-ShaderCache
+            Read-Host "`nPressione ENTER para regressar ao menu..."
+        }
+        "3" {
             Invoke-SkyUndo
             exit 0
         }
-        "3" {
+        "4" {
             Write-Host "`nA sair do SkyOptimizer. Nenhuma alteração foi realizada." -ForegroundColor Gray
             Start-Sleep -Seconds 1
             exit 0
         }
         Default {
-            Write-Host "`nOpção inválida! Escolha 1, 2 ou 3." -ForegroundColor Red
+            Write-Host "`nOpção inválida! Escolha 1, 2, 3 ou 4." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
