@@ -241,8 +241,18 @@ function Show-SystemHardwareInfo {
         $cpuName   = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1).Name
         if ($cpuName) { $cpuName = $cpuName.Trim() } else { $cpuName = "Processador Genérico" }
 
-        $ramBytes = (Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Measure-Object -Property Capacity -Sum).Sum
-        $ramGB = if ($ramBytes) { [math]::Round($ramBytes / 1GB) } else { 0 }
+        $ramGB = 0
+        $compSys = Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue
+        if ($compSys -and $compSys.TotalPhysicalMemory) {
+            $ramGB = [math]::Round($compSys.TotalPhysicalMemory / 1GB)
+        } else {
+            $ramBytes = (Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Measure-Object -Property Capacity -Sum).Sum
+            if ($ramBytes) { $ramGB = [math]::Round($ramBytes / 1GB) }
+        }
+        if ($ramGB -eq 0) {
+            $osMem = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).TotalVisibleMemorySize
+            if ($osMem) { $ramGB = [math]::Round($osMem / 1MB) }
+        }
 
         # Deteção de GPU e VRAM real via chave de classe do display (evita o limite de 4GB do WMI)
         $gpuItem = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000*' -ErrorAction SilentlyContinue | Where-Object DriverDesc | Select-Object -First 1
