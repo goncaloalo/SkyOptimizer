@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     SkyOptimizer - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
@@ -21,7 +21,7 @@
     Reverte todas as otimizações de volta para o estado original.
 .NOTES
     Autor: SkyOS Team
-    Versão: 1.0.0
+    Versão: 1.0.1
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -33,6 +33,15 @@ param(
     [Parameter(ParameterSetName = "UndoDirect")]
     [switch]$Undo
 )
+
+# ==============================================================================
+# 0. CONFIGURAÇÃO DE CODIFICAÇÃO UTF-8
+# ==============================================================================
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+    $OutputEncoding           = [System.Text.Encoding]::UTF8
+} catch {}
 
 # ==============================================================================
 # 1. AUTO-ELEVAÇÃO PARA ADMINISTRADOR
@@ -52,7 +61,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v1.0.0 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v1.0.1 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -109,7 +118,7 @@ function Write-SkyLog {
 
     try {
         if ($Global:SkyLogFile) {
-            Add-Content -Path $Global:SkyLogFile -Value $fileLogEntry -ErrorAction SilentlyContinue
+            Add-Content -Path $Global:SkyLogFile -Value $fileLogEntry -Encoding UTF8 -ErrorAction SilentlyContinue
         }
     } catch {}
 
@@ -117,19 +126,19 @@ function Write-SkyLog {
 
     switch ($Level) {
         "Success" {
-            Write-Host "[OK] " -ForegroundColor Green -NoNewline
+            Write-Host "    [OK] " -ForegroundColor Green -NoNewline
             Write-Host $Message -ForegroundColor White
         }
         "Warning" {
-            Write-Host "[AVISO] " -ForegroundColor Yellow -NoNewline
+            Write-Host "    [AVISO] " -ForegroundColor Yellow -NoNewline
             Write-Host $Message -ForegroundColor Yellow
         }
         "Error" {
-            Write-Host "[FALHOU] " -ForegroundColor Red -NoNewline
+            Write-Host "    [FALHOU] " -ForegroundColor Red -NoNewline
             Write-Host $Message -ForegroundColor Red
         }
         "Highlight" {
-            Write-Host "[*] " -ForegroundColor Cyan -NoNewline
+            Write-Host "    [*] " -ForegroundColor Cyan -NoNewline
             Write-Host $Message -ForegroundColor Cyan
         }
         "Status" {
@@ -137,7 +146,7 @@ function Write-SkyLog {
             Write-Host $Message -ForegroundColor White
         }
         Default {
-            Write-Host "[INFO] " -ForegroundColor Gray -NoNewline
+            Write-Host "    [INFO] " -ForegroundColor Gray -NoNewline
             Write-Host $Message -ForegroundColor Gray
         }
     }
@@ -183,9 +192,9 @@ function Backup-RegistryKey {
     if (Test-Path $psPath) {
         if (-not (Test-Path $backupFile)) {
             Write-SkyLog -Message "A criar backup de registo para '$stdPath' -> '$BackupName.reg'" -Level "Info" -NoConsole
-            $regProc = Start-Process -FilePath "reg.exe" -ArgumentList "export `"$stdPath`" `"$backupFile`" /y" -Wait -NoNewWindow -PassThru
-            if ($regProc.ExitCode -ne 0) {
-                Write-SkyLog -Message "Falha ao exportar registo de '$stdPath' (ExitCode: $($regProc.ExitCode))" -Level "Warning"
+            & reg.exe export "$stdPath" "$backupFile" /y *> $null
+            if ($LASTEXITCODE -ne 0) {
+                Write-SkyLog -Message "Falha ao exportar registo de '$stdPath' (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
             }
         }
     } else {
@@ -273,7 +282,7 @@ function Set-UltimatePowerPlan {
     }
 
     if ($ultimateGuid) {
-        powercfg -setactive $ultimateGuid
+        powercfg -setactive $ultimateGuid 2>$null
         Write-SkyLog -Message "Plano 'Desempenho Máximo' ($ultimateGuid) ativado com sucesso." -Level "Success"
         return $true
     } else {
@@ -300,7 +309,7 @@ function Set-TimerResolution {
     
     $bcdResult = bcdedit /set disabledynamictick yes 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-SkyLog -Message "Aviso: bcdedit disabledynamictick devolveu código de aviso: $bcdResult" -Level "Warning"
+        Write-SkyLog -Message "Aviso: bcdedit disabledynamictick devolveu código: $bcdResult" -Level "Warning"
     }
 
     Write-SkyLog -Message "Temporizador de alta precisão (GlobalTimerResolutionRequests & DynamicTick=Disabled) aplicado." -Level "Success"
@@ -311,12 +320,20 @@ function Disable-CoreParking {
     [CmdletBinding()]
     param()
 
-    $subGroup = "54533251-82be-4824-96c1-47b60b740d00" # Subgrupo de Processador
-    $setting  = "0cc5b647-c1df-4637-891a-dec75c318583" # Processor performance core parking min cores
+    $subGroup   = "54533251-82be-4824-96c1-47b60b740d00" # Subgrupo de Processador
+    $settingMin = "0cc5b647-c1df-4637-891a-dec75c318583" # Processor performance core parking min cores
+    $settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028" # Processor performance core parking max cores
 
-    powercfg -setacvalueindex scheme_current $subGroup $setting 100
-    powercfg -setdcvalueindex scheme_current $subGroup $setting 100
-    powercfg -setactive scheme_current
+    # Desocultar atributos caso estejam ocultos pelo sistema
+    $null = powercfg -attributes $subGroup $settingMin -ATTRIB_HIDE 2>&1
+    $null = powercfg -attributes $subGroup $settingMax -ATTRIB_HIDE 2>&1
+
+    # Definir 100% de núcleos mínimos e máximos ativos (sem adormecer núcleos)
+    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 100 2>&1
+    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 100 2>&1
+    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
+    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
+    $null = powercfg -setactive SCHEME_CURRENT 2>&1
 
     Write-SkyLog -Message "Core Parking desativado (100% núcleos ativos no perfil de energia)." -Level "Success"
     return $true
@@ -336,7 +353,7 @@ function Disable-Hibernation {
         $wasEnabled | Out-File -FilePath $hibBackupFile -Encoding UTF8 -Force
     }
 
-    powercfg -h off
+    $null = powercfg -h off 2>&1
     Write-SkyLog -Message "Hibernação desativada com sucesso (ficheiro hiberfil.sys removido)." -Level "Success"
     return $true
 }
@@ -375,7 +392,7 @@ function Disable-Superfetch {
     }
 
     if (-not $isSSD) {
-        Write-SkyLog -Message "Disco de sistema detetado como HDD/Indeterminado. SysMain MANTIDO ATIVO por segurança." -Level "Warning"
+        Write-SkyLog -Message "Disco detetado como HDD ou Virtual/Indeterminado. SysMain mantido ativo por segurança." -Level "Warning"
         return $true
     }
 
@@ -425,9 +442,10 @@ function Disable-USBSelectiveSuspend {
     $usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
     $usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
 
-    powercfg -setacvalueindex scheme_current $usbSubGroup $usbSetting 0
-    powercfg -setdcvalueindex scheme_current $usbSubGroup $usbSetting 0
-    powercfg -setactive scheme_current
+    $null = powercfg -attributes $usbSubGroup $usbSetting -ATTRIB_HIDE 2>&1
+    $null = powercfg -setacvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 0 2>&1
+    $null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 0 2>&1
+    $null = powercfg -setactive SCHEME_CURRENT 2>&1
 
     Write-SkyLog -Message "Suspensão Seletiva USB desativada no perfil de energia ativo." -Level "Success"
     return $true
@@ -479,7 +497,7 @@ function Optimize-NetworkLatency {
         }
     }
 
-    Write-SkyLog -Message "Algoritmo de Nagle desativado (TCPNoDelay=1, TcpAckFrequency=1) em $configuredCount interface(s) ativa(s)." -Level "Success"
+    Write-SkyLog -Message "Algoritmo de Nagle desativado (TCPNoDelay=1, TcpAckFrequency=1) em $configuredCount interface(s)." -Level "Success"
     return $true
 }
 
@@ -491,7 +509,7 @@ function Optimize-NetworkThrottling {
     Ensure-RegistryPath -KeyPath $profileKey
     Backup-RegistryKey -KeyPath $profileKey -BackupName "11_Multimedia_SystemProfile"
 
-    Set-ItemProperty -Path $profileKey -Name "NetworkThrottlingIndex" -Value ([uint32]0xFFFFFFFF) -Type DWord -Force
+    Set-ItemProperty -Path $profileKey -Name "NetworkThrottlingIndex" -Value 0xffffffff -Force
     Set-ItemProperty -Path $profileKey -Name "SystemResponsiveness" -Value 0 -Type DWord -Force
 
     Write-SkyLog -Message "Network Throttling desativado e SystemResponsiveness definido para 0." -Level "Success"
@@ -576,20 +594,26 @@ function Disable-TaskbarWidgets {
     [CmdletBinding()]
     param()
 
+    # 1. Política de Grupo do Sistema (Desativa Widgets e Feeds globalmente)
     $dshKey = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
     Ensure-RegistryPath -KeyPath $dshKey
     Backup-RegistryKey -KeyPath $dshKey -BackupName "16_Widgets_DshPolicy"
     Set-ItemProperty -Path $dshKey -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force
 
+    # 2. Definições de Utilizador (Windows 10/11) - Protegidas por UCPD em versões recentes do Win11
     $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
     Ensure-RegistryPath -KeyPath $advKey
     Backup-RegistryKey -KeyPath $advKey -BackupName "16_TaskbarWidgets_User"
-    Set-ItemProperty -Path $advKey -Name "TaskbarDa" -Value 0 -Type DWord -Force
+    try {
+        Set-ItemProperty -Path $advKey -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    } catch {}
 
     $feedsKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
     Ensure-RegistryPath -KeyPath $feedsKey
     Backup-RegistryKey -KeyPath $feedsKey -BackupName "16_Feeds_Win10"
-    Set-ItemProperty -Path $feedsKey -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force
+    try {
+        Set-ItemProperty -Path $feedsKey -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
+    } catch {}
 
     Write-SkyLog -Message "Widgets e Feeds de Notícias da barra de tarefas desativados." -Level "Success"
     return $true
@@ -643,20 +667,29 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 1.0.0
+                          Versão: 1.0.1
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v1.0.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v1.0.1 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 1. Ponto de Restauro do Sistema
     Write-Host "`n>>> [Passo 1/2] Segurança do Sistema" -ForegroundColor Magenta
     Write-Host "A verificar / criar Ponto de Restauro do Sistema antes de aplicar alterações..." -ForegroundColor Gray
 
     $restorePointCreated = $false
+    $prevProgress = $ProgressPreference
+    $ProgressPreference = 'SilentlyContinue'
     try {
         Enable-ComputerRestore -Drive "$env:SystemDrive" -ErrorAction SilentlyContinue
-        Checkpoint-Computer -Description "SkyOptimizer Pre-Tweak" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
+
+        # Permitir criação de pontos de restauro sem restrição do limite de 24h do Windows
+        $srKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore"
+        if (Test-Path $srKey) {
+            Set-ItemProperty -Path $srKey -Name "SystemRestorePointCreationFrequency" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        }
+
+        Checkpoint-Computer -Description "SkyOptimizer Pre-Tweak" -RestorePointType "MODIFY_SETTINGS" -WarningAction SilentlyContinue -ErrorAction Stop
         Write-SkyLog -Message "Ponto de Restauro criado: 'SkyOptimizer Pre-Tweak'" -Level "Success"
         $restorePointCreated = $true
     } catch {
@@ -674,6 +707,8 @@ function Invoke-SkyOptimize {
             Start-Sleep -Seconds 2
             return
         }
+    } finally {
+        $ProgressPreference = $prevProgress
     }
 
     # 2. Execução dos 18 Tweaks
@@ -721,16 +756,14 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/18] {1}..." -f $item.Id, $item.Name) -NoNewline
+        Write-Host ("[*] [{0,2}/18] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
             $null = & $item.Action
-            Write-Host " [OK]" -ForegroundColor Green
             $totalSuccess++
             $Global:SkyManifest.AppliedTweaks += $item.Name
         } catch {
-            Write-Host " [FALHOU]" -ForegroundColor Red
             $errorMsg = $_.Exception.Message
             Write-SkyLog -Message "Falha em $($item.Name): $errorMsg" -Level "Error"
             $totalFailed++
@@ -803,8 +836,8 @@ function Invoke-SkyUndo {
   ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
-                  Módulo de Restauração / Reversão
-                          Versão: 1.0.0
+                   Módulo de Restauração / Reversão
+                           Versão: 1.0.1
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
@@ -831,14 +864,14 @@ function Invoke-SkyUndo {
 
         foreach ($file in $regFiles) {
             Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
-            $importProc = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$($file.FullName)`"" -Wait -NoNewWindow -PassThru
-            if ($importProc.ExitCode -eq 0) {
+            & reg.exe import "$($file.FullName)" *> $null
+            if ($LASTEXITCODE -eq 0) {
                 Write-Host " [OK]" -ForegroundColor Green
                 Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
                 $restoredRegCount++
             } else {
                 Write-Host " [FALHOU]" -ForegroundColor Red
-                Write-SkyLog -Message "Falha ao restaurar $($file.Name) (ExitCode: $($importProc.ExitCode))" -Level "Warning"
+                Write-SkyLog -Message "Falha ao restaurar $($file.Name) (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
             }
         }
     } else {
@@ -854,8 +887,8 @@ function Invoke-SkyUndo {
         foreach ($key in $createdKeys) {
             if (-not [string]::IsNullOrWhiteSpace($key)) {
                 Write-Host "  [*] A remover chave recém-criada '$key'..." -ForegroundColor Gray -NoNewline
-                $delProc = Start-Process -FilePath "reg.exe" -ArgumentList "delete `"$key`" /f" -Wait -NoNewWindow -PassThru
-                if ($delProc.ExitCode -eq 0) {
+                & reg.exe delete "$key" /f *> $null
+                if ($LASTEXITCODE -eq 0) {
                     Write-Host " [OK]" -ForegroundColor Green
                 } else {
                     Write-Host " [IGNORADO]" -ForegroundColor Gray
@@ -879,36 +912,42 @@ function Invoke-SkyUndo {
     }
 
     if ($origPlanGuid -and ($origPlanGuid -match '^[a-fA-F0-9-]+$')) {
-        powercfg -setactive $origPlanGuid
+        powercfg -setactive $origPlanGuid 2>$null
         Write-Host "  [OK] Plano de Energia original reativado ($origPlanGuid)." -ForegroundColor Green
-        Write-SkyLog -Message "Plano de energia original reativado: $origPlanGuid" -Level "Success"
+        Write-SkyLog -Message "Plano de energia original reativado: $origPlanGuid" -Level "Success" -NoConsole
     } else {
         powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
         Write-Host "  [INFO] Plano de Energia reposto para Equilibrado (Balanced)." -ForegroundColor Gray
     }
 
-    # Core Parking (Repor para 0%)
-    $subGroup = "54533251-82be-4824-96c1-47b60b740d00"
-    $setting  = "0cc5b647-c1df-4637-891a-dec75c318583"
-    powercfg -setacvalueindex scheme_current $subGroup $setting 0 2>$null
-    powercfg -setdcvalueindex scheme_current $subGroup $setting 0 2>$null
-    powercfg -setactive scheme_current 2>$null
+    # Core Parking (Repor para 0% e desocultar)
+    $subGroup   = "54533251-82be-4824-96c1-47b60b740d00"
+    $settingMin = "0cc5b647-c1df-4637-891a-dec75c318583"
+    $settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028"
+    $null = powercfg -attributes $subGroup $settingMin -ATTRIB_HIDE 2>&1
+    $null = powercfg -attributes $subGroup $settingMax -ATTRIB_HIDE 2>&1
+    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
+    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
+    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
+    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
+    $null = powercfg -setactive SCHEME_CURRENT 2>&1
     Write-Host "  [OK] Core Parking reposto para predefinição de gestão de energia." -ForegroundColor Green
 
     # Suspensão Seletiva USB (Repor para 1 - Ativado por defeito)
     $usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
     $usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
-    powercfg -setacvalueindex scheme_current $usbSubGroup $usbSetting 1 2>$null
-    powercfg -setdcvalueindex scheme_current $usbSubGroup $usbSetting 1 2>$null
-    powercfg -setactive scheme_current 2>$null
+    $null = powercfg -attributes $usbSubGroup $usbSetting -ATTRIB_HIDE 2>&1
+    $null = powercfg -setacvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
+    $null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
+    $null = powercfg -setactive SCHEME_CURRENT 2>&1
     Write-Host "  [OK] Suspensão Seletiva USB reposta para padrão de conservação de energia." -ForegroundColor Green
 
     # Dynamic Tick (BCD)
-    $bcdResult = bcdedit /deletevalue disabledynamictick 2>&1
+    $null = bcdedit /deletevalue disabledynamictick 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  [OK] Dynamic Tick (BCD) reposto para o valor padrão." -ForegroundColor Green
     } else {
-        bcdedit /set disabledynamictick no 2>&1 | Out-Null
+        $null = bcdedit /set disabledynamictick no 2>&1
         Write-Host "  [OK] Dynamic Tick verificado e reposto." -ForegroundColor Green
     }
 
@@ -918,14 +957,15 @@ function Invoke-SkyUndo {
     if (Test-Path $hibFile) {
         $origHib = (Get-Content -Path $hibFile -ErrorAction SilentlyContinue).Trim()
     } elseif ($null -ne $Global:SkyManifest.Hibernation) {
-        $origHib = "$($Global:SkyManifest.Hibernation)"
+        $origHib = $Global:SkyManifest.Hibernation
     }
 
-    if ($origHib -eq "1") {
-        powercfg -h on
-        Write-Host "  [OK] Hibernação reativada (estado original: Ativa)." -ForegroundColor Green
+    if ($origHib -eq 1 -or $origHib -eq "1") {
+        powercfg -h on 2>$null
+        Write-Host "  [OK] Hibernação reativada." -ForegroundColor Green
     } else {
-        Write-Host "  [INFO] Hibernação mantida no estado original." -ForegroundColor Gray
+        powercfg -h off 2>$null
+        Write-Host "  [INFO] Hibernação mantida desativada (estado original)." -ForegroundColor Gray
     }
 
     # SysMain (Superfetch)
