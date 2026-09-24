@@ -1,18 +1,18 @@
 # SkyOptimizer 🚀
 
-> **Toolkit Modular, Não-Destrutivo e 100% Reversível de Otimização para Windows 10 e 11.**
+> **Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização para Windows 10 e 11.**
 
-O **SkyOptimizer** foi concebido especificamente para máquinas de uso diário (máquinas pessoais com jogos, aplicações de trabalho e dados instalados), ao contrário de playbooks de instalação limpa que removem ficheiros protegidos ou componentes essenciais do Windows.
+O **SkyOptimizer** é um utilitário consolidado num **único ficheiro PowerShell autocontido** (`SkyOptimizer.ps1`), sem qualquer dependência externa ou pastas adicionais de módulos. Foi concebido especificamente para máquinas de uso diário (máquinas pessoais com jogos, aplicações de trabalho e dados instalados), ao contrário de playbooks agressivos de instalação limpa que removem ficheiros protegidos ou componentes essenciais do Windows.
 
 ---
 
 ## 🛡️ Pilares de Segurança e Confiabilidade
 
-1. **Ponto de Restauro Automático (`System Restore`):** Cria um ponto de restauro (`SkyOptimizer Pre-Tweak`) antes de efetuar qualquer alteração. Caso a proteção do sistema esteja inativa ou sujeita ao limite de 24h do Windows, o utilizador é avisado e pode decidir se avança.
+1. **Ponto de Restauro Automático (`System Restore`):** Cria um ponto de restauro (`SkyOptimizer Pre-Tweak`) antes de efetuar qualquer alteração. Caso a proteção do sistema esteja inativa ou sujeita ao limite de 24h do Windows, o utilizador é avisado com opção de confirmação.
 2. **Backups de Registo Individuais (`.reg`):** Antes de cada modificação, a chave original é exportada via `reg export` para a pasta `.\Backups\`.
-3. **Registo de Chaves Criadas (`created_keys.txt`):** Se uma chave ou valor não existia previamente, é registada para que o script de reversão a elimine em vez de tentar restaurar ficheiros inexistentes.
+3. **Registo de Chaves Criadas (`created_keys.txt`):** Se uma chave ou valor não existia previamente, é registada para que a reversão a elimine de raiz em vez de tentar restaurar ficheiros inexistentes.
 4. **Manifesto de Estado (`state_backup.json`):** Armazena o plano de energia original, estado da hibernação, modo de inicialização do SysMain e histórico de execução.
-5. **Reversão Completa (`UNDO-SkyOptimizer.ps1`):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original com um único comando.
+5. **Reversão Completa Integrada (UNDO):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original através da opção `[2]` do menu ou com o parâmetro `.\SkyOptimizer.ps1 -Undo`.
 6. **Não-Destrutivo:** Zero remoção de ficheiros do sistema (`System32`, `WinSxS`), zero desativação do Windows Update, Windows Defender ou Microsoft Store.
 
 ---
@@ -63,53 +63,55 @@ O **SkyOptimizer** foi concebido especificamente para máquinas de uso diário (
 
 ```text
 SkyOptimizer/
-├── Backups/                # Backups de registo (.reg), estado original e chaves criadas
-│   ├── .gitkeep
-│   ├── state_backup.json   (gerado na execução)
-│   ├── created_keys.txt    (gerado se houver chaves novas)
-│   └── *.reg               (exportações individuais de registo)
-├── Logs/                   # Registos timestamped de execução detalhada
-│   ├── .gitkeep
-│   └── SkyOptimizer_YYYY-MM-DD_HHmm.log
-├── Tweaks/                 # Módulos Powershell organizados por categoria
-│   ├── 0-Common.ps1        # Logging, backups automáticos de registo e gestão de estado
-│   ├── 1-System.ps1        # Tweaks 1 a 6 (CPU, Energia, Temporizador, FTH, SSD)
-│   ├── 2-Gaming.ps1        # Tweaks 7 a 9 (Rato, USB, Game DVR)
-│   ├── 3-Network.ps1       # Tweaks 10 a 12 (Nagle, Throttling, QoS)
-│   ├── 4-Privacy.ps1       # Tweaks 13 a 16 (Telemetria segura, Iniciar, Bing, Widgets)
-│   └── 5-Explorer.ps1      # Tweaks 17 a 18 (Extensões, Arquivamento)
+├── Backups/                # Backups de registo (.reg), estado original e chaves criadas (gerados em runtime)
+│   └── .gitkeep
+├── Logs/                   # Registos timestamped de execução detalhada (gerados em runtime)
+│   └── .gitkeep
 ├── .gitignore
 ├── README.md
-├── SkyOptimizer.ps1        # Executável principal (Auto-elevação + Restore Point + Tweaks)
-└── UNDO-SkyOptimizer.ps1   # Reversão completa para o estado original
+└── SkyOptimizer.ps1        # Ficheiro Único Autocontido (Menu + 18 Tweaks + Reversão / UNDO)
 ```
 
 ---
 
 ## 🚀 Como Executar
 
-### 1. Otimizar o Sistema
+### 1. Modo Interativo (Recomendado)
 1. Abra uma janela de **PowerShell como Administrador** (ou clique com o botão direito no `SkyOptimizer.ps1` e selecione **"Executar com o PowerShell"**).
 2. Se necessário, permita a execução de scripts temporariamente:
    ```powershell
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
    ```
-3. Execute o script principal:
+3. Execute o script:
    ```powershell
    .\SkyOptimizer.ps1
    ```
-4. Acompanhe o progresso em tempo real na consola. No final, opte por reiniciar o Windows Explorer para refletir de imediato as alterações gráficas.
+4. Será exibido o menu interativo:
+   ```text
+   ========================================
+              SkyOptimizer v1.0            
+   ========================================
+   [1] Aplicar Otimizações
+   [2] Reverter Alterações (Desfazer)
+   [3] Sair
+   ========================================
+   Escolha uma opção:
+   ```
 
 ---
 
-### 2. Reverter Todas as Alterações (Desfazer / UNDO)
-Caso queira regressar ao estado original da sua máquina por qualquer razão:
-1. Abra a PowerShell como Administrador na pasta do projeto.
-2. Execute o script de reversão:
-   ```powershell
-   .\UNDO-SkyOptimizer.ps1
-   ```
-3. O script importará todos os backups `.reg`, restaurará os planos de energia e serviços, e limpará as chaves recém-adicionadas.
+### 2. Automação via Linha de Comando (Sem Menu)
+Pode automatizar a execução passando parâmetros diretamente:
+
+* **Aplicar todas as 18 otimizações diretamente:**
+  ```powershell
+  .\SkyOptimizer.ps1 -Apply
+  ```
+
+* **Reverter todas as alterações para o estado original:**
+  ```powershell
+  .\SkyOptimizer.ps1 -Undo
+  ```
 
 ---
 
