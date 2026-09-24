@@ -917,8 +917,15 @@ function Set-FastShutdown {
     Set-ItemProperty -Path $deskKey -Name "AutoEndTasks" -Value "1" -Type String -Force
 
     $sysCtrlKey = "HKLM:\SYSTEM\CurrentControlSet\Control"
-    Ensure-RegistryPath -KeyPath $sysCtrlKey
-    Backup-RegistryKey -KeyPath $sysCtrlKey -BackupName "30_FastShutdown_System"
+    $origTimeout = (Get-ItemProperty -Path $sysCtrlKey -Name "WaitToKillServiceTimeout" -ErrorAction SilentlyContinue).WaitToKillServiceTimeout
+    if (-not $origTimeout) { $origTimeout = "5000" }
+
+    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "30_FastShutdown_System.reg"
+    if (-not (Test-Path $backupFile)) {
+        $regContent = "Windows Registry Editor Version 5.00`r`n`r`n[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control]`r`n`"WaitToKillServiceTimeout`"=`"$origTimeout`"`r`n"
+        [System.IO.File]::WriteAllText($backupFile, $regContent, [System.Text.Encoding]::ASCII)
+    }
+
     Set-ItemProperty -Path $sysCtrlKey -Name "WaitToKillServiceTimeout" -Value "2000" -Type String -Force
 
     Write-SkyLog -Message "Tempo de espera de encerramento do Windows otimizado para 2 segundos." -Level "Success"
@@ -1232,6 +1239,16 @@ function Invoke-SkyUndo {
 
         foreach ($file in $regFiles) {
             Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
+
+            # Tratamento direto para 30_FastShutdown_System (evita bloqueios na árvore inteira HKLM Control)
+            if ($file.Name -eq "30_FastShutdown_System.reg") {
+                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
+                Write-Host " [OK]" -ForegroundColor Green
+                Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                $restoredRegCount++
+                continue
+            }
+
             & reg.exe import "$($file.FullName)" *> $null
             if ($LASTEXITCODE -eq 0) {
                 Write-Host " [OK]" -ForegroundColor Green
@@ -1367,10 +1384,10 @@ function Invoke-SkyUndo {
         }
     }
 
-    # Diagnóstico SleepStudy (Reativar logs)
-    $null = wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:true 2>&1
-    $null = wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:true 2>&1
-    $null = wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:true 2>&1
+    # Diagnóstico SleepStudy (Reativar logs sem bloquear ou pedir confirmação)
+    'y' | & wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:true /q:true 2>&1 | Out-Null
+    'y' | & wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:true /q:true 2>&1 | Out-Null
+    'y' | & wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:true /q:true 2>&1 | Out-Null
     $null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1
     Write-Host "  [OK] Canais de diagnóstico SleepStudy reativados." -ForegroundColor Green
 
