@@ -1237,26 +1237,31 @@ function Invoke-SkyUndo {
     if (Test-Path $Global:SkyBackupDir) {
         $regFiles = Get-ChildItem -Path $Global:SkyBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue
 
-        foreach ($file in $regFiles) {
-            Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
+        if (-not $regFiles -or $regFiles.Count -eq 0) {
+            Write-Host "  [*] Nenhum ficheiro de backup (.reg) encontrado em .\Backups\" -ForegroundColor Gray
+            Write-Host "      (Os backups individuais de registo são gerados ao executar a Opção [1])." -ForegroundColor DarkGray
+        } else {
+            foreach ($file in $regFiles) {
+                Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
 
-            # Tratamento direto para 30_FastShutdown_System (evita bloqueios na árvore inteira HKLM Control)
-            if ($file.Name -eq "30_FastShutdown_System.reg") {
-                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
-                Write-Host " [OK]" -ForegroundColor Green
-                Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                $restoredRegCount++
-                continue
-            }
+                # Tratamento direto para 30_FastShutdown_System (evita bloqueios na árvore inteira HKLM Control)
+                if ($file.Name -eq "30_FastShutdown_System.reg") {
+                    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
 
-            & reg.exe import "$($file.FullName)" *> $null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host " [OK]" -ForegroundColor Green
-                Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                $restoredRegCount++
-            } else {
-                Write-Host " [FALHOU]" -ForegroundColor Red
-                Write-SkyLog -Message "Falha ao restaurar $($file.Name) (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
+                & reg.exe import "$($file.FullName)" *> $null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                } else {
+                    Write-Host " [FALHOU]" -ForegroundColor Red
+                    Write-SkyLog -Message "Falha ao restaurar $($file.Name) (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
+                }
             }
         }
     } else {
