@@ -222,7 +222,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 ---
 
 ## 💬 Comunidade & Suporte Oficial SkyOptimizer
-Tens dúvidas sobre o teu setup, queres dicas in-game ou otimizar outro computador?  
+Tens dúvidas sobre o teu setup ou queres otimizar outro computador?  
 Junta-te à nossa comunidade no Discord:  
 👉 **[Discord Oficial SkyOptimizer](https://discord.gg/cE8ZaDRGV5)**
 

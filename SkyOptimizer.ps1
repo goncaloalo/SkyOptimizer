@@ -1509,7 +1509,7 @@ Como utilizar estes atalhos de 1 clique:
 
 --------------------------------------------------------------------------------
 Comunidade & Suporte SkyOptimizer:
-Tens dúvidas sobre o teu setup, queres dicas in-game ou otimizar outro PC?
+Tens dúvidas sobre o teu setup ou queres otimizar outro PC?
 Entra no nosso Discord da comunidade:
 👉 https://discord.gg/cE8ZaDRGV5
 ================================================================================
@@ -2131,3 +2131,4 @@ while ($true) {
         }
     }
 }
+
