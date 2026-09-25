@@ -45,14 +45,6 @@ param(
     [Parameter(ParameterSetName = "ApplyDirect")]
     [switch]$Apply,
 
-    [Parameter(ParameterSetName = "ApplyDirect")]
-    [switch]$DisableVbs,
-
-    [Parameter(ParameterSetName = "ApplyDirect")]
-    [Parameter(ParameterSetName = "Interactive")]
-    [Parameter(ParameterSetName = "DeployPanelDirect")]
-    [switch]$IncludeVbsToggle,
-
     [Parameter(ParameterSetName = "CleanDirect")]
     [switch]$Clean,
 
@@ -80,17 +72,10 @@ $principal = [Security.Principal.WindowsPrincipal]$currentUser
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[!] Privilégios de Administrador necessários. A reiniciar com elevação..." -ForegroundColor Yellow
     $paramString = ""
-    if ($Apply) {
-        $paramString = " -Apply"
-        if ($DisableVbs) { $paramString += " -DisableVbs" }
-        if ($IncludeVbsToggle) { $paramString += " -IncludeVbsToggle" }
-    }
+    if ($Apply) { $paramString = " -Apply" }
     elseif ($Clean) { $paramString = " -Clean" }
     elseif ($Undo) { $paramString = " -Undo" }
-    elseif ($DeployPanel) {
-        $paramString = " -DeployPanel"
-        if ($IncludeVbsToggle) { $paramString += " -IncludeVbsToggle" }
-    }
+    elseif ($DeployPanel) { $paramString = " -DeployPanel" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
     Start-Process powershell.exe -ArgumentList $argsList -Verb RunAs
     exit
@@ -1362,10 +1347,7 @@ function Deploy-ClientPanel {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$ReportContent,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$IncludeVbsToggle
+        [string]$ReportContent
     )
 
     try {
@@ -1395,9 +1377,23 @@ function Deploy-ClientPanel {
             Copy-Item -Path (Join-Path $Global:SkyBackupDir "*") -Destination $permBackups -Recurse -Force -ErrorAction SilentlyContinue
         }
 
-        # 1. Atalho Reverter Tudo
+        # Limpar atalhos antigos ou duplicados se existirem
+        $obsoleteFiles = @(
+            "[1] Desfazer Tudo (Reverter Otimizacoes).cmd",
+            "[5] Limpar Shaders e Cache (FiveM e CS2).cmd",
+            "[6] Alternar Isolamento do Nucleo (VBS).cmd",
+            "[6] Alternar Isolamento do Nucleo (Jogos e FPS).cmd",
+            "[6] Desinstalar SkyOptimizer e Apagar Tudo.cmd",
+            "[7] Desinstalar SkyOptimizer e Apagar Tudo.cmd"
+        )
+        foreach ($old in $obsoleteFiles) {
+            $oldPath = Join-Path $panelDir $old
+            if (Test-Path $oldPath) { Remove-Item -Path $oldPath -Force -ErrorAction SilentlyContinue }
+        }
+
+        # 1. Atalho Reverter Otimizações
         $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$engine = '$permScript'; if (Test-Path `$engine) { & `$engine -Undo } else { Write-Host '[ERRO] Motor SkyOptimizer nao encontrado em C:\ProgramData\SkyOptimizer\' -ForegroundColor Red; pause } }`"`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[1] Desfazer Tudo (Reverter Otimizacoes).cmd") -Value $undoCmd -Encoding ASCII -Force
+        Set-Content -Path (Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd") -Value $undoCmd -Encoding ASCII -Force
 
         # 2. Atalho Impressora
         $printerCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Impressora`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'Spooler' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico de impressao nao encontrado neste sistema.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'Spooler' -StartupType Automatic; Start-Service -Name 'Spooler' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  SERVICO DE IMPRESSORA ATIVADO COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'O Windows ja pode comunicar com impressoras e faturas.' -ForegroundColor White } else { Stop-Service -Name 'Spooler' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'Spooler' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  SERVICO DE IMPRESSORA DESATIVADO COM SUCESSO' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Processos em segundo plano suspensos para poupar RAM e CPU.' -ForegroundColor White } }`"`r`necho.`r`npause"
@@ -1411,21 +1407,10 @@ function Deploy-ClientPanel {
         $searchCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Pesquisa do Windows`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'WSearch' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico Windows Search nao encontrado.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'WSearch' -StartupType Automatic; Start-Service -Name 'WSearch' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  PESQUISA NA BARRA DE TAREFAS ATIVADA COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'A barra de tarefas voltara a pesquisar todos os ficheiros.' -ForegroundColor White } else { Stop-Service -Name 'WSearch' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'WSearch' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  PESQUISA EM SEGUNDO PLANO DESATIVADA' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Escritas e leituras constantes no disco/SSD eliminadas.' -ForegroundColor White } }`"`r`necho.`r`npause"
         Set-Content -Path (Join-Path $panelDir "[4] Alternar Pesquisa na Barra de Tarefas.cmd") -Value $searchCmd -Encoding ASCII -Force
 
-        # 5. Atalho Limpeza de Shaders
-        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Cache`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$engine = '$permScript'; if (Test-Path `$engine) { & `$engine -Clean } else { Write-Host '[ERRO] Motor SkyOptimizer nao encontrado em C:\ProgramData\SkyOptimizer\' -ForegroundColor Red; pause } }`"`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[5] Limpar Shaders e Cache (FiveM e CS2).cmd") -Value $cleanCmd -Encoding ASCII -Force
-
-        # Limpar atalhos antigos se existirem
-        $oldVbs1 = Join-Path $panelDir "[6] Alternar Isolamento do Nucleo (VBS).cmd"
-        $oldVbs2 = Join-Path $panelDir "[6] Alternar Isolamento do Nucleo (Jogos e FPS).cmd"
-        $oldDel6 = Join-Path $panelDir "[6] Desinstalar SkyOptimizer e Apagar Tudo.cmd"
-        $oldDel7 = Join-Path $panelDir "[7] Desinstalar SkyOptimizer e Apagar Tudo.cmd"
-
-        if ($IncludeVbsToggle) {
-            # 6. Atalho Isolamento do Núcleo (VBS/HVCI)
-            $vbsCmd = @'
+        # 5. Atalho Isolamento do Núcleo (VBS e Jogos)
+        $vbsCmd = @'
 @echo off
-title SkyOptimizer - Controlo de Isolamento do Nucleo (Jogos e FPS)
+title SkyOptimizer - Controlo de Isolamento do Nucleo (VBS e Jogos)
 :: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5
 net session >nul 2>&1
 if %errorLevel% neq 0 (
@@ -1444,7 +1429,7 @@ echo  Desativa-lo liberta a CPU, garantindo mais 5%% a 15%% de FPS e eliminando
 echo  micro-stutters e latencia em quase todos os jogos competitivos.
 echo.
 echo  ------------------------------------------------------------------------------
-echo  GUIA DE COMPATIBILIDADE DE JOGOS:
+echo  GUIA RAPIDO DE COMPATIBILIDADE:
 echo  ------------------------------------------------------------------------------
 echo.
 echo  [!] EXIGEM ESTE RECURSO ATIVADO (Se desligar, o jogo nao arranca no Win11):
@@ -1475,151 +1460,32 @@ echo Discord da Comunidade: https://discord.gg/cE8ZaDRGV5
 echo.
 pause
 '@
-            Set-Content -Path (Join-Path $panelDir "[6] Alternar Isolamento do Nucleo (Jogos e FPS).cmd") -Value $vbsCmd -Encoding ASCII -Force
-            if (Test-Path $oldVbs1) { Remove-Item -Path $oldVbs1 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $oldDel6) { Remove-Item -Path $oldDel6 -Force -ErrorAction SilentlyContinue }
+        Set-Content -Path (Join-Path $panelDir "[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd") -Value $vbsCmd -Encoding ASCII -Force
 
-            # 7. Atalho Desinstalar e Apagar Tudo
-            $delCmd = @'
-@echo off
-title SkyOptimizer - Desinstalar e Remover Ficheiros
-:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    powershell -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
-    exit /b
-)
-chcp 65001 >nul
-cls
-echo ================================================================================
-echo           SkyOptimizer - Desinstalacao e Limpeza Total do Sistema
-echo           Discord Oficial: https://discord.gg/cE8ZaDRGV5
-echo ================================================================================
-echo.
-echo  Este assistente permite remover por completo todas as pastas e backups
-echo  do SkyOptimizer caso pretendas deixar o teu computador 100%% limpo.
-echo.
-echo ================================================================================
-echo.
-set /p confirm="Desejas REVERTER todas as alteracoes antes de apagar os backups? (S/N): "
-if /i "%confirm%"=="s" (
-    if exist "C:\ProgramData\SkyOptimizer\SkyOptimizer.ps1" (
-        powershell -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\SkyOptimizer\SkyOptimizer.ps1" -Undo
-    )
-)
-echo.
-set /p delConfirm="Confirmas a eliminacao definitiva das pastas do SkyOptimizer? (S/N): "
-if /i "%delConfirm%"=="s" (
-    if exist "C:\ProgramData\SkyOptimizer" (
-        rmdir /s /q "C:\ProgramData\SkyOptimizer"
-        echo [OK] Pasta C:\ProgramData\SkyOptimizer removida com sucesso.
-    )
-    echo [OK] A remover a pasta do Painel do Ambiente de Trabalho...
-    start /b "" cmd /c "timeout /t 2 /nobreak >nul & rmdir /s /q \"%~dp0\""
-    echo.
-    echo [SUCESSO] O SkyOptimizer foi desinstalado sem deixar ficheiros residuais.
-) else (
-    echo Operacao cancelada. Ficheiros mantidos.
-)
-echo.
-pause
-'@
-            Set-Content -Path (Join-Path $panelDir "[7] Desinstalar SkyOptimizer e Apagar Tudo.cmd") -Value $delCmd -Encoding ASCII -Force
-        } else {
-            # Se não incluir o atalho de VBS, remove atalhos de VBS caso existam e gera desinstalador como [6]
-            if (Test-Path $oldVbs1) { Remove-Item -Path $oldVbs1 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $oldVbs2) { Remove-Item -Path $oldVbs2 -Force -ErrorAction SilentlyContinue }
-            if (Test-Path $oldDel7) { Remove-Item -Path $oldDel7 -Force -ErrorAction SilentlyContinue }
+        # 6. Atalho Limpeza de Shaders
+        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Cache`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$engine = '$permScript'; if (Test-Path `$engine) { & `$engine -Clean } else { Write-Host '[ERRO] Motor SkyOptimizer nao encontrado em C:\ProgramData\SkyOptimizer\' -ForegroundColor Red; pause } }`"`r`npause"
+        Set-Content -Path (Join-Path $panelDir "[6] Limpar Shaders e Cache (FiveM e CS2).cmd") -Value $cleanCmd -Encoding ASCII -Force
 
-            # 6. Atalho Desinstalar e Apagar Tudo
-            $delCmd = @'
-@echo off
-title SkyOptimizer - Desinstalar e Remover Ficheiros
-:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    powershell -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
-    exit /b
-)
-chcp 65001 >nul
-cls
-echo ================================================================================
-echo           SkyOptimizer - Desinstalacao e Limpeza Total do Sistema
-echo           Discord Oficial: https://discord.gg/cE8ZaDRGV5
-echo ================================================================================
-echo.
-echo  Este assistente permite remover por completo todas as pastas e backups
-echo  do SkyOptimizer caso pretendas deixar o teu computador 100%% limpo.
-echo.
-echo ================================================================================
-echo.
-set /p confirm="Desejas REVERTER todas as alteracoes antes de apagar os backups? (S/N): "
-if /i "%confirm%"=="s" (
-    if exist "C:\ProgramData\SkyOptimizer\SkyOptimizer.ps1" (
-        powershell -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\SkyOptimizer\SkyOptimizer.ps1" -Undo
-    )
-)
-echo.
-set /p delConfirm="Confirmas a eliminacao definitiva das pastas do SkyOptimizer? (S/N): "
-if /i "%delConfirm%"=="s" (
-    if exist "C:\ProgramData\SkyOptimizer" (
-        rmdir /s /q "C:\ProgramData\SkyOptimizer"
-        echo [OK] Pasta C:\ProgramData\SkyOptimizer removida com sucesso.
-    )
-    echo [OK] A remover a pasta do Painel do Ambiente de Trabalho...
-    start /b "" cmd /c "timeout /t 2 /nobreak >nul & rmdir /s /q \"%~dp0\""
-    echo.
-    echo [SUCESSO] O SkyOptimizer foi desinstalado sem deixar ficheiros residuais.
-) else (
-    echo Operacao cancelada. Ficheiros mantidos.
-)
-echo.
-pause
-'@
-            Set-Content -Path (Join-Path $panelDir "[6] Desinstalar SkyOptimizer e Apagar Tudo.cmd") -Value $delCmd -Encoding ASCII -Force
-        }
-
-        # 8. Relatório Antes vs. Depois
+        # Relatório Antes vs. Depois
         if ($ReportContent) {
             Set-Content -Path (Join-Path $panelDir "Relatorio_Otimizacao.txt") -Value $ReportContent -Encoding UTF8 -Force
         }
 
-        # 9. Ficheiro LEIA-ME
-        $readmeVbsSection = if ($IncludeVbsToggle) {
-@"
-
-6. [6] Alternar Isolamento do Nucleo (Jogos e FPS).cmd
-   - Permite alternar o Isolamento do Nucleo. Desativar da mais FPS em
-     FiveM, CS2, ARC Raiders, Warzone, Fortnite, Apex, etc.
-     Mantem ATIVADO apenas se jogares VALORANT ou CS2 na FACEIT.
-
-7. [7] Desinstalar SkyOptimizer e Apagar Tudo.cmd
-   - Remove permanentemente todas as pastas, ficheiros e atalhos do computador
-     caso nao pretendas manter qualquer ficheiro guardado.
-"@
-        } else {
-@"
-
-6. [6] Desinstalar SkyOptimizer e Apagar Tudo.cmd
-   - Remove permanentemente todas as pastas, ficheiros e atalhos do computador
-     caso nao pretendas manter qualquer ficheiro guardado.
-"@
-        }
-
+        # Ficheiro LEIA-ME
         $readmeTxt = @"
 ================================================================================
                     SkyOptimizer - Painel de Controlo & Suporte
 ================================================================================
 
-Este painel foi preparado para o teu computador pelo teu técnico SkyOptimizer.
+Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
 Todas as 43 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
 --------------------------------------------------------------------------------
-1. [1] Desfazer Tudo (Reverter Otimizacoes).cmd
-   - Reverte 100% de todas as alterações efetuadas, repondo os ficheiros de
-     registo originais da tua máquina.
+1. [1] Reverter Todas as Otimizacoes.cmd
+   - Reverte 100% de todas as alterações efetuadas, repondo as configurações
+     e registos originais da tua máquina com segurança total.
 
 2. [2] Alternar Impressora (Ligar-Desligar).cmd
    - Se precisares de imprimir documentos ou ligar uma impressora, clica 2x
@@ -1632,9 +1498,14 @@ Como utilizar estes atalhos de 1 clique:
 4. [4] Alternar Pesquisa na Barra de Tarefas.cmd
    - Ativa ou desativa a indexação constante de ficheiros do Windows Search.
 
-5. [5] Limpar Shaders e Cache (FiveM e CS2).cmd
+5. [5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd
+   - Permite alternar o Isolamento do Núcleo. Desativar dá mais 5% a 15% de FPS
+     em FiveM, CS2, ARC Raiders, Warzone, Fortnite, Apex, etc.
+     Mantém ATIVADO apenas se jogares VALORANT ou CS2 na FACEIT.
+
+6. [6] Limpar Shaders e Cache (FiveM e CS2).cmd
    - Executa mensalmente ou sempre que notares micro-stutters para limpar
-     ficheiros temporários e caches de shaders da gráfica.$readmeVbsSection
+     ficheiros temporários e caches de shaders da gráfica.
 
 --------------------------------------------------------------------------------
 Comunidade & Suporte SkyOptimizer:
@@ -1733,55 +1604,6 @@ function Invoke-SkyOptimize {
         }
     } finally {
         $ProgressPreference = $prevProgress
-    }
-
-    # 1.1 Configuração de Isolamento do Núcleo (VBS / HVCI) para Jogos
-    $deployVbsToggle = $IncludeVbsToggle.IsPresent
-    if ($DisableVbs.IsPresent) {
-        $hvciKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
-        $dgKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"
-        if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }
-        Set-ItemProperty -Path $hvciKey -Name "Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $dgKey -Name "EnableVirtualizationBasedSecurity" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Write-Host "`n[OK] Isolamento do Núcleo (VBS) desativado via parâmetro (-DisableVbs)." -ForegroundColor Green
-    } elseif ($PSCmdlet.ParameterSetName -eq "ApplyDirect") {
-        Write-Host "`n[*] Isolamento do Núcleo (VBS) mantido no estado atual por segurança." -ForegroundColor Gray
-    } else {
-        Write-Host "`n>>> [Perfil de Jogos] Configuração de Isolamento do Núcleo (VBS / HVCI)" -ForegroundColor Magenta
-        Write-Host "O Isolamento do Núcleo reduz entre 5% a 15% dos FPS em FiveM, CS2, ARC Raiders, etc." -ForegroundColor Gray
-        Write-Host "Nota: É OBRIGATÓRIO manter ATIVADO apenas se o cliente jogar VALORANT ou CS2 na FACEIT.`n" -ForegroundColor Gray
-        Write-Host "  [1] Manter VBS Ativado (Cliente joga VALORANT ou FACEIT - Padrão Seguro)" -ForegroundColor Yellow
-        Write-Host "  [2] Desativar VBS     (Cliente joga FiveM, CS2 Premier, ARC Raiders, etc. - Máximo FPS)" -ForegroundColor Green
-        Write-Host "  [3] Manter como está sem alterar" -ForegroundColor White
-        $vbsChoice = Read-Host "`nEscolha o perfil do cliente (1, 2 ou 3) [Padrão: 1]"
-        if ([string]::IsNullOrWhiteSpace($vbsChoice)) { $vbsChoice = "1" }
-
-        switch ($vbsChoice.Trim()) {
-            "2" {
-                $hvciKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
-                $dgKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"
-                if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }
-                Set-ItemProperty -Path $hvciKey -Name "Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-                Set-ItemProperty -Path $dgKey -Name "EnableVirtualizationBasedSecurity" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-                Write-Host "[OK] Isolamento do Núcleo (VBS) desativado para máxima performance em jogos." -ForegroundColor Green
-            }
-            "1" {
-                $hvciKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
-                $dgKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard"
-                if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }
-                Set-ItemProperty -Path $hvciKey -Name "Enabled" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-                Set-ItemProperty -Path $dgKey -Name "EnableVirtualizationBasedSecurity" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-                Write-Host "[OK] Isolamento do Núcleo (VBS) mantido ativado para compatibilidade com Valorant/FACEIT." -ForegroundColor Green
-            }
-            Default {
-                Write-Host "[*] Isolamento do Núcleo mantido no estado atual do sistema." -ForegroundColor Gray
-            }
-        }
-
-        $panelVbsResp = Read-Host "`nDeseja incluir o atalho de alternar VBS no Ambiente de Trabalho do cliente? (S/N) [Padrão: N]"
-        if ($panelVbsResp -match '^(s|sim|y|yes)$') {
-            $deployVbsToggle = $true
-        }
     }
 
     # 2. Execução dos 43 Tweaks
@@ -1921,7 +1743,7 @@ function Invoke-SkyOptimize {
   Data/Hora:     $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
   Computador:    $env:COMPUTERNAME
   Sistema:       $($Global:SkyManifest.OperatingSystem)
-  Núcleo VBS:    $($baselineMetrics.VbsState) -> $($postMetrics.VbsState)
+  Núcleo VBS:    $($baselineMetrics.VbsState)
 --------------------------------------------------------------------------------
   Métrica                      Antes             Depois            Impacto Real
   ------------------------------------------------------------------------------
@@ -1937,7 +1759,7 @@ function Invoke-SkyOptimize {
 ================================================================================
 "@
 
-    Deploy-ClientPanel -ReportContent $reportText -IncludeVbsToggle:$deployVbsToggle | Out-Null
+    Deploy-ClientPanel -ReportContent $reportText | Out-Null
     Write-Host $reportText -ForegroundColor Cyan
 
     # Relatório Final de Execução
@@ -2257,7 +2079,7 @@ if ($Undo) {
 if ($DeployPanel) {
     Clear-Host
     Write-Host ">>> A gerar 'Painel do Cliente' no Ambiente de Trabalho..." -ForegroundColor Cyan
-    Deploy-ClientPanel -IncludeVbsToggle:$IncludeVbsToggle
+    Deploy-ClientPanel
     Write-Host "`n[OK] Painel gerado com sucesso no Desktop." -ForegroundColor Green
     exit 0
 }
@@ -2285,9 +2107,7 @@ while ($true) {
         "2" {
             Clear-Host
             Write-Host ">>> A gerar 'Painel do Cliente' no Ambiente de Trabalho..." -ForegroundColor Cyan
-            $vbsAsk = Read-Host "Deseja incluir o atalho de alternar Isolamento do Núcleo (VBS)? (S/N) [Padrão: N]"
-            $incVbs = ($vbsAsk -match '^(s|sim|y|yes)$')
-            Deploy-ClientPanel -IncludeVbsToggle:$incVbs
+            Deploy-ClientPanel
             Read-Host "`nPressione ENTER para regressar ao menu..."
         }
         "3" {

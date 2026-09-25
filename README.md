@@ -14,9 +14,9 @@ O **SkyOptimizer** é um utilitário consolidado num **único ficheiro PowerShel
 3. **Registo de Chaves Criadas (`created_keys.txt`):** Se uma chave ou valor não existia previamente, é registada para que a reversão a elimine de raiz em vez de tentar restaurar ficheiros inexistentes.
 4. **Manifesto de Estado (`state_backup.json`):** Armazena o plano de energia original, estado da hibernação, modo do SysMain, estado do Armazenamento Reservado e histórico de execução.
 5. **Reversão Completa Integrada (UNDO):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original através da opção `[4]` do menu ou com o parâmetro `.\SkyOptimizer.ps1 -Undo`.
-6. **Desinstalação Limpa (Zero Ficheiros Residuais):** O cliente dispõe de um atalho de 1 clique para reverter alterações e eliminar por completo todas as pastas de backups e ficheiros do computador caso queira deixá-lo 100% virgem.
+6. **Reversão Total de 1 Clique:** O cliente dispõe de um atalho direto no Ambiente de Trabalho para restaurar 100% dos ficheiros de registo e configurações originais da máquina com segurança absoluta.
 7. **Regras Estritas de Hardware & Anti-Cheat:**
-   - **VBS / HVCI Inteligente & Perfil de Jogos:** O técnico define no AnyDesk se o cliente joga VALORANT/FACEIT (mantém VBS ativo) ou jogos como FiveM, CS2, ARC Raiders, Warzone (+5% a +15% FPS com VBS desligado). O atalho no Desktop é opcional para não baralhar o cliente.
+   - **VBS / HVCI Seguro & Guia de Jogos:** O script base não força alterações cegas de VBS. O cliente dispõe do utilitário `[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd` com a lista dos jogos mais jogados do mundo para alternar quando quiser.
    - **Modo MSI Exclusivo:** Aplicado estritamente à GPU dedicada (NVIDIA/AMD) com prioridade padrão (`Undefined`). NUNCA em controladores de áudio, USB ou rede.
    - **Deteção de Energia:** Otimizações de rede (EEE) e portas USB operam exclusivamente em Desktop ou quando ligado à tomada (AC Power), preservando a bateria de portáteis.
    - **HAGS Inteligente:** Só é ativado em sistemas com $\ge$ 6 GB de VRAM dedicada real (64-bit) e drivers WDDM 2.7+.
@@ -34,7 +34,7 @@ No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava
   Data/Hora:     25/09/2026 16:45:10
   Computador:    DESKTOP-CLIENTE
   Sistema:       Microsoft Windows 11 Pro
-  Núcleo VBS:    Ativado -> Desativado (Ajustado p/ Jogos)
+  Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
 --------------------------------------------------------------------------------
   Métrica                      Antes             Depois            Impacto Real
   ------------------------------------------------------------------------------
@@ -57,14 +57,13 @@ No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava
 Ao aplicar a otimização, o SkyOptimizer gera automaticamente a pasta:  
 📁 **`SkyOptimizer - Painel de Controlo`**
 
-Contendo utilitários com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
-* **`[1] Desfazer Tudo (Reverter Otimizacoes).cmd`** — Executa o `Invoke-SkyUndo` diretamente a partir do motor permanente.
+Contendo 6 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
+* **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa o `Invoke-SkyUndo` diretamente a partir do motor permanente para repor 100% das definições originais.
 * **`[2] Alternar Impressora (Ligar-Desligar).cmd`** — Liga ou desliga o serviço de impressão `Spooler` na hora.
 * **`[3] Alternar Bluetooth (Ligar-Desligar).cmd`** — Liga ou desliga os serviços Bluetooth (para comandos sem fios Xbox/PS5 ou auscultadores).
 * **`[4] Alternar Pesquisa na Barra de Tarefas.cmd`** — Liga ou desliga a indexação em segundo plano do `WSearch`.
-* **`[5] Limpar Shaders e Cache (FiveM e CS2).cmd`** — Rotina rápida de manutenção mensal para eliminar engasgos causados por cache de shaders.
-* **`[6] Alternar Isolamento do Nucleo (Jogos e FPS).cmd`** *(Opcional)* — Mostra a lista completa dos jogos mais jogados: desativar para FiveM/CS2/ARC Raiders/Warzone/Fortnite/Apex (+5% a +15% FPS); manter ativo para VALORANT/FACEIT.
-* **`Desinstalar SkyOptimizer e Apagar Tudo.cmd`** — Assistente para reverter alterações e eliminar definitivamente as pastas `C:\ProgramData\SkyOptimizer` e o Painel do Desktop (zero resíduos).
+* **`[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd`** — Permite alternar o VBS com o guia dos jogos mais jogados do mundo (desativar para FiveM/CS2/ARC Raiders/Warzone/Fortnite/Apex; ativar para VALORANT/FACEIT).
+* **`[6] Limpar Shaders e Cache (FiveM e CS2).cmd`** — Rotina rápida de manutenção mensal para eliminar micro-stutters causados por caches corrompidas.
 * **`Relatorio_Otimizacao.txt`** — Comprovativo detalhado de RAM libertada, processos reduzidos e GBs recuperados.
 * **`LEIA-ME (Suporte SkyOptimizer).txt`** — Ficheiro de instruções simples em português com o Discord oficial da comunidade.
 
@@ -203,16 +202,6 @@ Contendo utilitários com **elevação automática de Administrador** (UAC) e ex
 * **Aplicar todas as 43 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
-  ```
-
-* **Aplicar otimizações e desativar VBS (Máxima Performance para FiveM / CS2 / ARC Raiders):**
-  ```powershell
-  .\SkyOptimizer.ps1 -Apply -DisableVbs
-  ```
-
-* **Aplicar otimizações incluindo o atalho de VBS no Painel do Cliente:**
-  ```powershell
-  .\SkyOptimizer.ps1 -Apply -IncludeVbsToggle
   ```
 
 * **Instalar exclusivamente o Painel do Cliente no Desktop:**
