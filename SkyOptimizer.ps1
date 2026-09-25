@@ -1438,10 +1438,10 @@ echo      * FACEIT CS2 (Faceit Anti-Cheat Client)
 echo      * League of Legends (Anti-cheat Riot Vanguard)
 echo.
 echo  [+] GANHAM +5%% A +15%% FPS E MENOS LATENCIA COM ISTO DESATIVADO:
-echo      * FiveM / GTA RP & GTA V
+echo      * FiveM / GTA V
 echo      * Counter-Strike 2 (Matchmaking Oficial / Premier da Valve / VAC)
 echo      * ARC Raiders
-echo      * Call of Duty (Warzone / Modern Warfare III / Black Ops 6)
+echo      * Call of Duty / Warzone
 echo      * Fortnite (Modo Desempenho / DX11 / DX12)
 echo      * Apex Legends
 echo      * Rust
@@ -2131,4 +2131,5 @@ while ($true) {
         }
     }
 }
+
 
