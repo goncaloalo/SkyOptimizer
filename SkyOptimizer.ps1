@@ -609,9 +609,9 @@ function Optimize-NetworkThrottling {
     Backup-RegistryKey -KeyPath $profileKey -BackupName "11_Multimedia_SystemProfile"
 
     Set-ItemProperty -Path $profileKey -Name "NetworkThrottlingIndex" -Value 0xffffffff -Force
-    Set-ItemProperty -Path $profileKey -Name "SystemResponsiveness" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path $profileKey -Name "SystemResponsiveness" -Value 10 -Type DWord -Force
 
-    Write-SkyLog -Message "Network Throttling desativado e SystemResponsiveness definido para 0." -Level "Success"
+    Write-SkyLog -Message "Network Throttling desativado e SystemResponsiveness definido para 10 (proteção de áudio em background)." -Level "Success"
     return $true
 }
 
@@ -2205,6 +2205,7 @@ while ($true) {
         }
     }
 }
+
 
 
 
