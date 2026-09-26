@@ -166,8 +166,14 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ## 🚀 Como Executar
 
-### 1. Modo Interativo (Recomendado no AnyDesk)
-1. Abra uma janela de **PowerShell como Administrador** (ou clique com o botão direito no `SkyOptimizer.ps1` e selecione **"Executar com o PowerShell"**).
+### 1. Modo Rápido (1-Clique via AnyDesk)
+Dê duplo clique no ficheiro **`Executar-SkyOptimizer.bat`**.  
+O iniciador solicita automaticamente privilégios de Administrador (UAC), define a política de execução e abre o menu interativo com codificação UTF-8.
+
+---
+
+### 2. Modo Interativo (PowerShell Manual)
+1. Abra uma janela de **PowerShell como Administrador**.
 2. Se necessário, permita a execução de scripts temporariamente:
    ```powershell
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -176,29 +182,32 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
    ```powershell
    .\SkyOptimizer.ps1
    ```
-4. O menu interativo exibirá a ficha técnica do computador (incluindo estado de VBS):
+4. O menu interativo exibirá a ficha técnica do computador (incluindo tipo de disco, plano de energia e estado de VBS):
    ```text
    ================================================================================
-                    Windows 10/11 Performance Toolkit - Versão: 2.2.0
+                   SkyOptimizer v2.2 - Toolkit de Otimização Windows
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
      Processador:   AMD Ryzen 7 5800X
      Placa Gráfica: NVIDIA GeForce RTX 3070 (8 GB VRAM)
      Memória RAM:   32 GB
+     Disco do SO:   SSD (NVMe)
+     Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
    [1] Aplicar Otimizações Completas (43 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
-   [5] Sair
+   [5] Reparar Integridade do Windows (DISM / SFC)
+   [6] Sair
    ================================================================================
    ```
 
 ---
 
-### 2. Automação via Linha de Comando
+### 3. Automação via Linha de Comando
 * **Aplicar todas as 43 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
@@ -217,6 +226,11 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 * **Reverter 100% das alterações efetuadas:**
   ```powershell
   .\SkyOptimizer.ps1 -Undo
+  ```
+
+* **Reparar integridade do Windows via DISM e SFC:**
+  ```powershell
+  .\SkyOptimizer.ps1 -Repair
   ```
 
 ---

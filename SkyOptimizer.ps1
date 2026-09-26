@@ -52,7 +52,10 @@ param(
     [switch]$Undo,
 
     [Parameter(ParameterSetName = "DeployPanelDirect")]
-    [switch]$DeployPanel
+    [switch]$DeployPanel,
+
+    [Parameter(ParameterSetName = "RepairDirect")]
+    [switch]$Repair
 )
 
 # ==============================================================================
@@ -291,6 +294,24 @@ function Show-SystemHardwareInfo {
             $vramGB = [math]::Round($gpuItem.'HardwareInformation.qwMemorySize' / 1GB)
         }
 
+        # Deteção de Disco do Sistema
+        $diskInfo = "Armazenamento Padrão"
+        try {
+            $physDisk = Get-PhysicalDisk -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($physDisk) {
+                $diskInfo = "$($physDisk.MediaType) ($($physDisk.BusType))"
+            }
+        } catch {}
+
+        # Deteção de Plano de Energia Ativo
+        $powerPlan = "Equilibrado / Padrão"
+        try {
+            $rawScheme = powercfg /getactivescheme 2>$null
+            if ($rawScheme -match '\((.*?)\)') {
+                $powerPlan = $matches[1]
+            }
+        } catch {}
+
         $vbsState = Get-VbsStatus
 
         Write-Host "  Dispositivo:   " -NoNewline -ForegroundColor Gray
@@ -303,6 +324,11 @@ function Show-SystemHardwareInfo {
         Write-Host "$gpuName $(if ($vramGB -gt 0) { "($vramGB GB VRAM)" })" -ForegroundColor White
         Write-Host "  Memória RAM:   " -NoNewline -ForegroundColor Gray
         Write-Host "$ramGB GB" -ForegroundColor White
+        Write-Host "  Disco do SO:   " -NoNewline -ForegroundColor Gray
+        Write-Host "$diskInfo" -ForegroundColor White
+        Write-Host "  Plano Energia: " -NoNewline -ForegroundColor Gray
+        $planColor = if ($powerPlan -match 'Desempenho|Ultimate|Performance') { "Green" } else { "Yellow" }
+        Write-Host "$powerPlan" -ForegroundColor $planColor
         Write-Host "  Núcleo VBS:    " -NoNewline -ForegroundColor Gray
         $vbsColor = if ($vbsState -eq "Ativado") { "Yellow" } else { "Green" }
         Write-Host "$vbsState $(if ($vbsState -eq "Ativado") { "(Valorant/FACEIT Suportados)" } else { "(Máxima Performance)" })" -ForegroundColor $vbsColor
@@ -1524,6 +1550,43 @@ Entra no nosso Discord da comunidade:
     }
 }
 
+function Repair-WindowsSystemIntegrity {
+    [CmdletBinding()]
+    param()
+
+    Clear-Host
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Write-Host "         SkyOptimizer - Verificação de Integridade do Windows (DISM / SFC)" -ForegroundColor Cyan
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Write-Host "`nEsta ferramenta analisa e repara ficheiros corrompidos do sistema operativo." -ForegroundColor Gray
+    Write-Host "Recomendada se o cliente tiver queixas de ecrãs azuis (BSOD), crashes frequentes ou" -ForegroundColor Gray
+    Write-Host "atualizações do Windows interrompidas.`n" -ForegroundColor Gray
+    Write-Host "[!] Tempo estimado: 5 a 10 minutos (necessita de ligação à Internet).`n" -ForegroundColor Yellow
+
+    $conf = Read-Host "Pretende iniciar a reparação de integridade agora? (S/N) [Padrão: N]"
+    if ($conf -notmatch '^(s|sim|y|yes)$') {
+        Write-Host "`n[*] Operação cancelada. A regressar ao menu..." -ForegroundColor Gray
+        Start-Sleep -Seconds 1
+        return $false
+    }
+
+    Write-SkyLog -Message "Início da reparação de integridade do Windows (DISM / SFC)." -Level "Info"
+
+    Write-Host "`n[Passo 1/2] A reparar a base de componentes do Windows via DISM..." -ForegroundColor Magenta
+    Write-Host "Comando: dism.exe /Online /Cleanup-Image /RestoreHealth`n" -ForegroundColor Gray
+    & dism.exe /Online /Cleanup-Image /RestoreHealth
+
+    Write-Host "`n[Passo 2/2] A analisar e reparar ficheiros de sistema protegidos via SFC..." -ForegroundColor Magenta
+    Write-Host "Comando: sfc.exe /scannow`n" -ForegroundColor Gray
+    & sfc.exe /scannow
+
+    Write-Host "`n================================================================================" -ForegroundColor Green
+    Write-Host "  VERIFICAÇÃO DE INTEGRIDADE CONCLUÍDA" -ForegroundColor Green
+    Write-Host "================================================================================" -ForegroundColor Green
+    Write-SkyLog -Message "Reparação de integridade do Windows concluída." -Level "Success"
+    return $true
+}
+
 # ==============================================================================
 # 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 43 TWEAKS)
 # ==============================================================================
@@ -2084,20 +2147,27 @@ if ($DeployPanel) {
     exit 0
 }
 
+if ($Repair) {
+    Repair-WindowsSystemIntegrity
+    exit 0
+}
+
 # Modo Interativo Padrão
 while ($true) {
     Clear-Host
-    Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "      SkyOptimizer v2.2 (Elite)         " -ForegroundColor White
-    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Write-Host "                SkyOptimizer v2.2 - Toolkit de Otimização Windows" -ForegroundColor White
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Show-SystemHardwareInfo
     Write-Host "[1] Aplicar Otimizações Completas (43 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow
-    Write-Host "[5] Sair" -ForegroundColor Red
-    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "[5] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Magenta
+    Write-Host "[6] Sair" -ForegroundColor Red
+    Write-Host "================================================================================" -ForegroundColor Cyan
     
-    $choice = Read-Host "Escolha uma opção"
+    $choice = Read-Host "Escolha uma opção (1-6)"
 
     switch ($choice.Trim()) {
         "1" {
@@ -2121,15 +2191,20 @@ while ($true) {
             exit 0
         }
         "5" {
+            Repair-WindowsSystemIntegrity
+            Read-Host "`nPressione ENTER para regressar ao menu..."
+        }
+        "6" {
             Write-Host "`nA sair do SkyOptimizer. Nenhuma alteração foi realizada." -ForegroundColor Gray
             Start-Sleep -Seconds 1
             exit 0
         }
         Default {
-            Write-Host "`nOpção inválida! Escolha 1, 2, 3, 4 ou 5." -ForegroundColor Red
+            Write-Host "`nOpção inválida! Escolha de 1 a 6." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
 }
+
 
 
