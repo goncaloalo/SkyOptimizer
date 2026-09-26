@@ -1,21 +1,23 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.3 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.4 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
     e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 60 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
+    Aplica 72 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
     MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
     na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
     LLMNR desativado, sniffing de pastas desativado, agrupamento svchost, remoção de bloatware AppX,
     kernel e drivers em RAM (DisablePagingExecutive), desativação de Page Combining, suspensão inteligente
     de indexação em jogos, remoção de limite SMB, desativação de Aero Shake, caminhos longos Win32 (>260 chars),
-    eliminação de DMA Coalescing em rede, controlo de crash BSOD e qualidade de vida.
+    eliminação de DMA Coalescing em rede, controlo de crash BSOD, expansão de cache de ícones (4MB),
+    bloqueio de firmware WPBT, eliminação de audio ducking, menu clássico Win11 sem atrasos, aceleração
+    visual de janelas, telemetria NVIDIA em fundo, qualidade 100% wallpaper e diagnóstico silencioso.
     Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
     no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
 .PARAMETER Apply
-    Aplica diretamente as 60 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica diretamente as 72 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
 .PARAMETER Clean
     Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
@@ -27,7 +29,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 60 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica as 72 otimizações e gera o Painel do Cliente no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -39,7 +41,7 @@
     Reverte todas as otimizações de volta para o estado original da máquina.
 .NOTES
     Autor: SkyOS Team
-    Versão: 2.3.0
+    Versão: 2.4.0
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -90,7 +92,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.3.0 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.4.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -1759,7 +1761,249 @@ function Disable-NetworkDmaCoalescing {
 }
 
 # ==============================================================================
-# 4.15 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.15 BATCH DE TWEAKS DE ELITE ADICIONAIS (INTERFACE, FIRMWARE & DIAGNÓSTICO)
+# ==============================================================================
+
+function Optimize-ExplorerIconCache {
+    [CmdletBinding()]
+    param()
+
+    $expKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
+    Backup-RegistryKey -KeyPath $expKey -BackupName "61_Explorer_MaxCachedIcons"
+    Ensure-RegistryPath -KeyPath $expKey
+
+    # Expande o cache de ícones de 500 para 4096 KB (evita recarregamentos contínuos de ícones e travamentos de pastas)
+    Set-ItemProperty -Path $expKey -Name "Max Cached Icons" -Value "4096" -Type String -Force
+    Write-SkyLog -Message "Cache de ícones do Explorador expandida para 4096 KB (elimina recarregamentos constantes e lentidão em pastas)." -Level "Success"
+    return $true
+}
+
+function Disable-AudioDucking {
+    [CmdletBinding()]
+    param()
+
+    $audioKey = "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio"
+    Backup-RegistryKey -KeyPath $audioKey -BackupName "62_Audio_UserDuckingPreference"
+    Ensure-RegistryPath -KeyPath $audioKey
+
+    # UserDuckingPreference = 3 ("Do nothing" - impede que o Windows reduza o som do jogo em 80% quando alguém fala no Discord/FiveM)
+    Set-ItemProperty -Path $audioKey -Name "UserDuckingPreference" -Value 3 -Type DWord -Force
+    Write-SkyLog -Message "Atenuação automática de áudio (Audio Ducking) desativada (volume de jogos não é reduzido em chamadas do Discord/TeamSpeak)." -Level "Success"
+    return $true
+}
+
+function Set-ClassicContextMenuWin11 {
+    [CmdletBinding()]
+    param()
+
+    # Aplica-se estritamente ao Windows 11 (Build >= 22000)
+    $osBuild = [Environment]::OSVersion.Version.Build
+    if ($osBuild -lt 22000) {
+        Write-SkyLog -Message "Menu de contexto clássico nativo no Windows 10 (Build $osBuild). Ignorado com segurança." -Level "Info"
+        return $true
+    }
+
+    $parentClsid = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}"
+    $clsidKey = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
+    Backup-RegistryKey -KeyPath $parentClsid -BackupName "63_Win11_ClassicContextMenu"
+
+    Ensure-RegistryPath -KeyPath $clsidKey
+    & reg.exe add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /f /ve /t REG_SZ /d "" *> $null
+
+    Write-SkyLog -Message "Menu de contexto clássico restaurado no Windows 11 (elimina o atraso e 'Mostrar mais opções')." -Level "Success"
+    return $true
+}
+
+function Disable-WindowMinimizeAnimations {
+    [CmdletBinding()]
+    param()
+
+    $wmKey = "HKCU:\Control Panel\Desktop\WindowMetrics"
+    Backup-RegistryKey -KeyPath $wmKey -BackupName "64_WindowMetrics_MinAnimate"
+    Ensure-RegistryPath -KeyPath $wmKey
+    Set-ItemProperty -Path $wmKey -Name "MinAnimate" -Value "0" -Type String -Force
+
+    $advKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    Backup-RegistryKey -KeyPath $advKey -BackupName "64_Explorer_TaskbarAnimations"
+    Ensure-RegistryPath -KeyPath $advKey
+    Set-ItemProperty -Path $advKey -Name "TaskbarAnimations" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Animações de minimizar/maximizar e barra de tarefas desativadas (resposta instantânea em Alt-Tab; fontes 100% nítidas)." -Level "Success"
+    return $true
+}
+
+function Set-MaxWallpaperQuality {
+    [CmdletBinding()]
+    param()
+
+    $deskKey = "HKCU:\Control Panel\Desktop"
+    Backup-RegistryKey -KeyPath $deskKey -BackupName "65_Desktop_WallpaperQuality"
+    Ensure-RegistryPath -KeyPath $deskKey
+
+    # 100 = 100% qualidade JPEG (desativa a compressão para 85% padrão do Windows em monitores 1080p/1440p/4K)
+    Set-ItemProperty -Path $deskKey -Name "JPEGImportQuality" -Value 100 -Type DWord -Force
+    Write-SkyLog -Message "Qualidade de importação de papel de parede definida para 100% (elimina compressão e artefactos visuais no ambiente de trabalho)." -Level "Success"
+    return $true
+}
+
+function Disable-EdgeScreenGestures {
+    [CmdletBinding()]
+    param()
+
+    $edgeKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI"
+    Backup-RegistryKey -KeyPath $edgeKey -BackupName "66_EdgeUI_AllowEdgeSwipe"
+    Ensure-RegistryPath -KeyPath $edgeKey
+
+    # Impede gestos acidentais de deslize das bordas do ecrã durante flicks rápidos com o rato no gaming
+    Set-ItemProperty -Path $edgeKey -Name "AllowEdgeSwipe" -Value 0 -Type DWord -Force
+    Write-SkyLog -Message "Gestos de deslize nas extremidades do ecrã (Edge Swipe) desativados (previne interferências de cliques rápidos em jogos)." -Level "Success"
+    return $true
+}
+
+function Disable-WpbtExecution {
+    [CmdletBinding()]
+    param()
+
+    $smKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager"
+    Backup-RegistryKey -KeyPath $smKey -BackupName "67_SessionManager_DisableWpbt"
+    Ensure-RegistryPath -KeyPath $smKey
+
+    # Impede que tabelas de firmware/BIOS (WPBT) injetem bloatware (Armoury Crate, Vantage, App Center) silenciosamente na inicialização
+    Set-ItemProperty -Path $smKey -Name "DisableWpbtExecution" -Value 1 -Type DWord -Force
+    Write-SkyLog -Message "Injeção automática de software da BIOS/Firmware (WPBT) bloqueada com sucesso." -Level "Success"
+    return $true
+}
+
+function Disable-NvidiaTelemetry {
+    [CmdletBinding()]
+    param()
+
+    $isNvidia = $false
+    try {
+        $gpuItem = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000*' -ErrorAction SilentlyContinue | Where-Object { $_.DriverDesc -match 'NVIDIA' }
+        if ($gpuItem) { $isNvidia = $true }
+    } catch {}
+
+    $nvKey = "HKCU:\Software\NVIDIA Corporation\NVControlPanel2\Client"
+    if (Test-Path "HKCU:\Software\NVIDIA Corporation" -or $isNvidia) {
+        Backup-RegistryKey -KeyPath $nvKey -BackupName "68_Nvidia_Telemetry"
+        Ensure-RegistryPath -KeyPath $nvKey
+        Set-ItemProperty -Path $nvKey -Name "OptInOrOutPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+
+    # Desativação de tarefas agendadas de telemetria da NVIDIA (se instaladas)
+    $nvTasks = @("\NvTmMon", "\NvTmRep", "\NvTmRepOnLogon")
+    $tasksDisabled = 0
+    foreach ($tName in $nvTasks) {
+        $matching = Get-ScheduledTask -TaskPath "\" -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like "$($tName.TrimStart('\'))*" }
+        foreach ($t in $matching) {
+            $null = schtasks /Change /TN "$($t.TaskName)" /Disable 2>&1
+            $tasksDisabled++
+        }
+    }
+
+    if ($isNvidia) {
+        Write-SkyLog -Message "Telemetria e relatórios em background da NVIDIA desativados com sucesso ($tasksDisabled tarefa(s) suspensa(s))." -Level "Success"
+    } else {
+        Write-SkyLog -Message "Configuração de telemetria NVIDIA concluída (GPU não-NVIDIA ou componentes não instalados)." -Level "Info"
+    }
+    return $true
+}
+
+function Disable-WindowsFeedbackRequests {
+    [CmdletBinding()]
+    param()
+
+    $dcKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
+    Backup-RegistryKey -KeyPath $dcKey -BackupName "69_DataCollection_Feedback"
+    Ensure-RegistryPath -KeyPath $dcKey
+    Set-ItemProperty -Path $dcKey -Name "DoNotShowFeedbackNotifications" -Value 1 -Type DWord -Force
+
+    $siufKey = "HKCU:\SOFTWARE\Microsoft\Siuf\Rules"
+    Backup-RegistryKey -KeyPath $siufKey -BackupName "69_Siuf_FeedbackRules"
+    Ensure-RegistryPath -KeyPath $siufKey
+    Set-ItemProperty -Path $siufKey -Name "NumberOfSIUFInPeriod" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Inquéritos e notificações de feedback do Windows (SIUF) desativados com sucesso." -Level "Success"
+    return $true
+}
+
+function Disable-SettingsOnlineTips {
+    [CmdletBinding()]
+    param()
+
+    $polKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+    Backup-RegistryKey -KeyPath $polKey -BackupName "70_Policies_OnlineTips"
+    Ensure-RegistryPath -KeyPath $polKey
+    Set-ItemProperty -Path $polKey -Name "AllowOnlineTips" -Value 0 -Type DWord -Force
+
+    $cloudKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+    Backup-RegistryKey -KeyPath $cloudKey -BackupName "70_CloudContent_SoftLanding"
+    Ensure-RegistryPath -KeyPath $cloudKey
+    Set-ItemProperty -Path $cloudKey -Name "DisableSoftLanding" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Dicas online e conteúdos de ajuda remota nas Definições do Windows desativados." -Level "Success"
+    return $true
+}
+
+function Disable-SilentDiagnosticServices {
+    [CmdletBinding()]
+    param()
+
+    $targetServices = @(
+        "diagnosticshub.standardcollector.service",
+        "wercplsupport"
+    )
+
+    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_diagnostic_services.json"
+    $backupState = @{}
+
+    foreach ($sName in $targetServices) {
+        $svc = Get-Service -Name $sName -ErrorAction SilentlyContinue
+        if ($svc) {
+            $cim = Get-CimInstance Win32_Service -Filter "Name='$sName'" -ErrorAction SilentlyContinue
+            $prevMode = if ($cim) { $cim.StartMode } else { "Manual" }
+            $backupState[$sName] = $prevMode
+
+            Stop-Service -Name $sName -Force -ErrorAction SilentlyContinue
+            Set-Service -Name $sName -StartupType Disabled -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Desativação do template de sincronização em segundo plano OneSyncSvc
+    $oneSyncKey = "HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc"
+    if (Test-Path $oneSyncKey) {
+        $curStart = (Get-ItemProperty -Path $oneSyncKey -Name "Start" -ErrorAction SilentlyContinue).Start
+        if ($null -ne $curStart) {
+            $backupState["OneSyncSvc_RegStart"] = $curStart
+            Set-ItemProperty -Path $oneSyncKey -Name "Start" -Value 4 -Type DWord -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    if ($backupState.Count -gt 0) {
+        $backupState | ConvertTo-Json | Out-File -FilePath $backupFile -Encoding UTF8 -Force
+    }
+
+    Write-SkyLog -Message "Serviços adicionais de diagnóstico silencioso e tracing suspensos com sucesso." -Level "Success"
+    return $true
+}
+
+function Disable-GameBarPresenceWriter {
+    [CmdletBinding()]
+    param()
+
+    $gbKey = "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter"
+    Backup-RegistryKey -KeyPath $gbKey -BackupName "72_GameBar_PresenceWriter"
+    Ensure-RegistryPath -KeyPath $gbKey
+
+    # ActivationType = 0 impede o arranque em segundo plano do GameBarPresenceWriter.exe ao abrir qualquer jogo
+    Set-ItemProperty -Path $gbKey -Name "ActivationType" -Value 0 -Type DWord -Force
+    Write-SkyLog -Message "GameBarPresenceWriter em segundo plano desativado (elimina micro-stutter e polling de jogos)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.16 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -1785,7 +2029,7 @@ function Deploy-ClientPanel {
             New-Item -ItemType Directory -Path $permDir -Force | Out-Null
         }
 
-        # SEGURANÇA IP: Garantir que o script mestre com as 60 otimizações NUNCA fica no PC do cliente
+        # SEGURANÇA IP: Garantir que o script mestre com as 72 otimizações NUNCA fica no PC do cliente
         $oldMasterScript = Join-Path $permDir "SkyOptimizer.ps1"
         if (Test-Path $oldMasterScript) {
             Remove-Item -Path $oldMasterScript -Force -ErrorAction SilentlyContinue
@@ -2034,6 +2278,61 @@ if (-not (Test-Path (Join-Path $backupDir "55_CrashControlDiagnostics.reg"))) {
     Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 }
 
+# Servicos de Diagnostico Adicionais
+$diagSvcFile = Join-Path -Path $backupDir -ChildPath "previous_diagnostic_services.json"
+if (Test-Path $diagSvcFile) {
+    try {
+        $diagMap = Get-Content -Path $diagSvcFile -Raw | ConvertFrom-Json
+        foreach ($prop in $diagMap.PSObject.Properties) {
+            $sName = $prop.Name
+            $sVal = $prop.Value
+            if ($sName -eq "OneSyncSvc_RegStart") {
+                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc" -Name "Start" -Value ([int]$sVal) -Type DWord -Force -ErrorAction SilentlyContinue
+            } else {
+                $startup = if ($sVal -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
+                Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
+                if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
+            }
+        }
+        Write-Host "  [OK] Servicos de diagnostico adicionais restaurados." -ForegroundColor Green
+    } catch {}
+}
+
+# Tarefas Nvidia Telemetry
+$nvTasks = Get-ScheduledTask -TaskPath "\" -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match '^NvTm' }
+foreach ($t in $nvTasks) { $null = schtasks /Change /TN "$($t.TaskName)" /Enable 2>&1 }
+
+# Menu de Contexto Classico Win11 (se chave nao existia previamente)
+if (-not (Test-Path (Join-Path $backupDir "63_Win11_ClassicContextMenu.reg"))) {
+    & reg.exe delete "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" /f *> $null
+}
+
+# Fallbacks de Interface, Firmware e Sistema
+if (-not (Test-Path (Join-Path $backupDir "61_Explorer_MaxCachedIcons.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "67_SessionManager_DisableWpbt.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "62_Audio_UserDuckingPreference.reg"))) {
+    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "64_WindowMetrics_MinAnimate.reg"))) {
+    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "64_Explorer_TaskbarAnimations.reg"))) {
+    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "65_Desktop_WallpaperQuality.reg"))) {
+    Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "66_EdgeUI_AllowEdgeSwipe.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "72_GameBar_PresenceWriter.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Force -ErrorAction SilentlyContinue
+}
+
 # 4. Finalizacao
 Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
 $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
@@ -2159,7 +2458,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 60 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 72 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -2243,7 +2542,7 @@ function Repair-WindowsSystemIntegrity {
 }
 
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 60 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 72 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -2260,12 +2559,12 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 2.3.0
+                          Versão: 2.4.0
 ===============================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.3.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.4.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
     $baselineMetrics = [ordered]@{
@@ -2324,8 +2623,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 60 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (60 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 72 Tweaks
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (72 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -2419,7 +2718,23 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 57; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Histórico de Atividades e Tracing de Diagnóstico Contínuo"; Action = { Disable-ActivityHistoryAndDiagnosticTracing } },
         [ordered]@{ Id = 58; Category = "Agendador & Telemetria Avançada"; Name = "Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)"; Action = { Disable-SilentAppInstallation } },
         [ordered]@{ Id = 59; Category = "Agendador & Telemetria Avançada"; Name = "Ativação de Caminhos Longos de Ficheiro Win32 (>260 Chars para FiveM/Mods)"; Action = { Enable-LongFilePaths } },
-        [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de DMA Coalescing em Adaptadores de Rede (Menor Jitter/Latência)"; Action = { Disable-NetworkDmaCoalescing } }
+        [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de DMA Coalescing em Adaptadores de Rede (Menor Jitter/Latência)"; Action = { Disable-NetworkDmaCoalescing } },
+
+        # Categoria 17: Interface, Janelas & Multimédia
+        [ordered]@{ Id = 61; Category = "Interface & Multimédia"; Name = "Expansão da Cache de Ícones do Explorador (4096 KB sem Recarregamentos)"; Action = { Optimize-ExplorerIconCache } },
+        [ordered]@{ Id = 62; Category = "Interface & Multimédia"; Name = "Desativação de Atenuação de Áudio (Volume de Jogos Estável em Chamadas)"; Action = { Disable-AudioDucking } },
+        [ordered]@{ Id = 63; Category = "Interface & Multimédia"; Name = "Menu de Contexto Clássico Instantâneo no Windows 11 (Sem Delays)"; Action = { Set-ClassicContextMenuWin11 } },
+        [ordered]@{ Id = 64; Category = "Interface & Multimédia"; Name = "Desativação de Animações de Minimização (Alt-Tab Instantâneo e Fluido)"; Action = { Disable-WindowMinimizeAnimations } },
+        [ordered]@{ Id = 65; Category = "Interface & Multimédia"; Name = "Qualidade Máxima de Papel de Parede (100% JPEG sem Compressão)"; Action = { Set-MaxWallpaperQuality } },
+        [ordered]@{ Id = 66; Category = "Interface & Multimédia"; Name = "Desativação de Gestos de Extremidade do Ecrã (Edge Swipe no Gaming)"; Action = { Disable-EdgeScreenGestures } },
+
+        # Categoria 18: Firmware, Diagnóstico & Serviços Adicionais
+        [ordered]@{ Id = 67; Category = "Firmware & Diagnóstico"; Name = "Bloqueio de Injeção de Bloatware de Firmware/BIOS no Boot (WPBT)"; Action = { Disable-WpbtExecution } },
+        [ordered]@{ Id = 68; Category = "Firmware & Diagnóstico"; Name = "Desativação de Telemetria e Relatórios em Fundo da NVIDIA"; Action = { Disable-NvidiaTelemetry } },
+        [ordered]@{ Id = 69; Category = "Firmware & Diagnóstico"; Name = "Desativação de Inquéritos e Pedidos de Feedback do Windows (SIUF)"; Action = { Disable-WindowsFeedbackRequests } },
+        [ordered]@{ Id = 70; Category = "Firmware & Diagnóstico"; Name = "Desativação de Dicas Online e Promoções Cloud nas Definições"; Action = { Disable-SettingsOnlineTips } },
+        [ordered]@{ Id = 71; Category = "Firmware & Diagnóstico"; Name = "Desativação de Serviços de Diagnóstico Silencioso (Hub, WerCpl, Sync)"; Action = { Disable-SilentDiagnosticServices } },
+        [ordered]@{ Id = 72; Category = "Firmware & Diagnóstico"; Name = "Desativação de GameBarPresenceWriter em Fundo (Anti-Stutter no Arranque)"; Action = { Disable-GameBarPresenceWriter } }
     )
 
     $currentCategory = ""
@@ -2433,7 +2748,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/60] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/72] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -2543,7 +2858,7 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer v2.2 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Write-Host "`n[+] SkyOptimizer v2.4 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para concluir..."
 }
 
@@ -2565,7 +2880,7 @@ function Invoke-SkyUndo {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                    Módulo de Restauração / Reversão
-                           Versão: 2.2.0
+                           Versão: 2.4.0
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
@@ -2831,6 +3146,61 @@ function Invoke-SkyUndo {
         Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     }
 
+    # Serviços de Diagnóstico Adicionais (Tweak 71)
+    $diagSvcFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_diagnostic_services.json"
+    if (Test-Path $diagSvcFile) {
+        try {
+            $diagMap = Get-Content -Path $diagSvcFile -Raw | ConvertFrom-Json
+            foreach ($prop in $diagMap.PSObject.Properties) {
+                $sName = $prop.Name
+                $sVal = $prop.Value
+                if ($sName -eq "OneSyncSvc_RegStart") {
+                    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc" -Name "Start" -Value ([int]$sVal) -Type DWord -Force -ErrorAction SilentlyContinue
+                } else {
+                    $startup = if ($sVal -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
+                    Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
+                    if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
+                }
+            }
+            Write-Host "  [OK] Serviços de diagnóstico adicionais repostos para os modos de arranque originais." -ForegroundColor Green
+        } catch {}
+    }
+
+    # Tarefas Nvidia Telemetry
+    $nvTasks = Get-ScheduledTask -TaskPath "\" -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match '^NvTm' }
+    foreach ($t in $nvTasks) { $null = schtasks /Change /TN "$($t.TaskName)" /Enable 2>&1 }
+
+    # Menu de Contexto Clássico Win11 (se chave não existia previamente)
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "63_Win11_ClassicContextMenu.reg"))) {
+        & reg.exe delete "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" /f *> $null
+    }
+
+    # Fallbacks de Interface, Firmware e Sistema
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "61_Explorer_MaxCachedIcons.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "67_SessionManager_DisableWpbt.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "62_Audio_UserDuckingPreference.reg"))) {
+        Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "64_WindowMetrics_MinAnimate.reg"))) {
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "64_Explorer_TaskbarAnimations.reg"))) {
+        Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "65_Desktop_WallpaperQuality.reg"))) {
+        Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "66_EdgeUI_AllowEdgeSwipe.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "72_GameBar_PresenceWriter.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Force -ErrorAction SilentlyContinue
+    }
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -2899,10 +3269,10 @@ if ($Repair) {
 while ($true) {
     Clear-Host
     Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host "                SkyOptimizer v2.3 - Toolkit de Otimização Windows" -ForegroundColor White
+    Write-Host "                SkyOptimizer v2.4 - Toolkit de Otimização Windows" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (60 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (72 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow

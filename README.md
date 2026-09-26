@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 60 Otimizações Incluídas (v2.3)
+## ⚡ As 72 Otimizações Incluídas (v2.4)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -195,6 +195,26 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **59** | **Ativação de Caminhos Longos de Ficheiro Win32** | `LongPathsEnabled=1` em `FileSystem`, eliminando o limite legado de 260 caracteres para ficheiros de mods e texturas do FiveM. |
 | **60** | **Desativação de DMA Coalescing em Placas de Rede** | Define `*DMACoalescing=0` em adaptadores de rede, eliminando atrasos de buffer e micro-latência em pacotes de rede (documentado pela Intel). |
 
+### 17. Interface, Janelas & Multimédia (Atlas Engine)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **61** | **Expansão da Cache de Ícones do Explorador** | `Max Cached Icons="4096"` em `Windows\CurrentVersion\Explorer`. Expande de 500 KB para 4 MB, eliminando recarregamentos contínuos de ícones e travamentos de pastas. |
+| **62** | **Desativação de Atenuação de Áudio (Audio Ducking)** | `UserDuckingPreference=3` em `Multimedia\Audio`. Impede que o Windows reduza o som do jogo em 80% quando alguém fala no Discord, FiveM ou TeamSpeak. |
+| **63** | **Menu de Contexto Clássico Instantâneo no Windows 11** | Chave CLSID `{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}`. Devolve o menu clássico instantâneo sem atrasos nem necessidade de clicar em "Mostrar mais opções". |
+| **64** | **Desativação de Animações de Janelas e Barra de Tarefas** | `MinAnimate=0` e `TaskbarAnimations=0`. Elimina atrasos gráficos no Alt-Tab e minimização, mantendo a nitidez de tipos de letra 100% intacta. |
+| **65** | **Qualidade Máxima de Papel de Parede (100% JPEG)** | `JPEGImportQuality=100` em `Control Panel\Desktop`. Desativa a compressão padrão de 85% do Windows, garantindo imagem nítida sem artefactos de compressão. |
+| **66** | **Desativação de Gestos de Extremidade do Ecrã (Edge Swipe)** | `AllowEdgeSwipe=0` em `Policies\Microsoft\Windows\EdgeUI`. Previne a ativação acidental de menus laterais durante movimentos rápidos de mira/rato em jogos. |
+
+### 18. Firmware, Diagnóstico & Serviços Adicionais (Atlas Engine)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **67** | **Bloqueio de Injeção de Bloatware da BIOS/Firmware (WPBT)** | `DisableWpbtExecution=1` em `Session Manager`. Impede que a motherboard/BIOS injete instaladores e bloatware (Armoury Crate, Vantage) na inicialização do Windows. |
+| **68** | **Desativação de Telemetria e Relatórios em Fundo da NVIDIA** | `OptInOrOutPreference=0` e desativação das tarefas agendadas `\NvTm*`. Reduz processos de diagnóstico em background preservando o NVIDIA Control Panel e GeForce Experience. |
+| **69** | **Desativação de Inquéritos e Pedidos de Feedback (SIUF)** | `DoNotShowFeedbackNotifications=1` e `NumberOfSIUFInPeriod=0`. Bloqueia inquéritos invasivos de satisfação do Windows e sondagens do utilizador. |
+| **70** | **Desativação de Dicas Online e Promoções Cloud nas Definições** | `AllowOnlineTips=0` e `DisableSoftLanding=1`. Impede a app Definições de contactar servidores remotos para descarregar conteúdos promocionais e ajuda. |
+| **71** | **Desativação de Serviços de Diagnóstico Silencioso** | Desativa com salvaguarda reversível em JSON os serviços `diagnosticshub.standardcollector.service`, `wercplsupport` e o template `OneSyncSvc`. |
+| **72** | **Desativação de GameBarPresenceWriter em Fundo** | `ActivationType=0` na classe COM de presença de jogos. Impede que o processo seja instanciado em segundo plano no arranque de cada jogo, eliminando micro-stutters. |
+
 ---
 
 ## 🚀 Como Executar
@@ -218,7 +238,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 4. O menu interativo exibirá a ficha técnica do computador (incluindo tipo de disco, plano de energia e estado de VBS):
    ```text
    ================================================================================
-                   SkyOptimizer v2.3 - Toolkit de Otimização Windows
+                   SkyOptimizer v2.4 - Toolkit de Otimização Windows
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
@@ -229,7 +249,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (60 Tweaks)
+   [1] Aplicar Otimizações Completas (72 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -241,7 +261,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 60 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 72 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```
