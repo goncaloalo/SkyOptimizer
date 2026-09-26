@@ -1,6 +1,3 @@
-# Runtime logs and backups
-Logs/*.log
-Backups/*.reg
-Backups/*.txt
-!Logs/.gitkeep
-!Backups/.gitkeep
+# Runtime logs and temporary folders
+Logs/
+Backups/

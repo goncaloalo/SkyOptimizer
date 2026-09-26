@@ -94,20 +94,15 @@ $Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.3.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
-# Diretório de Backups Local (pasta onde o script é executado)
-$Global:SkyBackupDir = Join-Path -Path $scriptDir -ChildPath "Backups"
+# Diretório Central de Backups (Cofre Oculto em C:\ProgramData\SkyOptimizer\Backups)
+# Todos os backups originais vão DIRETAMENTE para o cofre do sistema, mantendo a pasta de trabalho 100% limpa
+$Global:SkyPermDir = Join-Path -Path $env:SystemDrive -ChildPath "ProgramData\SkyOptimizer"
+$Global:SkyBackupDir = Join-Path -Path $Global:SkyPermDir -ChildPath "Backups"
 if (-not (Test-Path $Global:SkyBackupDir)) {
     New-Item -ItemType Directory -Path $Global:SkyBackupDir -Force | Out-Null
 }
 $Global:SkyBackupDir = (Resolve-Path $Global:SkyBackupDir).Path
-
-# Diretório de Backups Permanente (Cofre em C:\ProgramData\SkyOptimizer\Backups)
-$Global:SkyPermDir = Join-Path -Path $env:SystemDrive -ChildPath "ProgramData\SkyOptimizer"
-$Global:SkyPermBackupDir = Join-Path -Path $Global:SkyPermDir -ChildPath "Backups"
-if (-not (Test-Path $Global:SkyPermBackupDir)) {
-    New-Item -ItemType Directory -Path $Global:SkyPermBackupDir -Force | Out-Null
-}
-$Global:SkyPermBackupDir = (Resolve-Path $Global:SkyPermBackupDir).Path
+$Global:SkyPermBackupDir = $Global:SkyBackupDir
 
 # Diretório de Logs
 $logsFolder = Join-Path -Path $scriptDir -ChildPath "Logs"
