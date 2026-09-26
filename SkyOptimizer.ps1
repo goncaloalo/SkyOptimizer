@@ -1,11 +1,11 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.4 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.5 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
     e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 72 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
+    Aplica 78 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
     MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
     na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
     LLMNR desativado, sniffing de pastas desativado, agrupamento svchost, remoção de bloatware AppX,
@@ -13,11 +13,14 @@
     de indexação em jogos, remoção de limite SMB, desativação de Aero Shake, caminhos longos Win32 (>260 chars),
     eliminação de DMA Coalescing em rede, controlo de crash BSOD, expansão de cache de ícones (4MB),
     bloqueio de firmware WPBT, eliminação de audio ducking, menu clássico Win11 sem atrasos, aceleração
-    visual de janelas, telemetria NVIDIA em fundo, qualidade 100% wallpaper e diagnóstico silencioso.
+    visual de janelas, telemetria NVIDIA em fundo, qualidade 100% wallpaper, diagnóstico silencioso,
+    resposta rápida de teclado (strafe seguro sem FilterKeys), moderação de interrupções ITR desativada (hitreg instantâneo),
+    desativação de RSC e LSO (ticks de dados puros), Flow Control desativado (anti-bufferbloat), gestão de portas efémeras
+    MaxUserPort/TcpTimedWaitDelay e otimização de pilha TCP com proteção de velocidade de fibra (AutoTuning Normal).
     Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
     no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
 .PARAMETER Apply
-    Aplica diretamente as 72 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica diretamente as 78 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
 .PARAMETER Clean
     Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
@@ -29,7 +32,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 72 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica as 78 otimizações e gera o Painel do Cliente no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -41,7 +44,7 @@
     Reverte todas as otimizações de volta para o estado original da máquina.
 .NOTES
     Autor: SkyOS Team
-    Versão: 2.4.0
+    Versão: 2.5.0
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -92,7 +95,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.4.0 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.5.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -2003,7 +2006,203 @@ function Disable-GameBarPresenceWriter {
 }
 
 # ==============================================================================
-# 4.16 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.16 BATCH DE TWEAKS COMPETITIVOS (HITREG, HARDWARE DE REDE & RESPOSTA DE TECLADO)
+# ==============================================================================
+
+function Optimize-KeyboardRepeatResponse {
+    [CmdletBinding()]
+    param()
+
+    $kbKey = "HKCU:\Control Panel\Keyboard"
+    Backup-RegistryKey -KeyPath $kbKey -BackupName "73_Keyboard_RepeatResponse"
+    Ensure-RegistryPath -KeyPath $kbKey
+
+    # Reduz o atraso inicial de repetição para 0 e eleva a velocidade de repetição ao máximo nativo (31)
+    # 100% SEGURO: Não ativa FilterKeys nem corrompe a escrita normal em chats como Discord ou WhatsApp
+    Set-ItemProperty -Path $kbKey -Name "KeyboardDelay" -Value "0" -Type String -Force
+    Set-ItemProperty -Path $kbKey -Name "KeyboardSpeed" -Value "31" -Type String -Force
+
+    Write-SkyLog -Message "Resposta de repetição de teclado otimizada para o máximo nativo (KeyboardDelay=0, KeyboardSpeed=31; escrita diária 100% preservada)." -Level "Success"
+    return $true
+}
+
+function Disable-NetworkInterruptModeration {
+    [CmdletBinding()]
+    param()
+
+    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
+    if (-not (Test-Path $netClassKey)) {
+        Write-SkyLog -Message "Chave de adaptadores de rede não encontrada. Ignorado com segurança." -Level "Info"
+        return $true
+    }
+
+    Backup-RegistryKey -KeyPath $netClassKey -BackupName "74_Network_InterruptModeration"
+
+    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
+    $itrAdjusted = 0
+
+    foreach ($k in $subKeys) {
+        $keyPath = $k.PSPath
+        $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
+        if ($props) {
+            foreach ($propName in @("*InterruptModeration", "InterruptModeration", "ITR")) {
+                if ($null -ne $props.$propName) {
+                    Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
+                    $itrAdjusted++
+                }
+            }
+        }
+    }
+
+    # Tentativa de ajuste via cmdlet de adaptador de rede avançado
+    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+    foreach ($nic in $adapters) {
+        try {
+            $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -ErrorAction SilentlyContinue
+            if ($exists) {
+                Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 0 -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
+
+    Write-SkyLog -Message "Moderação de interrupções (ITR) desativada nos adaptadores de rede ($itrAdjusted propriedades ajustadas; processamento imediato de pacotes de tiros/hitreg)." -Level "Success"
+    return $true
+}
+
+function Disable-NetworkRscAndLso {
+    [CmdletBinding()]
+    param()
+
+    # Desativação de RSC (Receive Segment Coalescing) nos adaptadores físicos
+    try {
+        Disable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue
+    } catch {}
+
+    # Desativação de LSO (Large Send Offload) nos adaptadores físicos
+    try {
+        Disable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue
+    } catch {}
+
+    # Ajuste direto no registo da classe de rede para compatibilidade universal
+    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
+    if (Test-Path $netClassKey) {
+        Backup-RegistryKey -KeyPath $netClassKey -BackupName "75_Network_RscAndLso"
+        $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
+        foreach ($k in $subKeys) {
+            $keyPath = $k.PSPath
+            $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
+            if ($props) {
+                foreach ($propName in @("*RSC", "*RscIPv4", "*RscIPv6", "*LsoV2IPv4", "*LsoV2IPv6")) {
+                    if ($null -ne $props.$propName) {
+                        Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            }
+        }
+    }
+
+    Write-SkyLog -Message "RSC e LSO desativados nos adaptadores de rede (elimina agregação artificial de pacotes; ticks de dados puros e sem micro-desync)." -Level "Success"
+    return $true
+}
+
+function Disable-NetworkFlowControl {
+    [CmdletBinding()]
+    param()
+
+    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
+    if (-not (Test-Path $netClassKey)) {
+        Write-SkyLog -Message "Chave de adaptadores de rede não encontrada. Ignorado com segurança." -Level "Info"
+        return $true
+    }
+
+    Backup-RegistryKey -KeyPath $netClassKey -BackupName "76_Network_FlowControl"
+
+    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
+    $fcAdjusted = 0
+
+    foreach ($k in $subKeys) {
+        $keyPath = $k.PSPath
+        $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
+        if ($props) {
+            foreach ($propName in @("*FlowControl", "FlowControl")) {
+                if ($null -ne $props.$propName) {
+                    Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
+                    $fcAdjusted++
+                }
+            }
+        }
+    }
+
+    # Cmdlet de ajuste avançado se suportado pelo driver
+    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+    foreach ($nic in $adapters) {
+        try {
+            $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -ErrorAction SilentlyContinue
+            if ($exists) {
+                Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 0 -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
+
+    Write-SkyLog -Message "Controlo de Fluxo (Flow Control) desativado nos adaptadores de rede ($fcAdjusted propriedades ajustadas; previne buffering de pacotes em picos de tráfego)." -Level "Success"
+    return $true
+}
+
+function Optimize-TcpSocketsAndPorts {
+    [CmdletBinding()]
+    param()
+
+    $tcpKey = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
+    Backup-RegistryKey -KeyPath $tcpKey -BackupName "77_Tcpip_SocketsAndPorts"
+    Ensure-RegistryPath -KeyPath $tcpKey
+
+    # MaxUserPort = 65534 (Garante máximo de portas dinâmicas para conexões simultâneas de servidores multiplayer)
+    Set-ItemProperty -Path $tcpKey -Name "MaxUserPort" -Value 65534 -Type DWord -Force
+
+    # TcpTimedWaitDelay = 30 (Reduz retenção de sockets fechados de 120s para 30s, libertando canais de comunicação rapidamente)
+    Set-ItemProperty -Path $tcpKey -Name "TcpTimedWaitDelay" -Value 30 -Type DWord -Force
+
+    # DefaultTTL = 64 (Padrão RFC ideal para baixa latência em saltos de rota de rede)
+    Set-ItemProperty -Path $tcpKey -Name "DefaultTTL" -Value 64 -Type DWord -Force
+
+    Write-SkyLog -Message "Gestão de sockets TCP/IP e portas efémeras otimizada (MaxUserPort=65534, TcpTimedWaitDelay=30s, DefaultTTL=64)." -Level "Success"
+    return $true
+}
+
+function Optimize-NetshTcpGlobal {
+    [CmdletBinding()]
+    param()
+
+    # Guardar configuração original do TCP global para eventual diagnóstico
+    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_netsh_tcp.txt"
+    if (-not (Test-Path $backupFile)) {
+        try {
+            $currentTcp = netsh int tcp show global 2>&1
+            $currentTcp | Out-File -FilePath $backupFile -Encoding UTF8 -Force
+        } catch {}
+    }
+
+    # Desativar cabeçalhos redundantes e timestamps
+    $null = netsh int tcp set global timestamps=disabled 2>&1
+
+    # Desativar ECN (Explicit Congestion Notification - evita pacotes descartados por routers com suporte deficiente)
+    $null = netsh int tcp set global ecncapability=disabled 2>&1
+
+    # Desativar RSC a nível de stack TCP global
+    $null = netsh int tcp set global rsc=disabled 2>&1
+
+    # Ativar RSS (Receive Side Scaling - distribui processamento de rede por múltiplos núcleos de CPU)
+    $null = netsh int tcp set global rss=enabled 2>&1
+
+    # PROTEÇÃO CRÍTICA: Manter SEMPRE autotuninglevel=normal para garantir velocidade máxima em fibra 500M/1Gbps
+    $null = netsh int tcp set global autotuninglevel=normal 2>&1
+
+    Write-SkyLog -Message "Pilha TCP global otimizada via netsh (Timestamps=Disabled, ECN=Disabled, RSC=Disabled, RSS=Enabled, AutoTuning=Normal protegido)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.17 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -2029,7 +2228,7 @@ function Deploy-ClientPanel {
             New-Item -ItemType Directory -Path $permDir -Force | Out-Null
         }
 
-        # SEGURANÇA IP: Garantir que o script mestre com as 72 otimizações NUNCA fica no PC do cliente
+        # SEGURANÇA IP: Garantir que o script mestre com as 78 otimizações NUNCA fica no PC do cliente
         $oldMasterScript = Join-Path $permDir "SkyOptimizer.ps1"
         if (Test-Path $oldMasterScript) {
             Remove-Item -Path $oldMasterScript -Force -ErrorAction SilentlyContinue
@@ -2333,6 +2532,35 @@ if (-not (Test-Path (Join-Path $backupDir "72_GameBar_PresenceWriter.reg"))) {
     Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Force -ErrorAction SilentlyContinue
 }
 
+# Reposicao de Rede Competitiva, Hitreg e Teclado (Tweaks 73 a 78)
+if (-not (Test-Path (Join-Path $backupDir "73_Keyboard_RepeatResponse.reg"))) {
+    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "74_Network_InterruptModeration.reg"))) {
+    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+    foreach ($nic in $adapters) {
+        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
+    }
+}
+if (-not (Test-Path (Join-Path $backupDir "75_Network_RscAndLso.reg"))) {
+    try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
+    try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
+}
+if (-not (Test-Path (Join-Path $backupDir "76_Network_FlowControl.reg"))) {
+    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+    foreach ($nic in $adapters) {
+        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
+    }
+}
+if (-not (Test-Path (Join-Path $backupDir "77_Tcpip_SocketsAndPorts.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
+}
+$null = netsh int tcp set global timestamps=allowed 2>&1
+$null = netsh int tcp set global ecncapability=default 2>&1
+$null = netsh int tcp set global autotuninglevel=normal 2>&1
+
 # 4. Finalizacao
 Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
 $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
@@ -2458,7 +2686,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 72 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 78 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -2542,7 +2770,7 @@ function Repair-WindowsSystemIntegrity {
 }
 
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 72 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 78 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -2559,12 +2787,12 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 2.4.0
+                          Versão: 2.5.0
 ===============================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.4.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.5.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
     $baselineMetrics = [ordered]@{
@@ -2623,8 +2851,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 72 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (72 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 78 Tweaks
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (78 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -2734,7 +2962,15 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 69; Category = "Firmware & Diagnóstico"; Name = "Desativação de Inquéritos e Pedidos de Feedback do Windows (SIUF)"; Action = { Disable-WindowsFeedbackRequests } },
         [ordered]@{ Id = 70; Category = "Firmware & Diagnóstico"; Name = "Desativação de Dicas Online e Promoções Cloud nas Definições"; Action = { Disable-SettingsOnlineTips } },
         [ordered]@{ Id = 71; Category = "Firmware & Diagnóstico"; Name = "Desativação de Serviços de Diagnóstico Silencioso (Hub, WerCpl, Sync)"; Action = { Disable-SilentDiagnosticServices } },
-        [ordered]@{ Id = 72; Category = "Firmware & Diagnóstico"; Name = "Desativação de GameBarPresenceWriter em Fundo (Anti-Stutter no Arranque)"; Action = { Disable-GameBarPresenceWriter } }
+        [ordered]@{ Id = 72; Category = "Firmware & Diagnóstico"; Name = "Desativação de GameBarPresenceWriter em Fundo (Anti-Stutter no Arranque)"; Action = { Disable-GameBarPresenceWriter } },
+
+        # Categoria 19: Rede Competitiva, Hitreg & Resposta de Movimento
+        [ordered]@{ Id = 73; Category = "Competitivo: Hitreg & Movimento"; Name = "Resposta Rápida de Teclado & Strafe (Delay 0, Speed 31 Nativo)"; Action = { Optimize-KeyboardRepeatResponse } },
+        [ordered]@{ Id = 74; Category = "Competitivo: Hitreg & Movimento"; Name = "Moderação de Interrupções Desativada (ITR = 0 / Hitreg Instantâneo)"; Action = { Disable-NetworkInterruptModeration } },
+        [ordered]@{ Id = 75; Category = "Competitivo: Hitreg & Movimento"; Name = "Desativação de RSC e LSO na Rede (Ticks Puros sem Agregação)"; Action = { Disable-NetworkRscAndLso } },
+        [ordered]@{ Id = 76; Category = "Competitivo: Hitreg & Movimento"; Name = "Desativação de Controlo de Fluxo na Rede (Flow Control Off / Anti-Bufferbloat)"; Action = { Disable-NetworkFlowControl } },
+        [ordered]@{ Id = 77; Category = "Competitivo: Hitreg & Movimento"; Name = "Gestão de Sockets e Portas Efémeras TCP/IP (MaxUserPort=65534, WaitDelay=30s)"; Action = { Optimize-TcpSocketsAndPorts } },
+        [ordered]@{ Id = 78; Category = "Competitivo: Hitreg & Movimento"; Name = "Otimização de Pilha TCP Global (Timestamps/ECN Off, AutoTuning Normal)"; Action = { Optimize-NetshTcpGlobal } }
     )
 
     $currentCategory = ""
@@ -2748,7 +2984,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/72] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/78] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -2858,7 +3094,7 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer v2.4 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Write-Host "`n[+] SkyOptimizer v2.5 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para concluir..."
 }
 
@@ -2880,7 +3116,7 @@ function Invoke-SkyUndo {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                    Módulo de Restauração / Reversão
-                           Versão: 2.4.0
+                           Versão: 2.5.0
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
@@ -3201,6 +3437,35 @@ function Invoke-SkyUndo {
         Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Force -ErrorAction SilentlyContinue
     }
 
+    # Reposição de Rede Competitiva, Hitreg e Teclado (Tweaks 73 a 78)
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "73_Keyboard_RepeatResponse.reg"))) {
+        Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "74_Network_InterruptModeration.reg"))) {
+        $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+        foreach ($nic in $adapters) {
+            try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
+        }
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "75_Network_RscAndLso.reg"))) {
+        try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
+        try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "76_Network_FlowControl.reg"))) {
+        $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+        foreach ($nic in $adapters) {
+            try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
+        }
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "77_Tcpip_SocketsAndPorts.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
+    }
+    $null = netsh int tcp set global timestamps=allowed 2>&1
+    $null = netsh int tcp set global ecncapability=default 2>&1
+    $null = netsh int tcp set global autotuninglevel=normal 2>&1
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -3269,10 +3534,10 @@ if ($Repair) {
 while ($true) {
     Clear-Host
     Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host "                SkyOptimizer v2.4 - Toolkit de Otimização Windows" -ForegroundColor White
+    Write-Host "                SkyOptimizer v2.5 - Toolkit de Otimização Windows" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (72 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (78 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow

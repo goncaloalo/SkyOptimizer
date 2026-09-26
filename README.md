@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 72 Otimizações Incluídas (v2.4)
+## ⚡ As 78 Otimizações Incluídas (v2.5)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -215,6 +215,16 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **71** | **Desativação de Serviços de Diagnóstico Silencioso** | Desativa com salvaguarda reversível em JSON os serviços `diagnosticshub.standardcollector.service`, `wercplsupport` e o template `OneSyncSvc`. |
 | **72** | **Desativação de GameBarPresenceWriter em Fundo** | `ActivationType=0` na classe COM de presença de jogos. Impede que o processo seja instanciado em segundo plano no arranque de cada jogo, eliminando micro-stutters. |
 
+### 19. Rede Competitiva, Hitreg & Resposta de Movimento (Hardware & TCP)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **73** | **Otimização de Taxa e Delay de Repetição do Teclado (Strafe Seguro)** | `KeyboardDelay="0"` e `KeyboardSpeed="31"` em `Control Panel\Keyboard`. Elimina latência no início de repetição de teclas do Windows sem corromper digitação ou backspace no Discord, browser ou chat. |
+| **74** | **Desativação de Moderação de Interrupções na Placa de Rede (ITR Off)** | `*InterruptModeration="0"` na interface de rede física. Força o hardware de rede a interromper a CPU no instante milimétrico em que os pacotes UDP chegam, eliminando buffer em fila de espera. |
+| **75** | **Desativação de RSC e LSO na Rede (Ticks Puros sem Agregação)** | `Disable-NetAdapterRsc` e `Disable-NetAdapterLso`. Impede que a placa de rede agrupe múltiplos segmentos TCP/UDP em grandes blocos, assegurando que cada tick de jogo é processado em tempo real sem desfasamentos visuais/hitbox. |
+| **76** | **Desativação de Controlo de Fluxo na Rede (Flow Control Off / Anti-Bufferbloat)** | `*FlowControl="0"`. Evita o envio e receção de tramas PAUSE em routers/switches domésticos, prevenindo engarrafamentos de pacotes e o efeito de atraso em tiroteios e esquinas. |
+| **77** | **Expansão de Portas Efémeras e Reciclagem de Sockets (MaxUserPort & WaitDelay)** | `MaxUserPort=65534` e `TcpTimedWaitDelay=30` em `Tcpip\Parameters`. Expande a capacidade para 65534 portas e reduz o tempo de retenção de sockets obsoletos de 240s para 30s, prevenindo exaustão de conexões. |
+| **78** | **Otimização da Pilha TCP Global (Timestamps/ECN Off & Proteção AutoTuning)** | Desativa `timestamps` e `ecncapability` desnecessários via Netsh TCP, garantindo e protegendo `autotuninglevel=normal` para manter velocidades máximas de fibra (500M/1Gbps). |
+
 ---
 
 ## 🚀 Como Executar
@@ -238,7 +248,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 4. O menu interativo exibirá a ficha técnica do computador (incluindo tipo de disco, plano de energia e estado de VBS):
    ```text
    ================================================================================
-                   SkyOptimizer v2.4 - Toolkit de Otimização Windows
+                   SkyOptimizer v2.5 - Toolkit de Otimização Windows
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
@@ -249,7 +259,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (72 Tweaks)
+   [1] Aplicar Otimizações Completas (78 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -261,7 +271,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 72 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 78 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```
