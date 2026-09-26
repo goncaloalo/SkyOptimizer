@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 49 Otimizações Incluídas (v2.2)
+## ⚡ As 60 Otimizações Incluídas (v2.3)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -176,6 +176,25 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **48** | **Desativação de Serviços de Telemetria Ocultos** | Desativa `DiagTrack`, `PcaSvc` e `TrkWks` (eliminação de popups, I/O inútil e telemetria de diagnóstico). |
 | **49** | **Remoção Segura de Bloatware Pré-instalado** | Remove Clipchamp, Disney+, Bing News/Weather, Feedback Hub, etc. Preserva 100% da Microsoft Store, Xbox e Gaming Services. |
 
+### 15. Kernel, Memória & I/O Avançado (Atlas Engine)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **50** | **Kernel em RAM & Desativação de Page Combining** | `DisablePagingExecutive=1` (mantém o kernel NT e drivers em RAM física, eliminando page faults/stutters) e `DisablePageCombining=1` (desativa thread de desduplicação de memória). |
+| **51** | **Indexação Windows Search Sensível a Planos de Energia** | `RespectPowerModes=1` (`Gather\Windows\SystemIndex`), forçando o motor de pesquisa a pausar indexação pesada durante jogos ou planos de alto desempenho. |
+| **52** | **Remoção de Estrangulamento de Largura de Banda SMB** | `DisableBandwidthThrottling=1` em `LanmanWorkstation\Parameters`, eliminando limitação artificial de taxa de transferência de ficheiros e streaming em rede. |
+| **53** | **Desativação de Gesto Aero Shake** | `DisallowShaking=1` em `Explorer\Advanced`, impedindo a minimização acidental de Discord, OBS ou janelas do jogo em movimentos rápidos de rato/mira. |
+| **54** | **Desativação de Sondagem de Pouco Espaço em Disco** | `NoLowDiskSpaceChecks=1` em `Policies\Explorer`, eliminando o thread de verificação periódica de partições e popups invasivos em jogos. |
+| **55** | **Controlo de Falhas BSOD (Diagnóstico Visível)** | `AutoReboot=0` e `DisplayParameters=1` em `CrashControl`, permitindo ver o código de erro e driver problemático sem reiniciar instantaneamente. |
+
+### 16. Telemetria Silenciosa, Agendador & Caminhos Longos (Atlas Engine)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **56** | **Desativação de Tarefas Agendadas de Telemetria e Disco** | Desativa 5 tarefas pesadas de agendador (`Consolidator`, `UsbCeip`, `PcaPatchDbTask`, `DiskDiagnosticDataCollector`, etc.) e remove telemetria crítica do `Ubpm`. |
+| **57** | **Desativação de Histórico de Atividades & Tracing de Diagnóstico** | `UploadUserActivities=0`, `PublishUserActivities=0`, `DisableDiagnosticTracing=1` e `CEIPEnable=0`. |
+| **58** | **Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)** | Bloqueia downloads e sugestões automáticas de jogos/apps patrocinadas em segundo plano. |
+| **59** | **Ativação de Caminhos Longos de Ficheiro Win32** | `LongPathsEnabled=1` em `FileSystem`, eliminando o limite legado de 260 caracteres para ficheiros de mods e texturas do FiveM. |
+| **60** | **Desativação de DMA Coalescing em Placas de Rede** | Define `*DMACoalescing=0` em adaptadores de rede, eliminando atrasos de buffer e micro-latência em pacotes de rede (documentado pela Intel). |
+
 ---
 
 ## 🚀 Como Executar
@@ -199,7 +218,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 4. O menu interativo exibirá a ficha técnica do computador (incluindo tipo de disco, plano de energia e estado de VBS):
    ```text
    ================================================================================
-                   SkyOptimizer v2.2 - Toolkit de Otimização Windows
+                   SkyOptimizer v2.3 - Toolkit de Otimização Windows
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
@@ -210,7 +229,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (49 Tweaks)
+   [1] Aplicar Otimizações Completas (60 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -222,7 +241,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 49 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 60 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```

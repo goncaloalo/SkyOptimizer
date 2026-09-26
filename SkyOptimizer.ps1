@@ -1,19 +1,21 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.2 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.3 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
     e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 49 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
+    Aplica 60 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
     MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
     na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
     LLMNR desativado, sniffing de pastas desativado, agrupamento svchost, remoção de bloatware AppX,
-    controlo de Windows Update e qualidade de vida.
+    kernel e drivers em RAM (DisablePagingExecutive), desativação de Page Combining, suspensão inteligente
+    de indexação em jogos, remoção de limite SMB, desativação de Aero Shake, caminhos longos Win32 (>260 chars),
+    eliminação de DMA Coalescing em rede, controlo de crash BSOD e qualidade de vida.
     Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
     no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
 .PARAMETER Apply
-    Aplica diretamente as 49 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica diretamente as 60 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
 .PARAMETER Clean
     Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
@@ -25,7 +27,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 49 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica as 60 otimizações e gera o Painel do Cliente no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -37,7 +39,7 @@
     Reverte todas as otimizações de volta para o estado original da máquina.
 .NOTES
     Autor: SkyOS Team
-    Versão: 2.2.0
+    Versão: 2.3.0
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -88,7 +90,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.2.0 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.3.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -785,13 +787,17 @@ function Set-ManualWindowsUpdate {
     [CmdletBinding()]
     param()
 
+    $wuKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
     $auKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU"
-    Ensure-RegistryPath -KeyPath $auKey
+    Backup-RegistryKey -KeyPath $wuKey -BackupName "21_WU_PowerManagement"
     Backup-RegistryKey -KeyPath $auKey -BackupName "21_WU_AU_ManualAndNoReboot"
+    Ensure-RegistryPath -KeyPath $wuKey
+    Ensure-RegistryPath -KeyPath $auKey
+    Set-ItemProperty -Path $wuKey -Name "AUPowerManagement" -Value 0 -Type DWord -Force
     Set-ItemProperty -Path $auKey -Name "NoAutoRebootWithLoggedOnUsers" -Value 1 -Type DWord -Force
     Set-ItemProperty -Path $auKey -Name "AUOptions" -Value 2 -Type DWord -Force
 
-    Write-SkyLog -Message "Windows Update configurado para notificação/manual sem reinícios automáticos forçados." -Level "Success"
+    Write-SkyLog -Message "Windows Update configurado para manual/sem reinícios forçados e sem acordar o PC da suspensão." -Level "Success"
     return $true
 }
 
@@ -1507,6 +1513,238 @@ function Remove-BloatwareAppX {
 }
 
 # ==============================================================================
+# 4.14 BATCH DE TWEAKS AVANÇADOS DO ATLAS (MEMÓRIA, I/O, REDE & SISTEMA)
+# ==============================================================================
+
+function Optimize-KernelMemoryPaging {
+    [CmdletBinding()]
+    param()
+
+    $memKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
+    Backup-RegistryKey -KeyPath $memKey -BackupName "50_KernelMemoryManagement"
+    Ensure-RegistryPath -KeyPath $memKey
+
+    # DisablePagingExecutive: Mantém o kernel NT e todos os drivers residentes na RAM física (evita page faults e micro-stutters)
+    Set-ItemProperty -Path $memKey -Name "DisablePagingExecutive" -Value 1 -Type DWord -Force
+
+    # DisablePageCombining: Desativa o thread periódico de desduplicação de memória RAM (poupa ciclos de CPU e invalidações de cache)
+    Set-ItemProperty -Path $memKey -Name "DisablePageCombining" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Gestão de memória de kernel otimizada (DisablePagingExecutive=1, DisablePageCombining=1)." -Level "Success"
+    return $true
+}
+
+function Optimize-SearchIndexerPower {
+    [CmdletBinding()]
+    param()
+
+    $searchKey = "HKLM:\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex"
+    Backup-RegistryKey -KeyPath $searchKey -BackupName "51_SearchIndexerPower"
+    Ensure-RegistryPath -KeyPath $searchKey
+
+    # RespectPowerModes: Força a indexação de ficheiros a suspender quando o sistema está em Desempenho Máximo / Gaming
+    Set-ItemProperty -Path $searchKey -Name "RespectPowerModes" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Windows Search configurado para respeitar planos de energia (pausa indexação durante jogos)." -Level "Success"
+    return $true
+}
+
+function Disable-SmbBandwidthThrottling {
+    [CmdletBinding()]
+    param()
+
+    $lanmanKey = "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters"
+    Backup-RegistryKey -KeyPath $lanmanKey -BackupName "52_LanmanSmbThrottling"
+    Ensure-RegistryPath -KeyPath $lanmanKey
+
+    # DisableBandwidthThrottling: Remove o limite artificial de taxa de transferência de rede SMB
+    Set-ItemProperty -Path $lanmanKey -Name "DisableBandwidthThrottling" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Estrangulamento de largura de banda de rede SMB desativado com sucesso." -Level "Success"
+    return $true
+}
+
+function Disable-AeroShake {
+    [CmdletBinding()]
+    param()
+
+    $expAdvKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    Backup-RegistryKey -KeyPath $expAdvKey -BackupName "53_DisallowAeroShaking"
+    Ensure-RegistryPath -KeyPath $expAdvKey
+
+    # DisallowShaking: Impede que movimentos rápidos do rato minimizem janelas de fundo (Discord, OBS, etc.)
+    Set-ItemProperty -Path $expAdvKey -Name "DisallowShaking" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Gesto Aero Shake desativado (elimina minimizações acidentais de janelas em jogos rápidos)." -Level "Success"
+    return $true
+}
+
+function Disable-LowDiskSpaceChecks {
+    [CmdletBinding()]
+    param()
+
+    $polExpKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+    Backup-RegistryKey -KeyPath $polExpKey -BackupName "54_NoLowDiskSpaceChecks"
+    Ensure-RegistryPath -KeyPath $polExpKey
+
+    # NoLowDiskSpaceChecks: Elimina o thread de sondagem periódica de espaço em disco e popups invasivos
+    Set-ItemProperty -Path $polExpKey -Name "NoLowDiskSpaceChecks" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Verificações periódicas de pouco espaço em disco desativadas (poupança de I/O de disco)." -Level "Success"
+    return $true
+}
+
+function Set-CrashControlQuality {
+    [CmdletBinding()]
+    param()
+
+    $crashKey = "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl"
+    Backup-RegistryKey -KeyPath $crashKey -BackupName "55_CrashControlDiagnostics"
+    Ensure-RegistryPath -KeyPath $crashKey
+
+    # AutoReboot = 0: Impede reinício imediato após BSOD para permitir leitura do código de erro e driver .sys
+    Set-ItemProperty -Path $crashKey -Name "AutoReboot" -Value 0 -Type DWord -Force
+
+    # DisplayParameters = 1: Apresenta parâmetros detalhados de diagnóstico no ecrã de crash
+    Set-ItemProperty -Path $crashKey -Name "DisplayParameters" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Controlo de falhas (BSOD) configurado para diagnóstico (sem reinício instantâneo, código visível)." -Level "Success"
+    return $true
+}
+
+function Disable-MaintenanceScheduledTasks {
+    [CmdletBinding()]
+    param()
+
+    $tasks = @(
+        "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
+        "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
+        "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
+        "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
+        "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting"
+    )
+
+    $disabledCount = 0
+    foreach ($t in $tasks) {
+        $null = schtasks /Change /TN $t /Disable 2>&1
+        if ($LASTEXITCODE -eq 0) { $disabledCount++ }
+    }
+
+    $ubpmKey = "HKLM:\System\CurrentControlSet\Control\Ubpm"
+    if (Test-Path $ubpmKey) {
+        Remove-ItemProperty -Path $ubpmKey -Name "CriticalMaintenance_UsageDataReporting" -Force -ErrorAction SilentlyContinue
+    }
+
+    Write-SkyLog -Message "Tarefas agendadas de telemetria e diagnóstico em segundo plano desativadas ($disabledCount tarefas)." -Level "Success"
+    return $true
+}
+
+function Disable-ActivityHistoryAndDiagnosticTracing {
+    [CmdletBinding()]
+    param()
+
+    # Histórico de Atividades / Windows Timeline
+    $sysPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
+    Backup-RegistryKey -KeyPath $sysPolKey -BackupName "57_ActivityHistory_Policy"
+    Ensure-RegistryPath -KeyPath $sysPolKey
+    Set-ItemProperty -Path $sysPolKey -Name "UploadUserActivities" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path $sysPolKey -Name "PublishUserActivities" -Value 0 -Type DWord -Force
+
+    # Tracing de Desempenho / Diagnóstico
+    $diagKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance"
+    Backup-RegistryKey -KeyPath $diagKey -BackupName "57_DiagnosticTracing"
+    Ensure-RegistryPath -KeyPath $diagKey
+    Set-ItemProperty -Path $diagKey -Name "DisableDiagnosticTracing" -Value 1 -Type DWord -Force
+
+    # Programa de Melhoria de Experiência (CEIP)
+    $sqmKey = "HKLM:\SOFTWARE\Policies\Microsoft\SQMClient\Windows"
+    Backup-RegistryKey -KeyPath $sqmKey -BackupName "57_SQMClient_CEIP"
+    Ensure-RegistryPath -KeyPath $sqmKey
+    Set-ItemProperty -Path $sqmKey -Name "CEIPEnable" -Value 0 -Type DWord -Force
+
+    $appvKey = "HKLM:\SOFTWARE\Policies\Microsoft\AppV\CEIP"
+    Backup-RegistryKey -KeyPath $appvKey -BackupName "57_AppV_CEIP"
+    Ensure-RegistryPath -KeyPath $appvKey
+    Set-ItemProperty -Path $appvKey -Name "CEIPEnable" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Histórico de atividades e tracing de diagnóstico contínuo desativados com sucesso." -Level "Success"
+    return $true
+}
+
+function Disable-SilentAppInstallation {
+    [CmdletBinding()]
+    param()
+
+    $cdmKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+    Backup-RegistryKey -KeyPath $cdmKey -BackupName "58_ContentDeliveryManager_SilentApps"
+    Ensure-RegistryPath -KeyPath $cdmKey
+
+    $cdmSettings = [ordered]@{
+        "ContentDeliveryAllowed"          = 0
+        "OemPreInstalledAppsEnabled"      = 0
+        "PreInstalledAppsEnabled"         = 0
+        "PreInstalledAppsEverEnabled"     = 0
+        "SilentInstalledAppsEnabled"      = 0
+        "SubscribedContent-338388Enabled" = 0
+        "SubscribedContent-338389Enabled" = 0
+        "SoftLandingEnabled"              = 0
+        "FeatureManagementEnabled"        = 0
+    }
+
+    foreach ($k in $cdmSettings.Keys) {
+        Set-ItemProperty -Path $cdmKey -Name $k -Value $cdmSettings[$k] -Type DWord -Force
+    }
+
+    Write-SkyLog -Message "Instalação silenciosa de aplicações patrocinadas e sugestões do ContentDeliveryManager desativadas." -Level "Success"
+    return $true
+}
+
+function Enable-LongFilePaths {
+    [CmdletBinding()]
+    param()
+
+    $fsKey = "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem"
+    Backup-RegistryKey -KeyPath $fsKey -BackupName "59_FileSystem_LongPaths"
+    Ensure-RegistryPath -KeyPath $fsKey
+
+    Set-ItemProperty -Path $fsKey -Name "LongPathsEnabled" -Value 1 -Type DWord -Force
+    Write-SkyLog -Message "Suporte para caminhos longos de ficheiro Win32 (>260 caracteres) ativado (protege mods de FiveM e jogos)." -Level "Success"
+    return $true
+}
+
+function Disable-NetworkDmaCoalescing {
+    [CmdletBinding()]
+    param()
+
+    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
+    if (-not (Test-Path $netClassKey)) {
+        Write-SkyLog -Message "Chave de adaptadores de rede não encontrada. Ignorado." -Level "Info"
+        return $true
+    }
+
+    Backup-RegistryKey -KeyPath $netClassKey -BackupName "60_NetworkAdapters_DMACoalescing"
+
+    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
+    $coalesceDisabled = 0
+
+    foreach ($k in $subKeys) {
+        $keyPath = $k.PSPath
+        $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
+        if ($props) {
+            foreach ($propName in @("*DMACoalescing", "DMACoalescing")) {
+                if ($null -ne $props.$propName) {
+                    Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
+                    $coalesceDisabled++
+                }
+            }
+        }
+    }
+
+    Write-SkyLog -Message "DMA Coalescing desativado nos adaptadores de rede ($coalesceDisabled propriedades ajustadas; menor atraso de pacotes/jitter)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
 # 4.15 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
@@ -1645,7 +1883,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 49 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 60 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -1729,7 +1967,7 @@ function Repair-WindowsSystemIntegrity {
 }
 
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 49 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 60 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -1746,12 +1984,12 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 2.2.0
+                          Versão: 2.3.0
 ===============================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.2.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.3.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
     $baselineMetrics = [ordered]@{
@@ -1810,8 +2048,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 49 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (49 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 60 Tweaks
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (60 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -1890,7 +2128,22 @@ function Invoke-SkyOptimize {
         # Categoria 14: Debloat Profundo & svchost
         [ordered]@{ Id = 47; Category = "Debloat Profundo"; Name = "Agrupamento de Processos svchost.exe (Redução de Processos e RAM)"; Action = { Set-SvcHostProcessGrouping } },
         [ordered]@{ Id = 48; Category = "Debloat Profundo"; Name = "Desativação de Serviços de Telemetria (DiagTrack, PcaSvc, TrkWks)"; Action = { Disable-TelemetryServicesDeep } },
-        [ordered]@{ Id = 49; Category = "Debloat Profundo"; Name = "Remoção de Bloatware e Apps Pré-instaladas (Store/Xbox Protegidas)"; Action = { Remove-BloatwareAppX } }
+        [ordered]@{ Id = 49; Category = "Debloat Profundo"; Name = "Remoção de Bloatware e Apps Pré-instaladas (Store/Xbox Protegidas)"; Action = { Remove-BloatwareAppX } },
+
+        # Categoria 15: Kernel, Memória & I/O Avançado (Atlas Engine)
+        [ordered]@{ Id = 50; Category = "Kernel, Memória & I/O"; Name = "Kernel em RAM & Desativação de Page Combining (DisablePagingExecutive)"; Action = { Optimize-KernelMemoryPaging } },
+        [ordered]@{ Id = 51; Category = "Kernel, Memória & I/O"; Name = "Indexação Windows Search Sensível a Planos de Energia (RespectPowerModes)"; Action = { Optimize-SearchIndexerPower } },
+        [ordered]@{ Id = 52; Category = "Kernel, Memória & I/O"; Name = "Remoção de Estrangulamento de Largura de Banda SMB (LanmanWorkstation)"; Action = { Disable-SmbBandwidthThrottling } },
+        [ordered]@{ Id = 53; Category = "Kernel, Memória & I/O"; Name = "Desativação de Gesto Aero Shake (Proteção contra Minimização no Gaming)"; Action = { Disable-AeroShake } },
+        [ordered]@{ Id = 54; Category = "Kernel, Memória & I/O"; Name = "Desativação de Verificação Periódica de Pouco Espaço em Disco"; Action = { Disable-LowDiskSpaceChecks } },
+        [ordered]@{ Id = 55; Category = "Kernel, Memória & I/O"; Name = "Controlo de Falhas BSOD (Sem Reinício Instantâneo, Diagnóstico Visível)"; Action = { Set-CrashControlQuality } },
+
+        # Categoria 16: Telemetria Silenciosa, Agendador & Caminhos Longos (Atlas Engine)
+        [ordered]@{ Id = 56; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Tarefas Agendadas de Telemetria e Diagnóstico de Disco"; Action = { Disable-MaintenanceScheduledTasks } },
+        [ordered]@{ Id = 57; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Histórico de Atividades e Tracing de Diagnóstico Contínuo"; Action = { Disable-ActivityHistoryAndDiagnosticTracing } },
+        [ordered]@{ Id = 58; Category = "Agendador & Telemetria Avançada"; Name = "Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)"; Action = { Disable-SilentAppInstallation } },
+        [ordered]@{ Id = 59; Category = "Agendador & Telemetria Avançada"; Name = "Ativação de Caminhos Longos de Ficheiro Win32 (>260 Chars para FiveM/Mods)"; Action = { Enable-LongFilePaths } },
+        [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de DMA Coalescing em Adaptadores de Rede (Menor Jitter/Latência)"; Action = { Disable-NetworkDmaCoalescing } }
     )
 
     $currentCategory = ""
@@ -1904,7 +2157,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/49] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/60] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -2265,6 +2518,30 @@ function Invoke-SkyUndo {
         } catch {}
     }
 
+    # Reativação de Tarefas Agendadas de Telemetria e Diagnóstico
+    $maintTasks = @(
+        "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
+        "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
+        "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
+        "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
+        "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting"
+    )
+    foreach ($t in $maintTasks) {
+        $null = schtasks /Change /TN $t /Enable 2>&1
+    }
+    Write-Host "  [OK] Tarefas agendadas de diagnóstico/telemetria reativadas." -ForegroundColor Green
+
+    # Reposição de Kernel Memory Paging (se não restaurado por .reg)
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "50_KernelMemoryManagement.reg"))) {
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePagingExecutive" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePageCombining" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+
+    # Reposição de CrashControl (AutoReboot)
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "55_CrashControlDiagnostics.reg"))) {
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -2333,10 +2610,10 @@ if ($Repair) {
 while ($true) {
     Clear-Host
     Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host "                SkyOptimizer v2.2 - Toolkit de Otimização Windows" -ForegroundColor White
+    Write-Host "                SkyOptimizer v2.3 - Toolkit de Otimização Windows" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (49 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (60 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow
