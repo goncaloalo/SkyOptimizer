@@ -94,12 +94,20 @@ $Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.3.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
-# Diretório de Backups
+# Diretório de Backups Local (pasta onde o script é executado)
 $Global:SkyBackupDir = Join-Path -Path $scriptDir -ChildPath "Backups"
 if (-not (Test-Path $Global:SkyBackupDir)) {
     New-Item -ItemType Directory -Path $Global:SkyBackupDir -Force | Out-Null
 }
 $Global:SkyBackupDir = (Resolve-Path $Global:SkyBackupDir).Path
+
+# Diretório de Backups Permanente (Cofre em C:\ProgramData\SkyOptimizer\Backups)
+$Global:SkyPermDir = Join-Path -Path $env:SystemDrive -ChildPath "ProgramData\SkyOptimizer"
+$Global:SkyPermBackupDir = Join-Path -Path $Global:SkyPermDir -ChildPath "Backups"
+if (-not (Test-Path $Global:SkyPermBackupDir)) {
+    New-Item -ItemType Directory -Path $Global:SkyPermBackupDir -Force | Out-Null
+}
+$Global:SkyPermBackupDir = (Resolve-Path $Global:SkyPermBackupDir).Path
 
 # Diretório de Logs
 $logsFolder = Join-Path -Path $scriptDir -ChildPath "Logs"
@@ -225,6 +233,11 @@ function Backup-RegistryKey {
             & reg.exe export "$stdPath" "$backupFile" /y *> $null
             if ($LASTEXITCODE -ne 0) {
                 Write-SkyLog -Message "Falha ao exportar registo de '$stdPath' (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
+            } else {
+                # Sincronização em tempo real para o cofre permanente de backups
+                if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
+                    Copy-Item -Path $backupFile -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
+                }
             }
         }
     } else {
@@ -235,6 +248,9 @@ function Backup-RegistryKey {
         $existing = Get-Content -Path $createdKeysFile -ErrorAction SilentlyContinue
         if ($existing -notcontains $stdPath) {
             Add-Content -Path $createdKeysFile -Value $stdPath -ErrorAction SilentlyContinue
+        }
+        if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
+            Copy-Item -Path $createdKeysFile -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -251,6 +267,9 @@ function Save-SkyManifest {
     $manifestPath = Join-Path -Path $Global:SkyBackupDir -ChildPath "state_backup.json"
     $json = $Global:SkyManifest | ConvertTo-Json -Depth 5
     Set-Content -Path $manifestPath -Value $json -Encoding UTF8 -Force
+    if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
+        Copy-Item -Path $manifestPath -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Get-VbsStatus {
@@ -2309,6 +2328,19 @@ function Invoke-SkyUndo {
 
     # 1. Restauração de Backups de Registo (.reg)
     Write-Host "`n>>> [Passo 1/4] A restaurar ficheiros de Registo (.reg)..." -ForegroundColor Magenta
+
+    # Fallback Automático para o Cofre Permanente (C:\ProgramData\SkyOptimizer\Backups)
+    # Garante que a reversão funciona mesmo que a pasta de execução inicial tenha sido apagada
+    $permBackupDir = Join-Path -Path $env:SystemDrive -ChildPath "ProgramData\SkyOptimizer\Backups"
+    $localHasRegs = (Test-Path $Global:SkyBackupDir) -and ((Get-ChildItem -Path $Global:SkyBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue).Count -gt 0)
+    if (-not $localHasRegs -and (Test-Path $permBackupDir)) {
+        $permHasRegs = (Get-ChildItem -Path $permBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue).Count -gt 0
+        if ($permHasRegs) {
+            $Global:SkyBackupDir = $permBackupDir
+            Write-Host "  [INFO] A utilizar cofre permanente de backups: '$Global:SkyBackupDir'." -ForegroundColor Gray
+            Write-SkyLog -Message "Pasta de backups local ausente. A utilizar cofre permanente em '$Global:SkyBackupDir'." -Level "Info" -NoConsole
+        }
+    }
 
     $restoredRegCount = 0
     if (Test-Path $Global:SkyBackupDir) {
