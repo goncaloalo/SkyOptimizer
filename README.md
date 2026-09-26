@@ -298,6 +298,25 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 
 ---
 
+## 📦 Packs Autónomos & Competitivos (Vendas Avulsas / Clientes Específicos)
+
+Para clientes que já possuem um sistema otimizado (AtlasOS, ReviOS ou ISOs customizadas) ou pretendem apenas tweaks cirúrgicos de gameplay sem modificar o restante sistema operativo, o SkyOptimizer disponibiliza dois utilitários independentes de 1 clique na pasta `Packs/`:
+
+### 1. `SkyStrafe` (Pack Strafe & Teclado Competitivo)
+* **Localização:** `Packs/Pack-Strafe/Executar-Pack-Strafe.bat`
+* **Foco:** Resposta imediata das teclas de movimentação lateral (A/D) e delay mínimo de repetição de teclas do Windows (`KeyboardDelay=0`, `KeyboardSpeed=31`).
+* **Segurança:** 100% seguro para digitação diária (Discord, WhatsApp Web, Word e browsers) sem recurso a FilterKeys agressivo (`Flags=122`).
+* **Reversibilidade:** Backup automático e reposição com 1 clique.
+
+### 2. `SkyHitreg` (Pack White Bullet & Hardware de Rede)
+* **Localização:** `Packs/Pack-WhiteBullet-Hitreg/Executar-Pack-Hitreg.bat`
+* **Foco:** Registo milimétrico de tiros (hitreg), sincronização de modelo/hitbox e menor latência de rede em FiveM, CS2, Fortnite e COD.
+* **Ajustes:** Desativação de Interrupt Moderation (ITR 0), desativação de Flow Control, desativação de RSC e LSO (ticks de servidor sem agregação de pacotes) e otimização de portas efémeras TCP.
+* **Segurança:** Protege o `AutoTuningLevel` para manter 100% da velocidade máxima de ligações de fibra (500M/1Gbps).
+* **Reversibilidade:** Backup automático e reposição com 1 clique.
+
+---
+
 ## 💬 Comunidade & Suporte Oficial SkyOptimizer
 Tens dúvidas sobre o teu setup ou queres otimizar outro computador?  
 Junta-te à nossa comunidade no Discord:  
