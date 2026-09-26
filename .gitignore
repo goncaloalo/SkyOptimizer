@@ -1,6 +1,3 @@
 # Runtime logs and temporary folders
 Logs/
 Backups/
-Backups_*/
-**/Backups_*/
-
