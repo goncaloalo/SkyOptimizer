@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 43 Otimizações Incluídas (v2.2)
+## ⚡ As 46 Otimizações Incluídas (v2.2)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -162,6 +162,13 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **42** | **DirectFlip / Otimizações para Jogos em Janela** | Ativa modelo DirectFlip moderno (`SwapEffectUpgradeEnable=1;`) no Windows 11 para latência zero em Borderless. |
 | **43** | **Re-Trim Otimizado de Memória Flash em SSDs NVMe** | Executa `ReTrim` no disco C: se detetado como SSD, prevenindo engasgos no streaming de texturas no FiveM. |
 
+### 13. Otimizações de Elite (Rede, Explorador & Agendador)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **44** | **Desativação de Protocolo LLMNR na Rede** | `EnableMulticast=0`, eliminando pacotes broadcast desnecessários e ruído na rede local. |
+| **45** | **Desativação de Sniffing de Pastas no Explorador** | `FolderType=NotSpecified`, eliminando o atraso/barra verde ao abrir pastas pesadas e FiveM. |
+| **46** | **Bloqueio de Acordar por Manutenção Automática** | `WakeUp=0`, impedindo o Windows de acordar o PC da suspensão para tarefas pesadas noturnas. |
+
 ---
 
 ## 🚀 Como Executar
@@ -196,7 +203,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (43 Tweaks)
+   [1] Aplicar Otimizações Completas (46 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -208,7 +215,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 43 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 46 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```

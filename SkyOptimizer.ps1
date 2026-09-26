@@ -5,14 +5,14 @@
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
     e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 43 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
+    Aplica 46 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
     MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
     na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
-    controlo de Windows Update e qualidade de vida.
+    LLMNR desativado, sniffing de pastas desativado, controlo de Windows Update e qualidade de vida.
     Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
-    no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders, Reverter e Desinstalar).
+    no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
 .PARAMETER Apply
-    Aplica diretamente as 43 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica diretamente as 46 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
 .PARAMETER Clean
     Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
@@ -24,7 +24,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 43 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica as 46 otimizações e gera o Painel do Cliente no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -1366,7 +1366,50 @@ function Invoke-SsdReTrim {
 }
 
 # ==============================================================================
-# 4.13 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.13 OTIMIZAÇÕES DE ELITE (REDE, EXPLORADOR & AGENDADOR)
+# ==============================================================================
+
+function Disable-LLMNRProtocol {
+    [CmdletBinding()]
+    param()
+
+    $dnsClientKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient"
+    Ensure-RegistryPath -KeyPath $dnsClientKey
+    Backup-RegistryKey -KeyPath $dnsClientKey -BackupName "44_DNSClient_LLMNR"
+    Set-ItemProperty -Path $dnsClientKey -Name "EnableMulticast" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Protocolo LLMNR desativado (eliminação de broadcasts e ruído na rede local)." -Level "Success"
+    return $true
+}
+
+function Disable-AutoFolderDiscovery {
+    [CmdletBinding()]
+    param()
+
+    $bagsKey = "HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags\AllFolders\Shell"
+    Ensure-RegistryPath -KeyPath $bagsKey
+    Backup-RegistryKey -KeyPath $bagsKey -BackupName "45_Explorer_FolderTypeNotSpecified"
+    Set-ItemProperty -Path $bagsKey -Name "FolderType" -Value "NotSpecified" -Type String -Force
+
+    Write-SkyLog -Message "Descoberta automática de pastas desativada no Explorador (abertura instantânea de pastas pesadas e FiveM)." -Level "Success"
+    return $true
+}
+
+function Disable-MaintenanceWakeUp {
+    [CmdletBinding()]
+    param()
+
+    $maintKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Task Scheduler\Maintenance"
+    Ensure-RegistryPath -KeyPath $maintKey
+    Backup-RegistryKey -KeyPath $maintKey -BackupName "46_TaskScheduler_MaintenanceWakeUp"
+    Set-ItemProperty -Path $maintKey -Name "WakeUp" -Value 0 -Type DWord -Force
+
+    Write-SkyLog -Message "Acordar automático por manutenção do sistema desativado (prevenção de tarefas pesadas noturnas)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.14 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -1504,7 +1547,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 43 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 46 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -1588,7 +1631,7 @@ function Repair-WindowsSystemIntegrity {
 }
 
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 43 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 46 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -1669,8 +1712,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 43 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (43 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 46 Tweaks
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (46 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -1739,7 +1782,12 @@ function Invoke-SkyOptimize {
         # Categoria 12: Navegadores, Jogos em Janela & Armazenamento Avançado
         [ordered]@{ Id = 41; Category = "Navegadores & Janelas"; Name = "Desativação de Tarefas em Segundo Plano de Navegadores (Edge/Chrome)"; Action = { Disable-BrowserBackgroundTasks } },
         [ordered]@{ Id = 42; Category = "Navegadores & Janelas"; Name = "DirectFlip / Otimizações para Jogos em Janela (Windows 11)"; Action = { Enable-WindowedOptimizations } },
-        [ordered]@{ Id = 43; Category = "Navegadores & Janelas"; Name = "Re-Trim Otimizado de Memória Flash em SSDs NVMe (Drive C:)"; Action = { Invoke-SsdReTrim } }
+        [ordered]@{ Id = 43; Category = "Navegadores & Janelas"; Name = "Re-Trim Otimizado de Memória Flash em SSDs NVMe (Drive C:)"; Action = { Invoke-SsdReTrim } },
+
+        # Categoria 13: Otimizações de Elite (Rede, Explorador & Agendador)
+        [ordered]@{ Id = 44; Category = "Elite & Agendador"; Name = "Desativação de Protocolo LLMNR (Redução de Ruído na Rede)"; Action = { Disable-LLMNRProtocol } },
+        [ordered]@{ Id = 45; Category = "Elite & Agendador"; Name = "Desativação de Sniffing de Pastas no Explorador (FiveM / Pastas Rápidas)"; Action = { Disable-AutoFolderDiscovery } },
+        [ordered]@{ Id = 46; Category = "Elite & Agendador"; Name = "Bloqueio de Acordar por Manutenção Automática (WakeUp = 0)"; Action = { Disable-MaintenanceWakeUp } }
     )
 
     $currentCategory = ""
@@ -1753,7 +1801,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/43] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/46] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -2159,7 +2207,7 @@ while ($true) {
     Write-Host "                SkyOptimizer v2.2 - Toolkit de Otimização Windows" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (43 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (46 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow
@@ -2205,6 +2253,7 @@ while ($true) {
         }
     }
 }
+
 
 
 
