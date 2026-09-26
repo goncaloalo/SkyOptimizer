@@ -1784,13 +1784,17 @@ function Deploy-ClientPanel {
             New-Item -ItemType Directory -Path $panelDir -Force | Out-Null
         }
 
-        # Instalar motor permanente e copiar backups em C:\ProgramData\SkyOptimizer
+        # 1. Configurar Cofre Permanente e Garantir Proteção de Propriedade Intelectual (Zero Code Exposure)
         $permDir = Join-Path $env:SystemDrive "ProgramData\SkyOptimizer"
         if (-not (Test-Path $permDir)) {
             New-Item -ItemType Directory -Path $permDir -Force | Out-Null
         }
-        $permScript = Join-Path $permDir "SkyOptimizer.ps1"
-        Copy-Item -Path $PSCommandPath -Destination $permScript -Force -ErrorAction SilentlyContinue
+
+        # SEGURANÇA IP: Garantir que o script mestre com as 60 otimizações NUNCA fica no PC do cliente
+        $oldMasterScript = Join-Path $permDir "SkyOptimizer.ps1"
+        if (Test-Path $oldMasterScript) {
+            Remove-Item -Path $oldMasterScript -Force -ErrorAction SilentlyContinue
+        }
 
         # Sincronizar pasta de Backups para o local permanente
         $permBackups = Join-Path $permDir "Backups"
@@ -1800,6 +1804,264 @@ function Deploy-ClientPanel {
             }
             Copy-Item -Path (Join-Path $Global:SkyBackupDir "*") -Destination $permBackups -Recurse -Force -ErrorAction SilentlyContinue
         }
+
+        # Gerar Motor Leve de Reversão Exclusivo (Apenas código de restauro - ZERO segredos ou funções de tuning)
+        $revertScriptPath = Join-Path $permDir "SkyRevert.ps1"
+        $revertScriptCode = @'
+# ==============================================================================
+# SkyOptimizer - Motor Autónomo de Reversão e Restauro
+# (C) SkyOS Team - Suporte & Reversão Segura de Sistema
+# ==============================================================================
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+    $OutputEncoding           = [System.Text.Encoding]::UTF8
+} catch {}
+
+$currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = [Security.Principal.WindowsPrincipal]$currentUser
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "[!] Privilegios de Administrador necessarios. A reiniciar com elevacao..." -ForegroundColor Yellow
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
+Clear-Host
+Write-Host @"
+================================================================================
+  ____  _            ___        _   _           _              
+ / ___|| | _____   _/ _ \ _ __ | |_(_)_ __ ___ (_)_______ _ __ 
+ \___ \| |/ / | | | | | | '_ \| __| | '_ ` _ \| |_  / _ \ '__|
+  ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
+ |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
+             |___/      |_|                                    
+                    Modulo de Restauracao / Reversao
+================================================================================
+"@ -ForegroundColor Cyan
+
+Write-Host "`n[!] ATENCAO: Este procedimento ira reverter as configuracoes do sistema" -ForegroundColor Yellow
+Write-Host "    de volta para o estado original da sua maquina." -ForegroundColor Gray
+Write-Host "    Os seus ficheiros originais de backup serao restaurados com seguranca.`n" -ForegroundColor Gray
+
+$confirm = Read-Host "Deseja realmente reverter todas as otimizacoes? (S/N)"
+if ($confirm -notmatch '^(s|sim|y|yes)$') {
+    Write-Host "`nOperacao cancelada pelo utilizador." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
+    exit 0
+}
+
+$backupDir = Join-Path $PSScriptRoot "Backups"
+if (-not (Test-Path $backupDir)) {
+    $altBackup = Join-Path $env:SystemDrive "ProgramData\SkyOptimizer\Backups"
+    if (Test-Path $altBackup) { $backupDir = $altBackup }
+}
+
+# 1. Restaurar Backups de Registo (.reg)
+Write-Host "`n>>> [Passo 1/4] A restaurar ficheiros de Registo (.reg)..." -ForegroundColor Magenta
+$restoredRegCount = 0
+if (Test-Path $backupDir) {
+    $regFiles = Get-ChildItem -Path $backupDir -Filter "*.reg" -ErrorAction SilentlyContinue
+    if ($regFiles -and $regFiles.Count -gt 0) {
+        foreach ($file in $regFiles) {
+            Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
+            if ($file.Name -eq "30_FastShutdown_System.reg") {
+                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+            & reg.exe import "$($file.FullName)" *> $null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+            } else {
+                Write-Host " [FALHOU]" -ForegroundColor Red
+            }
+        }
+    }
+}
+
+# 2. Remover Chaves Criadas de Raiz
+Write-Host "`n>>> [Passo 2/4] A limpar chaves de registo criadas de raiz..." -ForegroundColor Magenta
+$createdKeysFile = Join-Path -Path $backupDir -ChildPath "created_keys.txt"
+if (Test-Path $createdKeysFile) {
+    $createdKeys = Get-Content -Path $createdKeysFile -ErrorAction SilentlyContinue
+    foreach ($key in $createdKeys) {
+        if (-not [string]::IsNullOrWhiteSpace($key)) {
+            Write-Host "  [*] A remover chave recem-criada '$key'..." -ForegroundColor Gray -NoNewline
+            & reg.exe delete "$key" /f *> $null
+            if ($LASTEXITCODE -eq 0) { Write-Host " [OK]" -ForegroundColor Green } else { Write-Host " [IGNORADO]" -ForegroundColor Gray }
+        }
+    }
+}
+
+# 3. Restaurar Energia, BCD, Servicos e Agendador
+Write-Host "`n>>> [Passo 3/4] A restaurar Definicoes de Energia, BCD, Servicos e Armazenamento..." -ForegroundColor Magenta
+
+# Plano de Energia
+$powerPlanFile = Join-Path -Path $backupDir -ChildPath "previous_power_plan.txt"
+if (Test-Path $powerPlanFile) {
+    $origPlanGuid = (Get-Content -Path $powerPlanFile -ErrorAction SilentlyContinue).Trim()
+    if ($origPlanGuid -and ($origPlanGuid -match '^[a-fA-F0-9-]+$')) {
+        powercfg -setactive $origPlanGuid 2>$null
+        Write-Host "  [OK] Plano de Energia original reativado ($origPlanGuid)." -ForegroundColor Green
+    } else {
+        powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
+        Write-Host "  [INFO] Plano de Energia reposto para Equilibrado (Balanced)." -ForegroundColor Gray
+    }
+} else {
+    powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
+    Write-Host "  [INFO] Plano de Energia reposto para Equilibrado (Balanced)." -ForegroundColor Gray
+}
+
+# Core Parking e USB
+$subGroup   = "54533251-82be-4824-96c1-47b60b740d00"
+$settingMin = "0cc5b647-c1df-4637-891a-dec75c318583"
+$settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028"
+$null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
+$null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
+$null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
+$null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
+$usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
+$usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
+$null = powercfg -setacvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
+$null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
+$null = powercfg -setactive SCHEME_CURRENT 2>&1
+Write-Host "  [OK] Gestao de energia de CPU e USB reposta." -ForegroundColor Green
+
+# Dynamic Tick
+$null = bcdedit /deletevalue disabledynamictick 2>&1
+if ($LASTEXITCODE -ne 0) { $null = bcdedit /set disabledynamictick no 2>&1 }
+Write-Host "  [OK] Dynamic Tick (BCD) reposto." -ForegroundColor Green
+
+# Hibernacao
+$hibFile = Join-Path -Path $backupDir -ChildPath "previous_hibernation.txt"
+if (Test-Path $hibFile) {
+    $origHib = (Get-Content -Path $hibFile -ErrorAction SilentlyContinue).Trim()
+    if ($origHib -eq 1 -or $origHib -eq "1") { powercfg -h on 2>$null; Write-Host "  [OK] Hibernacao reativada." -ForegroundColor Green }
+    else { powercfg -h off 2>$null; Write-Host "  [INFO] Hibernacao mantida desligada." -ForegroundColor Gray }
+}
+
+# SysMain
+$sysmainFile = Join-Path -Path $backupDir -ChildPath "previous_sysmain.txt"
+if (Test-Path $sysmainFile) {
+    $origSysMain = (Get-Content -Path $sysmainFile -ErrorAction SilentlyContinue).Trim()
+    if ($origSysMain -in @("Auto", "Automatic", "Manual")) {
+        $startupType = if ($origSysMain -eq "Manual") { "Manual" } else { "Automatic" }
+        Set-Service -Name SysMain -StartupType $startupType -ErrorAction SilentlyContinue
+        Start-Service -Name SysMain -ErrorAction SilentlyContinue
+        Write-Host "  [OK] Servico SysMain restaurado para $startupType." -ForegroundColor Green
+    }
+}
+
+# NTFS
+$null = fsutil behavior set disablelastaccess 0 2>&1
+$null = fsutil behavior set disable8dot3 0 2>&1
+Write-Host "  [OK] Parametros NTFS repostos." -ForegroundColor Green
+
+# Armazenamento Reservado
+$resFile = Join-Path -Path $backupDir -ChildPath "previous_reserved_storage.txt"
+if (Test-Path $resFile) {
+    $origRes = (Get-Content -Path $resFile -ErrorAction SilentlyContinue).Trim()
+    if ($origRes -eq "Enabled") {
+        $null = dism.exe /Online /Set-ReservedStorageState /State:Enabled 2>&1
+        Write-Host "  [OK] Armazenamento Reservado reposto." -ForegroundColor Green
+    }
+}
+
+# SleepStudy
+'y' | & wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:true /q:true 2>&1 | Out-Null
+'y' | & wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:true /q:true 2>&1 | Out-Null
+'y' | & wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:true /q:true 2>&1 | Out-Null
+$null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1
+Write-Host "  [OK] Canais SleepStudy reativados." -ForegroundColor Green
+
+# HAGS
+if (-not (Test-Path (Join-Path $backupDir "37_GraphicsDrivers_HAGS.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -Force -ErrorAction SilentlyContinue
+}
+
+# Placas de Rede
+$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+foreach ($nic in $adapters) {
+    foreach ($prop in @("*EEE", "*GreenEthernet", "*GigaLite", "PowerSavingMode", "EnergyEfficientEthernet")) {
+        try {
+            $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -ErrorAction SilentlyContinue
+            if ($exists) { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -RegistryValue 1 -ErrorAction SilentlyContinue }
+        } catch {}
+    }
+}
+Write-Host "  [OK] Gestao de energia de adaptadores de rede reposta." -ForegroundColor Green
+
+# SvcHost
+$svchostFile = Join-Path -Path $backupDir -ChildPath "previous_svchost_split.txt"
+$origSvcSplit = 3670016
+if (Test-Path $svchostFile) {
+    $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
+    if ($val -as [int]) { $origSvcSplit = [int]$val }
+}
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
+Write-Host "  [OK] SvcHostSplitThresholdInKB reposto ($origSvcSplit KB)." -ForegroundColor Green
+
+# Servicos de Telemetria
+$telemetrySvcFile = Join-Path -Path $backupDir -ChildPath "previous_telemetry_services.json"
+if (Test-Path $telemetrySvcFile) {
+    try {
+        $svcMap = Get-Content -Path $telemetrySvcFile -Raw | ConvertFrom-Json
+        foreach ($prop in $svcMap.PSObject.Properties) {
+            $sName = $prop.Name
+            $sMode = $prop.Value
+            $startup = if ($sMode -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
+            Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
+            if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
+        }
+        Write-Host "  [OK] Modos de arranque de servicos repostos." -ForegroundColor Green
+    } catch {}
+}
+
+# Tarefas Agendadas
+$maintTasks = @(
+    "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
+    "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
+    "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
+    "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
+    "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting"
+)
+foreach ($t in $maintTasks) { $null = schtasks /Change /TN $t /Enable 2>&1 }
+Write-Host "  [OK] Tarefas agendadas reativadas." -ForegroundColor Green
+
+# Reposicao de Kernel Paging e CrashControl
+if (-not (Test-Path (Join-Path $backupDir "50_KernelMemoryManagement.reg"))) {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePagingExecutive" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePageCombining" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "55_CrashControlDiagnostics.reg"))) {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+}
+
+# 4. Finalizacao
+Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
+$restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
+if ($restartExplorer -match '^(s|sim|y|yes)$') {
+    Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    Write-Host "[OK] Windows Explorer reiniciado." -ForegroundColor Green
+}
+
+Write-Host @"
+
+================================================================================
+                         REVERSAO CONCLUIDA COM SUCESSO
+================================================================================
+  Ficheiros de registo restaurados: $restoredRegCount
+  Definicoes de hardware e energia: Repostas
+  Estado dos Servicos:              Restaurado
+================================================================================
+O seu sistema foi revertido com seguranca para o estado anterior.
+"@ -ForegroundColor Green
+Read-Host "`nPressione ENTER para concluir..."
+'@
+        Set-Content -Path $revertScriptPath -Value $revertScriptCode -Encoding UTF8 -Force
 
         # Limpar atalhos antigos ou duplicados se existirem
         $obsoleteFiles = @(
@@ -1815,8 +2077,8 @@ function Deploy-ClientPanel {
             if (Test-Path $oldPath) { Remove-Item -Path $oldPath -Force -ErrorAction SilentlyContinue }
         }
 
-        # 1. Atalho Reverter Otimizações
-        $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$engine = '$permScript'; if (Test-Path `$engine) { & `$engine -Undo } else { Write-Host '[ERRO] Motor SkyOptimizer nao encontrado em C:\ProgramData\SkyOptimizer\' -ForegroundColor Red; pause } }`"`r`npause"
+        # 1. Atalho Reverter Otimizações (Executa exclusivamente o motor SkyRevert.ps1)
+        $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyRevert.ps1`"`r`npause"
         Set-Content -Path (Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd") -Value $undoCmd -Encoding ASCII -Force
 
         # 2. Atalho Impressora

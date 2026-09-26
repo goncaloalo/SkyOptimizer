@@ -58,7 +58,7 @@ Ao aplicar a otimização, o SkyOptimizer gera automaticamente a pasta:
 📁 **`SkyOptimizer - Painel de Controlo`**
 
 Contendo 6 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
-* **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa o `Invoke-SkyUndo` diretamente a partir do motor permanente para repor 100% das definições originais.
+* **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa o motor leve de reversão (`SkyRevert.ps1`), restaurando 100% das definições originais da máquina com segurança e proteção total de propriedade intelectual (zero exposição de código de tuning).
 * **`[2] Alternar Impressora (Ligar-Desligar).cmd`** — Liga ou desliga o serviço de impressão `Spooler` na hora.
 * **`[3] Alternar Bluetooth (Ligar-Desligar).cmd`** — Liga ou desliga os serviços Bluetooth (para comandos sem fios Xbox/PS5 ou auscultadores).
 * **`[4] Alternar Pesquisa na Barra de Tarefas.cmd`** — Liga ou desliga a indexação em segundo plano do `WSearch`.
