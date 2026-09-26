@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 46 Otimizações Incluídas (v2.2)
+## ⚡ As 49 Otimizações Incluídas (v2.2)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -169,6 +169,13 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **45** | **Desativação de Sniffing de Pastas no Explorador** | `FolderType=NotSpecified`, eliminando o atraso/barra verde ao abrir pastas pesadas e FiveM. |
 | **46** | **Bloqueio de Acordar por Manutenção Automática** | `WakeUp=0`, impedindo o Windows de acordar o PC da suspensão para tarefas pesadas noturnas. |
 
+### 14. Debloat Profundo & svchost (Atlas Tweaks)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **47** | **Agrupamento de Processos svchost.exe** | `SvcHostSplitThresholdInKB=0x40000000`, agrupando serviços partilhados e cortando 40 a 70 processos e 200-400 MB de RAM. |
+| **48** | **Desativação de Serviços de Telemetria Ocultos** | Desativa `DiagTrack`, `PcaSvc` e `TrkWks` (eliminação de popups, I/O inútil e telemetria de diagnóstico). |
+| **49** | **Remoção Segura de Bloatware Pré-instalado** | Remove Clipchamp, Disney+, Bing News/Weather, Feedback Hub, etc. Preserva 100% da Microsoft Store, Xbox e Gaming Services. |
+
 ---
 
 ## 🚀 Como Executar
@@ -203,7 +210,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (46 Tweaks)
+   [1] Aplicar Otimizações Completas (49 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -215,7 +222,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 46 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 49 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```

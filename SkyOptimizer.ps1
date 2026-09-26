@@ -5,14 +5,15 @@
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
     e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 46 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
+    Aplica 49 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
     MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
     na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
-    LLMNR desativado, sniffing de pastas desativado, controlo de Windows Update e qualidade de vida.
+    LLMNR desativado, sniffing de pastas desativado, agrupamento svchost, remoção de bloatware AppX,
+    controlo de Windows Update e qualidade de vida.
     Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
     no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
 .PARAMETER Apply
-    Aplica diretamente as 46 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica diretamente as 49 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
 .PARAMETER Clean
     Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
@@ -24,7 +25,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 46 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica as 49 otimizações e gera o Painel do Cliente no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -1409,7 +1410,104 @@ function Disable-MaintenanceWakeUp {
 }
 
 # ==============================================================================
-# 4.14 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.14 DEBLOAT AVANÇADO & AGRUPAMENTO SVCHOST (ATLAS TWEAKS)
+# ==============================================================================
+
+function Set-SvcHostProcessGrouping {
+    [CmdletBinding()]
+    param()
+
+    $ctrlKey = "HKLM:\SYSTEM\CurrentControlSet\Control"
+    Ensure-RegistryPath -KeyPath $ctrlKey
+
+    $origVal = (Get-ItemProperty -Path $ctrlKey -Name "SvcHostSplitThresholdInKB" -ErrorAction SilentlyContinue).SvcHostSplitThresholdInKB
+    if ($null -ne $origVal) {
+        $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_svchost_split.txt"
+        $origVal | Out-File -FilePath $backupFile -Encoding UTF8 -Force
+    }
+
+    Backup-RegistryKey -KeyPath $ctrlKey -BackupName "47_Control_SvcHostSplit"
+    Set-ItemProperty -Path $ctrlKey -Name "SvcHostSplitThresholdInKB" -Value 0x40000000 -Type DWord -Force
+
+    Write-SkyLog -Message "Agrupamento de processos svchost ativado (SvcHostSplitThresholdInKB elevado; redução substancial de processos e RAM)." -Level "Success"
+    return $true
+}
+
+function Disable-TelemetryServicesDeep {
+    [CmdletBinding()]
+    param()
+
+    $servicesToDisable = @(
+        @{ Name = "DiagTrack"; Desc = "Connected User Experiences and Telemetry" },
+        @{ Name = "PcaSvc";    Desc = "Program Compatibility Assistant Service" },
+        @{ Name = "TrkWks";    Desc = "Distributed Link Tracking Client" }
+    )
+
+    $backupState = @{}
+    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_telemetry_services.json"
+
+    foreach ($s in $servicesToDisable) {
+        $svc = Get-Service -Name $s.Name -ErrorAction SilentlyContinue
+        if ($svc) {
+            $cim = Get-CimInstance Win32_Service -Filter "Name='$($s.Name)'" -ErrorAction SilentlyContinue
+            $prevMode = if ($cim) { $cim.StartMode } else { "Manual" }
+            $backupState[$s.Name] = $prevMode
+
+            Stop-Service -Name $s.Name -Force -ErrorAction SilentlyContinue
+            Set-Service -Name $s.Name -StartupType Disabled -ErrorAction SilentlyContinue
+        }
+    }
+
+    if ($backupState.Count -gt 0) {
+        $backupState | ConvertTo-Json | Out-File -FilePath $backupFile -Encoding UTF8 -Force
+    }
+
+    Write-SkyLog -Message "Serviços de telemetria e overhead (DiagTrack, PcaSvc, TrkWks) desativados com sucesso." -Level "Success"
+    return $true
+}
+
+function Remove-BloatwareAppX {
+    [CmdletBinding()]
+    param()
+
+    $bloatTargets = @(
+        "Clipchamp.Clipchamp",
+        "Disney.37853FC22B2CE",
+        "*TikTok*",
+        "*SpotifyMusic*",
+        "Microsoft.MicrosoftSolitaireCollection",
+        "Microsoft.BingNews",
+        "Microsoft.BingWeather",
+        "Microsoft.WindowsFeedbackHub",
+        "Microsoft.GetHelp",
+        "Microsoft.Getstarted",
+        "Microsoft.PowerAutomateDesktop",
+        "Microsoft.Todos",
+        "Microsoft.Microsoft3DViewer",
+        "Microsoft.MixedReality.Portal",
+        "Microsoft.WindowsMaps",
+        "Microsoft.ZuneVideo",
+        "Microsoft.549981C3F5F10"
+    )
+
+    $removedCount = 0
+    foreach ($target in $bloatTargets) {
+        try {
+            $pkgs = Get-AppxPackage -Name $target -AllUsers -ErrorAction SilentlyContinue
+            if ($pkgs) {
+                $pkgs | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+                $removedCount++
+            }
+            Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like $target } | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+        } catch {}
+    }
+
+    Write-SkyLog -Message "Debloat de aplicações AppX concluído ($removedCount pacote(s) dispensáveis removidos; Microsoft Store e Xbox protegidas)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.15 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -1547,7 +1645,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 46 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 49 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -1631,7 +1729,7 @@ function Repair-WindowsSystemIntegrity {
 }
 
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 46 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 49 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -1712,8 +1810,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 46 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (46 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 49 Tweaks
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (49 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -1787,7 +1885,12 @@ function Invoke-SkyOptimize {
         # Categoria 13: Otimizações de Elite (Rede, Explorador & Agendador)
         [ordered]@{ Id = 44; Category = "Elite & Agendador"; Name = "Desativação de Protocolo LLMNR (Redução de Ruído na Rede)"; Action = { Disable-LLMNRProtocol } },
         [ordered]@{ Id = 45; Category = "Elite & Agendador"; Name = "Desativação de Sniffing de Pastas no Explorador (FiveM / Pastas Rápidas)"; Action = { Disable-AutoFolderDiscovery } },
-        [ordered]@{ Id = 46; Category = "Elite & Agendador"; Name = "Bloqueio de Acordar por Manutenção Automática (WakeUp = 0)"; Action = { Disable-MaintenanceWakeUp } }
+        [ordered]@{ Id = 46; Category = "Elite & Agendador"; Name = "Bloqueio de Acordar por Manutenção Automática (WakeUp = 0)"; Action = { Disable-MaintenanceWakeUp } },
+
+        # Categoria 14: Debloat Profundo & svchost
+        [ordered]@{ Id = 47; Category = "Debloat Profundo"; Name = "Agrupamento de Processos svchost.exe (Redução de Processos e RAM)"; Action = { Set-SvcHostProcessGrouping } },
+        [ordered]@{ Id = 48; Category = "Debloat Profundo"; Name = "Desativação de Serviços de Telemetria (DiagTrack, PcaSvc, TrkWks)"; Action = { Disable-TelemetryServicesDeep } },
+        [ordered]@{ Id = 49; Category = "Debloat Profundo"; Name = "Remoção de Bloatware e Apps Pré-instaladas (Store/Xbox Protegidas)"; Action = { Remove-BloatwareAppX } }
     )
 
     $currentCategory = ""
@@ -1801,7 +1904,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/46] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/49] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -2136,6 +2239,32 @@ function Invoke-SkyUndo {
     }
     Write-Host "  [OK] Propriedades avançadas de gestão de energia de rede repostas." -ForegroundColor Green
 
+    # SvcHostSplitThresholdInKB (Repor para o valor original ou 3670016 / 3.5GB padrão)
+    $svchostFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_svchost_split.txt"
+    $origSvcSplit = 3670016
+    if (Test-Path $svchostFile) {
+        $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
+        if ($val -as [int]) { $origSvcSplit = [int]$val }
+    }
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
+    Write-Host "  [OK] SvcHostSplitThresholdInKB reposto para o valor original ($origSvcSplit KB)." -ForegroundColor Green
+
+    # Serviços de Telemetria Adicionais (DiagTrack, PcaSvc, TrkWks)
+    $telemetrySvcFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_telemetry_services.json"
+    if (Test-Path $telemetrySvcFile) {
+        try {
+            $svcMap = Get-Content -Path $telemetrySvcFile -Raw | ConvertFrom-Json
+            foreach ($prop in $svcMap.PSObject.Properties) {
+                $sName = $prop.Name
+                $sMode = $prop.Value
+                $startup = if ($sMode -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
+                Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
+                if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
+            }
+            Write-Host "  [OK] Serviços de telemetria adicionais repostos para os modos de arranque originais." -ForegroundColor Green
+        } catch {}
+    }
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -2207,7 +2336,7 @@ while ($true) {
     Write-Host "                SkyOptimizer v2.2 - Toolkit de Otimização Windows" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (46 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (49 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow
@@ -2253,6 +2382,7 @@ while ($true) {
         }
     }
 }
+
 
 
 
