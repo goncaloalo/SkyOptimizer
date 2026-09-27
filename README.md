@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 78 Otimizações Incluídas (v2.5)
+## ⚡ As 80 Otimizações Incluídas (v2.6)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -84,8 +84,8 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 ### 2. Input & Gaming
 | # | Tweak | Descrição Técnica & Segurança |
 |---|-------|--------------------------------|
-| **7** | **Desativação de Aceleração do Rato** | Desativa o *Enhanced Pointer Precision* para resposta linear 1:1 de mira muscular. |
-| **8** | **Desativação de Suspensão Seletiva USB** | Impede portas USB de entrarem em micro-suspensão de energia. |
+| **7** | **Desativação de Aceleração do Rato & Curva MarkC 1:1** | Desativa o *Enhanced Pointer Precision*, define sensibilidade neutra 6/11 e aplica a curva MarkC 1:1 linear. |
+| **8** | **Desativação de Suspensão Seletiva USB & Controladores** | Impede portas USB de entrarem em micro-suspensão e remove poupança de energia nos controladores (estabilidade a 1000Hz-8000Hz). |
 | **9** | **Desativação de Xbox Game DVR / Game Bar** | Desativa captura e codificação de vídeo de fundo, libertando recursos da GPU. |
 
 ### 3. Rede & Latência
@@ -225,6 +225,12 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **77** | **Expansão de Portas Efémeras e Reciclagem de Sockets (MaxUserPort & WaitDelay)** | `MaxUserPort=65534` e `TcpTimedWaitDelay=30` em `Tcpip\Parameters`. Expande a capacidade para 65534 portas e reduz o tempo de retenção de sockets obsoletos de 240s para 30s, prevenindo exaustão de conexões. |
 | **78** | **Otimização da Pilha TCP Global (Timestamps/ECN Off & Proteção AutoTuning)** | Desativa `timestamps` e `ecncapability` desnecessários via Netsh TCP, garantindo e protegendo `autotuninglevel=normal` para manter velocidades máximas de fibra (500M/1Gbps). |
 
+### 20. Modo de Jogo & Apresentação Gráfica (FSO)
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **79** | **Ativação do Modo de Jogo Nativo do Windows (Game Mode)** | `AutoGameModeEnabled=1` em `SOFTWARE\Microsoft\GameBar`. Prioriza alocação de GPU e agendamento de threads de CPU exclusivamente para o jogo ativo, suspendendo tarefas de manutenção de fundo do Windows. |
+| **80** | **Otimização de Ecrã Inteiro e Apresentação (FSEBehaviorMode=2)** | `GameDVR_FSEBehaviorMode=2` em `System\GameConfigStore`. Desativa o hooking forçado de Fullscreen Optimizations híbridas, eliminando conflitos de taxa de atualização (Hz) e micro-atrasos de apresentação em jogos DirectX 9/11. |
+
 ---
 
 ## 🚀 Como Executar
@@ -248,7 +254,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 4. O menu interativo exibirá a ficha técnica do computador (incluindo tipo de disco, plano de energia e estado de VBS):
    ```text
    ================================================================================
-                   SkyOptimizer v2.5 - Toolkit de Otimização Windows
+                   SkyOptimizer v2.6 - Toolkit de Otimização Windows
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
@@ -259,7 +265,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (78 Tweaks)
+   [1] Aplicar Otimizações Completas (80 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -271,7 +277,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 78 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 80 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```

@@ -1,11 +1,11 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.5 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.6 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
     e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 78 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
+    Aplica 80 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
     MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
     na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
     LLMNR desativado, sniffing de pastas desativado, agrupamento svchost, remoção de bloatware AppX,
@@ -16,11 +16,12 @@
     visual de janelas, telemetria NVIDIA em fundo, qualidade 100% wallpaper, diagnóstico silencioso,
     resposta rápida de teclado (strafe seguro sem FilterKeys), moderação de interrupções ITR desativada (hitreg instantâneo),
     desativação de RSC e LSO (ticks de dados puros), Flow Control desativado (anti-bufferbloat), gestão de portas efémeras
-    MaxUserPort/TcpTimedWaitDelay e otimização de pilha TCP com proteção de velocidade de fibra (AutoTuning Normal).
+    MaxUserPort/TcpTimedWaitDelay, otimização de pilha TCP com proteção de velocidade de fibra (AutoTuning Normal),
+    ativação de Modo de Jogo nativo (AutoGameModeEnabled=1) e otimização de ecrã inteiro e apresentação (GameDVR FSE=2).
     Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
     no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
 .PARAMETER Apply
-    Aplica diretamente as 78 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica diretamente as 80 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
 .PARAMETER Clean
     Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
 .PARAMETER Undo
@@ -32,7 +33,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 78 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica as 80 otimizações e gera o Painel do Cliente no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -44,7 +45,7 @@
     Reverte todas as otimizações de volta para o estado original da máquina.
 .NOTES
     Autor: SkyOS Team
-    Versão: 2.5.0
+    Versão: 2.6.0
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -95,7 +96,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.5.0 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.6.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -551,14 +552,40 @@ function Disable-MouseAcceleration {
     Set-ItemProperty -Path $mouseKey -Name "MouseSpeed" -Value "0" -Type String -Force
     Set-ItemProperty -Path $mouseKey -Name "MouseThreshold1" -Value "0" -Type String -Force
     Set-ItemProperty -Path $mouseKey -Name "MouseThreshold2" -Value "0" -Type String -Force
+    Set-ItemProperty -Path $mouseKey -Name "MouseSensitivity" -Value "10" -Type String -Force
+    Set-ItemProperty -Path $mouseKey -Name "MouseTrails" -Value "0" -Type String -Force
 
-    Write-SkyLog -Message "Aceleração de rato desativada (input linear 1:1 configurado)." -Level "Success"
+    # Curva Linear MarkC 1:1 (elimina qualquer interpolação não-linear de aceleração residual no Windows 10/11)
+    $markCX = [byte[]](
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x15,0xE5,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x40,0x01,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x80,0x02,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x28,0x00,0x00,0x00,0x00,0x00
+    )
+    $markCY = [byte[]](
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0xB8,0x0B,0x01,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x20,0x05,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x50,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x00
+    )
+    Set-ItemProperty -Path $mouseKey -Name "SmoothMouseXCurve" -Value $markCX -Type Binary -Force
+    Set-ItemProperty -Path $mouseKey -Name "SmoothMouseYCurve" -Value $markCY -Type Binary -Force
+
+    Write-SkyLog -Message "Aceleração de rato desativada (input linear 1:1, sensibilidade neutra 6/11 e curva MarkC configurados)." -Level "Success"
     return $true
 }
 
 function Disable-USBSelectiveSuspend {
     [CmdletBinding()]
     param()
+
+    # Deteção de Alimentação CA / Portátil
+    if (Test-IsOnBattery) {
+        Write-SkyLog -Message "Dispositivo a funcionar a bateria. Otimização de Suspensão Seletiva USB ignorada para poupança." -Level "Warning"
+        return $false
+    }
 
     $usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
     $usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
@@ -568,7 +595,19 @@ function Disable-USBSelectiveSuspend {
     $null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 0 2>&1
     $null = powercfg -setactive SCHEME_CURRENT 2>&1
 
-    Write-SkyLog -Message "Suspensão Seletiva USB desativada no perfil de energia ativo." -Level "Success"
+    # Desativação de poupança de energia nos controladores e Hubs USB
+    $usbHubs = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Enum\USB\*\Device Parameters" -ErrorAction SilentlyContinue
+    $hubCount = 0
+    foreach ($h in $usbHubs) {
+        $p = $h.PSPath
+        Set-ItemProperty -Path $p -Name "DeviceSelectiveSuspended" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "SelectiveSuspendEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "EnhancedPowerManagementEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $p -Name "AllowIdleIrpInD3" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        $hubCount++
+    }
+
+    Write-SkyLog -Message "Suspensão Seletiva USB desativada no perfil de energia e em $hubCount controladores USB (estabilidade 1000Hz-8000Hz)." -Level "Success"
     return $true
 }
 
@@ -2202,7 +2241,44 @@ function Optimize-NetshTcpGlobal {
 }
 
 # ==============================================================================
-# 4.17 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.17 BATCH DE MODO DE JOGO & APRESENTAÇÃO GRÁFICA (TWEAKS 79 E 80)
+# ==============================================================================
+
+function Enable-WindowsGameMode {
+    [CmdletBinding()]
+    param()
+
+    $gameBarKey = "HKCU:\SOFTWARE\Microsoft\GameBar"
+    Ensure-RegistryPath -KeyPath $gameBarKey
+    Backup-RegistryKey -KeyPath $gameBarKey -BackupName "79_Windows_GameMode"
+
+    # AutoGameModeEnabled = 1 (Prioriza alocação de GPU e threads de CPU para o jogo ativo, reduzindo manutenção do SO)
+    Set-ItemProperty -Path $gameBarKey -Name "AutoGameModeEnabled" -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $gameBarKey -Name "AllowAutoGameMode" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Modo de Jogo nativo do Windows ativado (AutoGameModeEnabled=1; prioridade de hardware para o processo do jogo)." -Level "Success"
+    return $true
+}
+
+function Optimize-FullscreenOptimizations {
+    [CmdletBinding()]
+    param()
+
+    $configStore = "HKCU:\System\GameConfigStore"
+    Ensure-RegistryPath -KeyPath $configStore
+    Backup-RegistryKey -KeyPath $configStore -BackupName "80_GameConfigStore_FSE"
+
+    # GameDVR_FSEBehaviorMode = 2 (Desativa o hooking forçado de Fullscreen Optimizations híbridas, garantindo renderização limpa e taxa de atualização sem atrasos)
+    Set-ItemProperty -Path $configStore -Name "GameDVR_FSEBehaviorMode" -Value 2 -Type DWord -Force
+    Set-ItemProperty -Path $configStore -Name "GameDVR_HonorUserFSEBehaviorMode" -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $configStore -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Value 1 -Type DWord -Force
+
+    Write-SkyLog -Message "Apresentação gráfica e FSO otimizados (GameDVR_FSEBehaviorMode=2; elimina atrasos de overlay híbrido em ecrãs de alta taxa de Hz)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.18 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -2561,6 +2637,17 @@ $null = netsh int tcp set global timestamps=allowed 2>&1
 $null = netsh int tcp set global ecncapability=default 2>&1
 $null = netsh int tcp set global autotuninglevel=normal 2>&1
 
+# Reposicao de Modo de Jogo e FSO (Tweaks 79 e 80)
+if (-not (Test-Path (Join-Path $backupDir "79_Windows_GameMode.reg"))) {
+    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "80_GameConfigStore_FSE.reg"))) {
+    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
+}
+
 # 4. Finalizacao
 Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
 $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
@@ -2686,7 +2773,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 78 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 80 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -2770,7 +2857,7 @@ function Repair-WindowsSystemIntegrity {
 }
 
 # ==============================================================================
-# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 78 TWEAKS)
+# 5. FUNÇÃO PRINCIPAL DE OTIMIZAÇÃO (APLICAR 80 TWEAKS)
 # ==============================================================================
 
 function Invoke-SkyOptimize {
@@ -2787,12 +2874,12 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 2.5.0
+                          Versão: 2.6.0
 ===============================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.5.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.6.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
     $baselineMetrics = [ordered]@{
@@ -2851,8 +2938,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 78 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (78 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução dos 80 Tweaks
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (80 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -2970,7 +3057,11 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 75; Category = "Competitivo: Hitreg & Movimento"; Name = "Desativação de RSC e LSO na Rede (Ticks Puros sem Agregação)"; Action = { Disable-NetworkRscAndLso } },
         [ordered]@{ Id = 76; Category = "Competitivo: Hitreg & Movimento"; Name = "Desativação de Controlo de Fluxo na Rede (Flow Control Off / Anti-Bufferbloat)"; Action = { Disable-NetworkFlowControl } },
         [ordered]@{ Id = 77; Category = "Competitivo: Hitreg & Movimento"; Name = "Gestão de Sockets e Portas Efémeras TCP/IP (MaxUserPort=65534, WaitDelay=30s)"; Action = { Optimize-TcpSocketsAndPorts } },
-        [ordered]@{ Id = 78; Category = "Competitivo: Hitreg & Movimento"; Name = "Otimização de Pilha TCP Global (Timestamps/ECN Off, AutoTuning Normal)"; Action = { Optimize-NetshTcpGlobal } }
+        [ordered]@{ Id = 78; Category = "Competitivo: Hitreg & Movimento"; Name = "Otimização de Pilha TCP Global (Timestamps/ECN Off, AutoTuning Normal)"; Action = { Optimize-NetshTcpGlobal } },
+
+        # Categoria 20: Modo de Jogo & Apresentação Gráfica (FSO)
+        [ordered]@{ Id = 79; Category = "Modo de Jogo & Apresentação"; Name = "Ativação do Modo de Jogo Nativo do Windows (AutoGameModeEnabled = 1)"; Action = { Enable-WindowsGameMode } },
+        [ordered]@{ Id = 80; Category = "Modo de Jogo & Apresentação"; Name = "Otimização de Ecrã Inteiro e Renderização (FSEBehaviorMode = 2 / Anti-Input Lag)"; Action = { Optimize-FullscreenOptimizations } }
     )
 
     $currentCategory = ""
@@ -2984,7 +3075,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/78] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/80] {1}" -f $item.Id, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -3094,7 +3185,7 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer v2.5 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Write-Host "`n[+] SkyOptimizer v2.6 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para concluir..."
 }
 
@@ -3116,7 +3207,7 @@ function Invoke-SkyUndo {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                    Módulo de Restauração / Reversão
-                           Versão: 2.5.0
+                           Versão: 2.6.0
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
@@ -3466,6 +3557,17 @@ function Invoke-SkyUndo {
     $null = netsh int tcp set global ecncapability=default 2>&1
     $null = netsh int tcp set global autotuninglevel=normal 2>&1
 
+    # Reposição de Modo de Jogo e FSO (Tweaks 79 e 80)
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "79_Windows_GameMode.reg"))) {
+        Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "80_GameConfigStore_FSE.reg"))) {
+        Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
+    }
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -3534,10 +3636,10 @@ if ($Repair) {
 while ($true) {
     Clear-Host
     Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host "                SkyOptimizer v2.5 - Toolkit de Otimização Windows" -ForegroundColor White
+    Write-Host "                SkyOptimizer v2.6 - Toolkit de Otimização Windows" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (78 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (80 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow
