@@ -254,7 +254,14 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 4. O menu interativo exibirá a ficha técnica do computador (incluindo tipo de disco, plano de energia e estado de VBS):
    ```text
    ================================================================================
-                   SkyOptimizer v2.6 - Toolkit de Otimização Windows
+     ____  _            ___        _   _           _              
+    / ___|| | _____   _/ _ \ _ __ | |_(_)_ __ ___ (_)_______ _ __ 
+    \___ \| |/ / | | | | | | '_ \| __| | '_ ` _ \| |_  / _ \ '__|
+     ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
+    |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
+                |___/      |_|                                    
+                    Windows 10/11 Performance Toolkit
+                             Versão: 2.6.0
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro

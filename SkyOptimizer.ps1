@@ -3636,7 +3636,16 @@ if ($Repair) {
 while ($true) {
     Clear-Host
     Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host "                SkyOptimizer v2.6 - Toolkit de Otimização Windows" -ForegroundColor White
+    Write-Host @'
+  ____  _            ___        _   _           _              
+ / ___|| | _____   _/ _ \ _ __ | |_(_)_ __ ___ (_)_______ _ __ 
+ \___ \| |/ / | | | | | | '_ \| __| | '_ ` _ \| |_  / _ \ '__|
+  ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
+ |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
+             |___/      |_|                                    
+'@ -ForegroundColor Cyan
+    Write-Host "                 Windows 10/11 Performance Toolkit" -ForegroundColor White
+    Write-Host "                          Versão: 2.6.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
     Write-Host "[1] Aplicar Otimizações Completas (80 Tweaks)" -ForegroundColor Green
