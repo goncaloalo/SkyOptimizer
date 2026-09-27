@@ -64,7 +64,10 @@ param(
     [switch]$DeployPanel,
 
     [Parameter(ParameterSetName = "RepairDirect")]
-    [switch]$Repair
+    [switch]$Repair,
+
+    [Parameter(ParameterSetName = "AuditDirect")]
+    [switch]$Audit
 )
 
 # ==============================================================================
@@ -2961,6 +2964,11 @@ Como utilizar estes atalhos de 1 clique:
    - Executa mensalmente ou sempre que notares micro-stutters para limpar
      ficheiros temporários e caches de shaders da gráfica.
 
+7. Guia_VIP_Maximo_FPS.txt
+   - Consulta este guia para aprenderes a ativar o XMP/EXPO na tua BIOS,
+     garantir que o teu monitor está a 144Hz/240Hz reais e afinar
+     o Painel NVIDIA/AMD para a menor latência de clique.
+
 --------------------------------------------------------------------------------
 Comunidade & Suporte SkyOptimizer:
 Tens dúvidas sobre o teu setup ou queres otimizar outro PC?
@@ -2969,6 +2977,104 @@ Entra no nosso Discord da comunidade:
 ================================================================================
 "@
         [System.IO.File]::WriteAllText((Join-Path $panelDir "LEIA-ME (Suporte SkyOptimizer).txt"), $readmeTxt, [System.Text.Encoding]::UTF8)
+
+        # Ficheiro Guia VIP de Hardware, BIOS e FPS
+        $vipGuideTxt = @"
+================================================================================
+                    SkyOptimizer - Guia VIP de Hardware & FPS
+                   Segredos de BIOS, Gráfica e Periféricos
+================================================================================
+Comunidade Oficial & Suporte: https://discord.gg/cE8ZaDRGV5
+================================================================================
+
+Parabéns! O teu Windows foi profundamente otimizado ao nível de sistema operativo
+pelo SkyOptimizer (85 Tweaks de Elite de latência de kernel, I/O e energia).
+
+Para extraíres 100% do potencial da tua máquina e garantires a máxima fluidez,
+existem 5 configurações externas essenciais que deves verificar:
+
+--------------------------------------------------------------------------------
+1. ATIVAR O PERFIL XMP / EXPO (DOCP) NA BIOS (Ganho de +10% a +25% de 1% Lows)
+--------------------------------------------------------------------------------
+O QUE É:
+Por padrão de fábrica, quase todas as motherboards configuram a memória RAM
+para a velocidade base mínima de segurança (ex: 2133 MHz em DDR4 ou 4800 MHz em DDR5),
+mesmo que tenhas comprado memórias de 3200 MHz, 3600 MHz ou 6000 MHz!
+Isso cria um gargalo imenso na CPU e causa micro-travamentos frequentes em jogos.
+
+COMO ATIVAR:
+1. Reinicia o computador e pressiona continuamente a tecla 'DEL' ou 'F2' ao ligar.
+2. Na BIOS, procura pela opção:
+   - Processador Intel: 'X.M.P.' (Extreme Memory Profile) -> Muda para 'Profile 1' ou 'Enabled'.
+   - Processador AMD:   'EXPO' ou 'D.O.C.P.' -> Muda para 'Profile 1' ou 'Enabled'.
+3. Pressiona 'F10' para Guardar e Reiniciar (Save & Exit).
+4. Ao entrar no Windows, abre o Gestor de Tarefas (Ctrl+Shift+Esc), clica no
+   separador 'Desempenho' -> 'Memória' e verifica se a velocidade aumentou!
+
+--------------------------------------------------------------------------------
+2. RESIZABLE BAR / AMD SMART ACCESS MEMORY (SAM) (Ganho de +5% a +15% FPS)
+--------------------------------------------------------------------------------
+O QUE É:
+Permite que o processador aceda à totalidade da memória da placa gráfica (VRAM)
+em simultâneo, em vez de pequenos blocos de 256MB.
+
+COMO ATIVAR NA BIOS:
+1. Entra na BIOS (tecla 'DEL' ou 'F2').
+2. Vai às definições avançadas de PCI / Gráfica ('Advanced' -> 'PCI Subsystem Settings').
+3. Ativa as opções:
+   - 'Above 4G Decoding': ENABLED
+   - 'Re-Size BAR Support': AUTO ou ENABLED
+   - 'CSM Support' (Compatibility Support Module): DISABLED (Necessário UEFI puro).
+4. Pressiona 'F10' para Guardar e Reiniciar.
+
+--------------------------------------------------------------------------------
+3. TAXA DE ATUALIZAÇÃO DO MONITOR (HZ) (O Erro nº 1 dos Jogadores!)
+--------------------------------------------------------------------------------
+Muitos jogadores compram monitores de 144Hz, 165Hz ou 240Hz, mas estão a jogar
+a 60Hz no Windows sem saber, porque o Windows predefine 60Hz ao detetar o cabo!
+
+COMO CONFIRMAR:
+1. Clica com o botão direito no Ambiente de Trabalho -> 'Definições de visualização'.
+2. Rola até ao fundo e clica em 'Ecrã avançado' (Advanced display).
+3. No campo 'Escolher uma taxa de atualização', seleciona a frequência MÁXIMA
+   (ex: 144 Hz, 165 Hz, 240 Hz ou 360 Hz).
+4. NOTA: Se usas cabo HDMI antigo, podes estar limitado a 60Hz. Usa sempre um
+   cabo DisplayPort (DP) de qualidade para monitores de alta frequência.
+
+--------------------------------------------------------------------------------
+4. DEFINIÇÕES DO PAINEL DA PLACA GRÁFICA (NVIDIA / AMD)
+--------------------------------------------------------------------------------
+PAINEL DE CONTROLO NVIDIA (Clica botão direito no Desktop -> Painel NVIDIA):
+- 'Gerir definições 3D' (Manage 3D Settings):
+  * Modo de Gestão de Energia: 'Preferir desempenho máximo'
+  * Modo de Baixa Latência (Low Latency Mode): 'Ultra' (ou 'Ligado')
+  * Tamanho da Cache de Shaders: '10 GB' ou 'Ilimitado'
+  * Filtragem de Texturas - Qualidade: 'Alto Desempenho'
+
+PAINEL AMD ADRENALIN:
+- 'Jogos' -> 'Gráficos':
+  * Radeon Anti-Lag: 'Ativado' (reduz o atraso de input entre cliques e o ecrã)
+  * Radeon Enhanced Sync: 'Ativado' (se não usares FreeSync)
+  * Redefinir Cache de Shaders: Faz após cada grande atualização de driver.
+
+--------------------------------------------------------------------------------
+5. GESTÃO DE APLICAÇÕES DE ARRANQUE (Libertar 1.5 GB a 3 GB de RAM)
+--------------------------------------------------------------------------------
+Aplicações como Discord, Spotify, Steam, Epic Games e Razer abrem em segundo plano
+e consomem ciclos valiosos de CPU e memória RAM enquanto jogas.
+
+COMO LIMPAR:
+1. Pressiona 'Ctrl + Shift + Esc' para abrir o Gestor de Tarefas.
+2. Clica no separador 'Aplicações de arranque' (ícone do velocímetro ou lista).
+3. Desativa tudo o que não seja essencial no arranque (podes abrir manualmente quando fores jogar).
+4. NO DISCORD: Vai às Definições do Discord -> Avançadas -> Desativa 'Aceleração por Hardware'
+   para evitar que o Discord roube recursos da tua placa gráfica em jogo.
+
+================================================================================
+Dúvidas ou novo setup? Junta-te à comunidade: https://discord.gg/cE8ZaDRGV5
+================================================================================
+"@
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "Guia_VIP_Maximo_FPS.txt"), $vipGuideTxt, [System.Text.Encoding]::UTF8)
 
         Write-SkyLog -Message "Painel do Cliente criado com sucesso no Ambiente de Trabalho ('$panelDir')." -Level "Success"
         return $true
@@ -3809,6 +3915,139 @@ O seu sistema foi revertido com segurança para o estado anterior.
 }
 
 # ==============================================================================
+# 6.1 AUDITORIA DE HARDWARE, ECRÃ E OPORTUNIDADES DE FPS
+# ==============================================================================
+
+function Invoke-SkyHardwareAudit {
+    [CmdletBinding()]
+    param()
+
+    Clear-Host
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Write-Host @'
+  ____  _            ___        _   _           _              
+ / ___|| | _____   _/ _ \ _ __ | |_(_)_ __ ___ (_)_______ _ __ 
+ \___ \| |/ / | | | | | | '_ \| __| | '_ ` _ \| |_  / _ \ '__|
+  ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
+ |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
+             |___/      |_|                                    
+'@ -ForegroundColor Cyan
+    Write-Host "         Auditoria de Hardware, Ecrã & Oportunidades de FPS" -ForegroundColor White
+    Write-Host "                          Versão: 2.7.0" -ForegroundColor White
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Write-Host "`nA analisar componentes de hardware, periféricos e arranque...`n" -ForegroundColor Gray
+
+    # 1. Memória RAM & Análise de XMP / EXPO
+    Write-Host "--- [1/4] Memória RAM & Perfil XMP / EXPO (BIOS) ---" -ForegroundColor Yellow
+    $ramModules = Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue
+    $totalRamBytes = ($ramModules | Measure-Object -Property Capacity -Sum).Sum
+    $compSys = Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue
+    $totalRamGB = if ($totalRamBytes) { [math]::Round($totalRamBytes / 1GB, 1) } elseif ($compSys.TotalPhysicalMemory) { [math]::Round($compSys.TotalPhysicalMemory / 1GB, 1) } else { 0 }
+
+    if ($ramModules -and $ramModules.Count -gt 0) {
+        $firstMod = $ramModules | Select-Object -First 1
+        $currentSpeed = $firstMod.ConfiguredClockSpeed
+        $nominalSpeed = $firstMod.Speed
+        $channelCount = $ramModules.Count
+
+        Write-Host "  Capacidade Total:          $totalRamGB GB ($channelCount pentes instalados - $(if ($channelCount -ge 2) { 'Dual Channel / Multi-Channel Ativo' } else { 'Single Channel - Recomenda-se adicionar 2º pente' }))" -ForegroundColor White
+        Write-Host "  Velocidade Atual:          $currentSpeed MHz" -ForegroundColor $(if ($currentSpeed -ge $nominalSpeed -and $currentSpeed -gt 2400) { "Green" } else { "Yellow" })
+        Write-Host "  Velocidade Nominal Módulo: $nominalSpeed MHz" -ForegroundColor White
+
+        if ($currentSpeed -lt $nominalSpeed) {
+            Write-Host "  [ALERTA XMP/EXPO] A tua RAM está a $($currentSpeed) MHz mas suporta $($nominalSpeed) MHz de fábrica!" -ForegroundColor Yellow
+            Write-Host "    -> Acede à BIOS (DEL ou F2 ao ligar o PC) e ativa o perfil 'XMP' (Intel) ou 'EXPO/DOCP' (AMD)." -ForegroundColor Cyan
+            Write-Host "    -> Ganho estimado: +10% a +25% de estabilidade e menos micro-stutters nos 1% Low FPS!" -ForegroundColor Green
+        } elseif ($currentSpeed -in @(2133, 2400) -and $nominalSpeed -eq $currentSpeed) {
+            Write-Host "  [INFO JEDEC] A tua RAM está a $currentSpeed MHz (frequência base padrão)." -ForegroundColor Gray
+            Write-Host "    -> Se compraste memórias de 3200MHz/3600MHz/6000MHz, confirma se o perfil XMP/EXPO está ativo na BIOS." -ForegroundColor Cyan
+        } else {
+            Write-Host "  [OK] Frequência da RAM otimizada ($currentSpeed MHz)." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  Capacidade Total:          $totalRamGB GB" -ForegroundColor White
+        Write-Host "  [INFO] Ambiente Virtualizado (VM) ou chipset OEM sem exposição direta de dados SPD." -ForegroundColor Gray
+    }
+
+    # 2. Monitores & Taxa de Atualização (Hz)
+    Write-Host "`n--- [2/4] Monitores & Taxa de Atualização (Taxa de Hertz) ---" -ForegroundColor Yellow
+    $videoControllers = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue
+    $monitorsChecked = 0
+    foreach ($vc in $videoControllers) {
+        if ($vc.CurrentHorizontalResolution -gt 0) {
+            $monitorsChecked++
+            $hz = $vc.CurrentRefreshRate
+            Write-Host "  Ecrã #$($monitorsChecked) - $($vc.Name)" -ForegroundColor White
+            Write-Host "  Resolução Atual:           $($vc.CurrentHorizontalResolution) x $($vc.CurrentVerticalResolution)" -ForegroundColor White
+            Write-Host "  Taxa de Atualização:       $hz Hz" -ForegroundColor $(if ($hz -gt 60) { "Green" } else { "Yellow" })
+
+            if ($hz -le 60) {
+                Write-Host "  [ATENÇÃO] O monitor está a correr a 60 Hz no Windows." -ForegroundColor Yellow
+                Write-Host "    -> Se o teu monitor é de 144Hz, 165Hz ou 240Hz, ativa os Hertz máximos em:" -ForegroundColor Cyan
+                Write-Host "       Definições do Windows > Sistema > Ecrã > Ecrã Avançado." -ForegroundColor White
+                Write-Host "    -> Certifica-te também de usar um cabo DisplayPort (DP) de qualidade." -ForegroundColor Gray
+            } else {
+                Write-Host "  [OK] Monitor de Alta Frequência ativo ($hz Hz - Fluidez Máxima)." -ForegroundColor Green
+            }
+        }
+    }
+    if ($monitorsChecked -eq 0) {
+        Write-Host "  [INFO] Nenhum ecrã ativo reportado pelo driver WMI." -ForegroundColor Gray
+    }
+
+    # 3. Aplicações de Arranque (Impacto em Boot e RAM)
+    Write-Host "`n--- [3/4] Aplicações de Inicialização (Consumo de RAM no Boot) ---" -ForegroundColor Yellow
+    $startups = Get-CimInstance Win32_StartupCommand -ErrorAction SilentlyContinue
+    $heavyApps = @("Discord", "Spotify", "Steam", "EpicGamesLauncher", "Synapse3", "Overwolf", "Teams", "OneDrive", "Skype", "Battle.net")
+    $detectedHeavy = @()
+
+    if ($startups -and $startups.Count -gt 0) {
+        Write-Host "  Total de programas no arranque: $($startups.Count)" -ForegroundColor White
+        foreach ($s in $startups) {
+            $isHeavy = $false
+            foreach ($h in $heavyApps) {
+                if ($s.Name -match $h -or $s.Command -match $h) { $isHeavy = $true; break }
+            }
+            if ($isHeavy) {
+                $detectedHeavy += $s.Name
+                Write-Host "    [!] $($s.Name) (Consome CPU e RAM em segundo plano)" -ForegroundColor Yellow
+            } else {
+                Write-Host "    [-] $($s.Name)" -ForegroundColor Gray
+            }
+        }
+        if ($detectedHeavy.Count -gt 0) {
+            Write-Host "`n  [RECOMENDAÇÃO] Detetadas $($detectedHeavy.Count) aplicações de jogos/comunicação que abrem no boot." -ForegroundColor Yellow
+            Write-Host "    -> Abre o Gestor de Tarefas (Ctrl+Shift+Esc) > Separador 'Arranque' e desativa as que não precisas de imediato." -ForegroundColor Cyan
+            Write-Host "    -> Libertarás entre 1.0 GB e 2.5 GB de RAM antes de abrir qualquer jogo!" -ForegroundColor Green
+        } else {
+            Write-Host "  [OK] Arranque limpo! Nenhuma aplicação pesada detetada na inicialização." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  [OK] Nenhuma aplicação de inicialização registada (Arranque ultra limpo)." -ForegroundColor Green
+    }
+
+    # 4. Estado do Isolamento do Núcleo (VBS / HVCI)
+    Write-Host "`n--- [4/4] Camada de Segurança e Jogos (Isolamento do Núcleo) ---" -ForegroundColor Yellow
+    $vbsState = Get-VbsStatus
+    if ($vbsState -eq "Ativado") {
+        Write-Host "  Estado do VBS:             ATIVADO (Segurança de Virtualização Ligada)" -ForegroundColor Yellow
+        Write-Host "  Compatibilidade:           VALORANT e FACEIT funcionam a 100%." -ForegroundColor White
+        Write-Host "  Dica de Performance:       Se apenas jogas FiveM, CS2, ARC Raiders ou Warzone, desativar o VBS" -ForegroundColor Cyan
+        Write-Host "                             no 'Painel do Cliente' dá +5% a +15% de FPS e elimina micro-stutters." -ForegroundColor Cyan
+    } else {
+        Write-Host "  Estado do VBS:             DESATIVADO (Modo Máxima Performance / Menor Latência)" -ForegroundColor Green
+        Write-Host "  Compatibilidade:           FiveM, CS2 (Premier/VAC), ARC Raiders, COD com fluidez máxima." -ForegroundColor White
+        Write-Host "  Aviso:                     Se precisares de jogar VALORANT ou CS2 na FACEIT, ativa-o no Painel do Cliente." -ForegroundColor Gray
+    }
+
+    Write-Host "`n================================================================================" -ForegroundColor Cyan
+    Write-Host "Deseja consultar o Guia Completo de Otimização de BIOS e Gráfica?" -ForegroundColor Cyan
+    Write-Host "Encontra-se disponível no Ambiente de Trabalho em 'SkyOptimizer - Painel de Controlo\Guia_VIP_Maximo_FPS.txt'." -ForegroundColor Gray
+    Write-Host "================================================================================" -ForegroundColor Cyan
+    Read-Host "`nPressione ENTER para regressar ao menu principal..."
+}
+
+# ==============================================================================
 # 7. MENU INTERATIVO & DESPACHO DE EXECUÇÃO
 # ==============================================================================
 
@@ -3844,6 +4083,11 @@ if ($Repair) {
     exit 0
 }
 
+if ($Audit) {
+    Invoke-SkyHardwareAudit
+    exit 0
+}
+
 # Modo Interativo Padrão
 while ($true) {
     Clear-Host
@@ -3860,15 +4104,16 @@ while ($true) {
     Write-Host "                          Versão: 2.7.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks de Elite)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
-    Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
-    Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow
-    Write-Host "[5] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Magenta
-    Write-Host "[6] Sair" -ForegroundColor Red
+    Write-Host "[3] Diagnóstico de Setup & Hardware (RAM/XMP, Monitor Hz, Arranque)" -ForegroundColor Cyan
+    Write-Host "[4] Limpeza Segura de Caches e Shaders" -ForegroundColor Yellow
+    Write-Host "[5] Reverter Alterações (100% Desfazer)" -ForegroundColor Magenta
+    Write-Host "[6] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Blue
+    Write-Host "[7] Sair" -ForegroundColor Red
     Write-Host "================================================================================" -ForegroundColor Cyan
     
-    $choice = Read-Host "Escolha uma opção (1-6)"
+    $choice = Read-Host "Escolha uma opção (1-7)"
 
     switch ($choice.Trim()) {
         "1" {
@@ -3878,28 +4123,31 @@ while ($true) {
             Clear-Host
             Write-Host ">>> A gerar 'Painel do Cliente' no Ambiente de Trabalho..." -ForegroundColor Cyan
             Deploy-ClientPanel
-            Read-Host "`nPressione ENTER para regressar ao menu..."
+            Read-Host "`nPressione ENTER para regressar ao menu principal..."
         }
         "3" {
+            Invoke-SkyHardwareAudit
+        }
+        "4" {
             Clear-Host
             Write-Host ">>> A executar Limpeza de Caches de Shaders e Temporários..." -ForegroundColor Cyan
             Clear-ShaderCache
-            Read-Host "`nPressione ENTER para regressar ao menu..."
-        }
-        "4" {
-            Invoke-SkyUndo
+            Read-Host "`nPressione ENTER para regressar ao menu principal..."
         }
         "5" {
-            Repair-WindowsSystemIntegrity
-            Read-Host "`nPressione ENTER para regressar ao menu..."
+            Invoke-SkyUndo
         }
         "6" {
+            Repair-WindowsSystemIntegrity
+            Read-Host "`nPressione ENTER para regressar ao menu principal..."
+        }
+        "7" {
             Write-Host "`nA sair do SkyOptimizer. Nenhuma alteração foi realizada." -ForegroundColor Gray
             Start-Sleep -Seconds 1
             exit 0
         }
         Default {
-            Write-Host "`nOpção inválida! Escolha de 1 a 6." -ForegroundColor Red
+            Write-Host "`nOpção inválida! Escolha de 1 a 7." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }

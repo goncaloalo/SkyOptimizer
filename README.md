@@ -13,7 +13,7 @@ O **SkyOptimizer** é um utilitário consolidado num **único ficheiro PowerShel
 2. **Backups de Registo Individuais (`.reg`):** Antes de cada modificação, a chave original é exportada via `reg export` para a pasta `.\Backups\`.
 3. **Registo de Chaves Criadas (`created_keys.txt`):** Se uma chave ou valor não existia previamente, é registada para que a reversão a elimine de raiz em vez de tentar restaurar ficheiros inexistentes.
 4. **Manifesto de Estado (`state_backup.json`):** Armazena o plano de energia original, estado da hibernação, modo do SysMain, estado do Armazenamento Reservado e histórico de execução.
-5. **Reversão Completa Integrada (UNDO):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original através da opção `[4]` do menu ou com o parâmetro `.\SkyOptimizer.ps1 -Undo`.
+5. **Reversão Completa Integrada (UNDO):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original através da opção `[5]` do menu ou com o parâmetro `.\SkyOptimizer.ps1 -Undo`.
 6. **Reversão Total de 1 Clique:** O cliente dispõe de um atalho direto no Ambiente de Trabalho para restaurar 100% dos ficheiros de registo e configurações originais da máquina com segurança absoluta.
 7. **Regras Estritas de Hardware & Anti-Cheat:**
    - **VBS / HVCI Seguro & Guia de Jogos:** O script base não força alterações cegas de VBS. O cliente dispõe do utilitário `[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd` com a lista dos jogos mais jogados do mundo para alternar quando quiser.
@@ -281,12 +281,13 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (85 Tweaks)
+   [1] Aplicar Otimizações Completas (85 Tweaks de Elite)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
-   [3] Limpeza Segura de Caches e Shaders
-   [4] Reverter Alterações (100% Desfazer)
-   [5] Reparar Integridade do Windows (DISM / SFC)
-   [6] Sair
+   [3] Diagnóstico de Setup & Hardware (RAM/XMP, Monitor Hz, Arranque)
+   [4] Limpeza Segura de Caches e Shaders
+   [5] Reverter Alterações (100% Desfazer)
+   [6] Reparar Integridade do Windows (DISM / SFC)
+   [7] Sair
    ================================================================================
    ```
 
@@ -301,6 +302,11 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 * **Instalar exclusivamente o Painel do Cliente no Desktop:**
   ```powershell
   .\SkyOptimizer.ps1 -DeployPanel
+  ```
+
+* **Executar Auditoria de Hardware e Setup (RAM/XMP, Hz do Monitor, Apps no Arranque):**
+  ```powershell
+  .\SkyOptimizer.ps1 -Audit
   ```
 
 * **Limpar apenas shaders e temporários:**
