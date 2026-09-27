@@ -2198,34 +2198,56 @@ function Disable-NetworkFlowControl {
 
     Backup-RegistryKey -KeyPath $netClassKey -BackupName "76_Network_FlowControl"
 
-    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
+    # Verificar adaptadores físicos com distinção Ethernet (cabo) vs Wi-Fi
+    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
     $fcAdjusted = 0
+    $ethernetCount = 0
 
+    if ($adapters) {
+        foreach ($nic in $adapters) {
+            $isWireless = ($nic.PhysicalMediaType -match '802\.11' -or $nic.MediaType -match '802\.11' -or $nic.InterfaceDescription -match 'Wireless|Wi-Fi|WLAN')
+            if ($isWireless) {
+                Write-SkyLog -Message "Adaptador '$($nic.Name)' ($($nic.InterfaceDescription)) é Wi-Fi (802.11). Flow Control 802.3x ignorado com segurança (norma exclusiva de cabos Ethernet)." -Level "Info"
+                continue
+            }
+
+            # Adaptador Ethernet por cabo (802.3)
+            $ethernetCount++
+            try {
+                $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -ErrorAction SilentlyContinue
+                if ($exists) {
+                    Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 0 -ErrorAction SilentlyContinue
+                    $fcAdjusted++
+                    Write-SkyLog -Message "Controlo de Fluxo (Flow Control Off) aplicado no adaptador Ethernet: '$($nic.Name)'." -Level "Info"
+                }
+            } catch {}
+        }
+    }
+
+    # Ajuste complementar em controladores Ethernet na classe de hardware (ignora drivers Wi-Fi)
+    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
     foreach ($k in $subKeys) {
         $keyPath = $k.PSPath
         $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
         if ($props) {
-            foreach ($propName in @("*FlowControl", "FlowControl")) {
-                if ($null -ne $props.$propName) {
-                    Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
-                    $fcAdjusted++
+            $driverDesc = $props.DriverDesc
+            $isWifiDriver = ($driverDesc -match 'Wireless|Wi-Fi|WLAN|802\.11')
+            if (-not $isWifiDriver) {
+                foreach ($propName in @("*FlowControl", "FlowControl")) {
+                    if ($null -ne $props.$propName) {
+                        Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
+                        $fcAdjusted++
+                    }
                 }
             }
         }
     }
 
-    # Cmdlet de ajuste avançado se suportado pelo driver
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    foreach ($nic in $adapters) {
-        try {
-            $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -ErrorAction SilentlyContinue
-            if ($exists) {
-                Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 0 -ErrorAction SilentlyContinue
-            }
-        } catch {}
+    if ($ethernetCount -gt 0) {
+        Write-SkyLog -Message "Controlo de Fluxo (Flow Control) desativado em adaptadores Ethernet por cabo ($fcAdjusted propriedades ajustadas; previne tramas PAUSE e bufferbloat sem afetar Wi-Fi)." -Level "Success"
+    } else {
+        Write-SkyLog -Message "Nenhum adaptador Ethernet físico por cabo detetado. Flow Control 802.3x ignorado com segurança (sistema operando em Wi-Fi)." -Level "Info"
     }
-
-    Write-SkyLog -Message "Controlo de Fluxo (Flow Control) desativado nos adaptadores de rede ($fcAdjusted propriedades ajustadas; previne buffering de pacotes em picos de tráfego)." -Level "Success"
     return $true
 }
 
@@ -2900,8 +2922,11 @@ Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Val
 
 $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
 foreach ($nic in $adapters) {
+    $isWireless = ($nic.PhysicalMediaType -match '802\.11' -or $nic.MediaType -match '802\.11' -or $nic.InterfaceDescription -match 'Wireless|Wi-Fi|WLAN')
     try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
-    try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
+    if (-not $isWireless) {
+        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
+    }
 }
 try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
 try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
@@ -3945,8 +3970,11 @@ function Invoke-SkyUndo {
 
     $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
     foreach ($nic in $adapters) {
+        $isWireless = ($nic.PhysicalMediaType -match '802\.11' -or $nic.MediaType -match '802\.11' -or $nic.InterfaceDescription -match 'Wireless|Wi-Fi|WLAN')
         try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
-        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
+        if (-not $isWireless) {
+            try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
+        }
     }
     try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
     try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
