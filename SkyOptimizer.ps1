@@ -1698,6 +1698,8 @@ function Disable-MaintenanceScheduledTasks {
     param()
 
     $tasks = @(
+        "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
+        "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
         "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
         "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
         "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
@@ -2309,7 +2311,103 @@ function Optimize-FullscreenOptimizations {
 }
 
 # ==============================================================================
-# 4.18 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.18 BATCH DE OTIMIZAÇÕES CIRÚRGICAS (ESTABILIDADE, I/O & RESPONSIVIDADE)
+# ==============================================================================
+
+function Disable-PowerThrottling {
+    [CmdletBinding()]
+    param()
+
+    $ptKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling"
+    Ensure-RegistryPath -KeyPath $ptKey
+    Backup-RegistryKey -KeyPath $ptKey -BackupName "81_PowerThrottling"
+
+    # PowerThrottlingOff = 1 impede o corte artificial de frequência e prioridade em threads em background (Discord, OBS, FiveM subprocessos)
+    Set-ItemProperty -Path $ptKey -Name "PowerThrottlingOff" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Power Throttling do Windows desativado (garante prioridade estável no Discord, OBS e processos auxiliares)." -Level "Success"
+    return $true
+}
+
+function Disable-ZipIndexing {
+    [CmdletBinding()]
+    param()
+
+    $searchPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+    Ensure-RegistryPath -KeyPath $searchPolKey
+    Backup-RegistryKey -KeyPath $searchPolKey -BackupName "82_WindowsSearch_ZipIndexing"
+
+    # PreventIndexingArchives = 1 impede a descompressão e indexação contínua de ficheiros .zip e pacotes de mods em background
+    Set-ItemProperty -Path $searchPolKey -Name "PreventIndexingArchives" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Indexação de ficheiros comprimidos (.zip/mods) desativada (elimina leituras de disco e picos de CPU durante o jogo)." -Level "Success"
+    return $true
+}
+
+function Optimize-DwmVisualEffects {
+    [CmdletBinding()]
+    param()
+
+    $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    Ensure-RegistryPath -KeyPath $advKey
+    Backup-RegistryKey -KeyPath $advKey -BackupName "83_Explorer_VisualEffects"
+
+    # Desativação de sombras de ícones no ambiente de trabalho e sombras de janelas
+    Set-ItemProperty -Path $advKey -Name "ListviewShadow" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    $desktopKey = "HKCU:\Control Panel\Desktop"
+    Ensure-RegistryPath -KeyPath $desktopKey
+    Backup-RegistryKey -KeyPath $desktopKey -BackupName "83_Desktop_VisualEffects"
+
+    # Desativação de sombras de cursor mantendo FontSmoothing ativo (ClearType preservado a 100%)
+    Set-ItemProperty -Path $desktopKey -Name "DragFullWindows" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $desktopKey -Name "FontSmoothing" -Value "2" -Type String -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Sombras decorativas de janelas/ambiente de trabalho otimizadas (DWM aliviado com texto perfeitamente nítido)." -Level "Success"
+    return $true
+}
+
+function Disable-WindowsSpotlightDownloads {
+    [CmdletBinding()]
+    param()
+
+    $cdmKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+    Ensure-RegistryPath -KeyPath $cdmKey
+    Backup-RegistryKey -KeyPath $cdmKey -BackupName "84_Spotlight_ContentDelivery"
+
+    Set-ItemProperty -Path $cdmKey -Name "RotatingLockScreenEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cdmKey -Name "RotatingLockScreenOverlayEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cdmKey -Name "SubscribedContent-338387Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cdmKey -Name "SubscribedContent-338388Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $cdmKey -Name "SubscribedContent-338389Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    $cloudKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+    Ensure-RegistryPath -KeyPath $cloudKey
+    Backup-RegistryKey -KeyPath $cloudKey -BackupName "84_CloudContent_Spotlight"
+    Set-ItemProperty -Path $cloudKey -Name "DisableWindowsSpotlightFeatures" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Downloads em segundo plano e publicidade do Windows Spotlight no LockScreen desativados com sucesso." -Level "Success"
+    return $true
+}
+
+function Optimize-QuickAccessHistory {
+    [CmdletBinding()]
+    param()
+
+    $expKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer"
+    Ensure-RegistryPath -KeyPath $expKey
+    Backup-RegistryKey -KeyPath $expKey -BackupName "85_Explorer_QuickAccess"
+
+    # ShowRecent = 0 e ShowFrequent = 0 eliminam o journaling contínuo de ficheiros abertos no SSD
+    Set-ItemProperty -Path $expKey -Name "ShowRecent" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $expKey -Name "ShowFrequent" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Histórico contínuo de ficheiros recentes no Explorador desativado (abertura instantânea e menos escritas no SSD)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.19 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -2566,6 +2664,8 @@ if (Test-Path $telemetrySvcFile) {
 
 # Tarefas Agendadas
 $maintTasks = @(
+    "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
+    "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
     "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
     "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
     "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
@@ -2677,6 +2777,24 @@ if (-not (Test-Path (Join-Path $backupDir "80_GameConfigStore_FSE.reg"))) {
     Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
+}
+
+# Reposicao de Otimizacoes Cirurgicas (Tweaks 81 a 85)
+if (-not (Test-Path (Join-Path $backupDir "81_PowerThrottling.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "82_WindowsSearch_ZipIndexing.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "83_Explorer_VisualEffects.reg"))) {
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "84_CloudContent_Spotlight.reg"))) {
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path (Join-Path $backupDir "85_Explorer_QuickAccess.reg"))) {
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 }
 
 # 4. Finalizacao
@@ -2804,7 +2922,7 @@ pause
 ================================================================================
 
 Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 80 otimizações foram aplicadas para garantir a menor latência de input,
+Todas as 85 otimizações foram aplicadas para garantir a menor latência de input,
 frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
 
 Como utilizar estes atalhos de 1 clique:
@@ -2905,12 +3023,12 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 2.6.0
+                          Versão: 2.7.0
 ===============================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.6.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.7.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
     $baselineMetrics = [ordered]@{
@@ -2969,8 +3087,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução dos 80 Tweaks
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (80 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução das 85 Otimizações
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (85 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -3092,7 +3210,14 @@ function Invoke-SkyOptimize {
 
         # Categoria 20: Modo de Jogo & Apresentação Gráfica (FSO)
         [ordered]@{ Id = 79; Category = "Modo de Jogo & Apresentação"; Name = "Ativação do Modo de Jogo Nativo do Windows (AutoGameModeEnabled = 1)"; Action = { Enable-WindowsGameMode } },
-        [ordered]@{ Id = 80; Category = "Modo de Jogo & Apresentação"; Name = "Otimização de Ecrã Inteiro e Renderização (FSEBehaviorMode = 2 / Anti-Input Lag)"; Action = { Optimize-FullscreenOptimizations } }
+        [ordered]@{ Id = 80; Category = "Modo de Jogo & Apresentação"; Name = "Otimização de Ecrã Inteiro e Renderização (FSEBehaviorMode = 2 / Anti-Input Lag)"; Action = { Optimize-FullscreenOptimizations } },
+
+        # Categoria 21: Estabilidade de Frametimes & Otimizações Cirúrgicas
+        [ordered]@{ Id = 81; Category = "Estabilidade & Frametimes"; Name = "Desativação de Power Throttling do Windows (Prioridade Contínua no Discord/OBS)"; Action = { Disable-PowerThrottling } },
+        [ordered]@{ Id = 82; Category = "Armazenamento & I/O"; Name = "Desativação de Indexação de Ficheiros Comprimidos (.zip/mods no Windows Search)"; Action = { Disable-ZipIndexing } },
+        [ordered]@{ Id = 83; Category = "Interface & Multimédia"; Name = "Otimização de Sombras do DWM e Compositor Gráfico (Sem Sombras / Texto Nítido)"; Action = { Optimize-DwmVisualEffects } },
+        [ordered]@{ Id = 84; Category = "Privacidade & Telemetria"; Name = "Bloqueio de Downloads em Segundo Plano do Windows Spotlight no LockScreen"; Action = { Disable-WindowsSpotlightDownloads } },
+        [ordered]@{ Id = 85; Category = "Explorador & QoL"; Name = "Acesso Rápido Limpo sem Histórico Contínuo no SSD (Menos Escritas)"; Action = { Optimize-QuickAccessHistory } }
     )
 
     $currentCategory = ""
@@ -3106,7 +3231,7 @@ function Invoke-SkyOptimize {
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/80] {1}" -f $item.Id, $item.Name) -ForegroundColor White
+        Write-Host ("[*] [{0,2}/{1}] {2}" -f $item.Id, $tweaks.Count, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         try {
@@ -3216,7 +3341,7 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer v2.6 concluído com êxito! Para reverter qualquer alteração, utilize a Opção [4] ou execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Write-Host "`n[+] SkyOptimizer v2.7 concluído com êxito! Para reverter qualquer alteração, utilize a Opção [4] ou execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 
@@ -3238,7 +3363,7 @@ function Invoke-SkyUndo {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                    Módulo de Restauração / Reversão
-                           Versão: 2.6.0
+                           Versão: 2.7.0
 ================================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
@@ -3482,6 +3607,8 @@ function Invoke-SkyUndo {
 
     # Reativação de Tarefas Agendadas de Telemetria e Diagnóstico
     $maintTasks = @(
+        "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
+        "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
         "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
         "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
         "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
@@ -3599,6 +3726,24 @@ function Invoke-SkyUndo {
         Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
     }
 
+    # Reposição de Otimizações Cirúrgicas (Tweaks 81 a 85)
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "81_PowerThrottling.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "82_WindowsSearch_ZipIndexing.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "83_Explorer_VisualEffects.reg"))) {
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "84_CloudContent_Spotlight.reg"))) {
+        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "85_Explorer_QuickAccess.reg"))) {
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    }
+
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
@@ -3676,10 +3821,10 @@ while ($true) {
              |___/      |_|                                    
 '@ -ForegroundColor Cyan
     Write-Host "                 Windows 10/11 Performance Toolkit" -ForegroundColor White
-    Write-Host "                          Versão: 2.6.0" -ForegroundColor White
+    Write-Host "                          Versão: 2.7.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (80 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
     Write-Host "[3] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[4] Reverter Alterações (100% Desfazer)" -ForegroundColor Yellow

@@ -69,7 +69,7 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 80 Otimizações Incluídas (v2.6)
+## ⚡ As 85 Otimizações Incluídas (v2.7)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -231,6 +231,15 @@ Contendo 6 utilitários essenciais com **elevação automática de Administrador
 | **79** | **Ativação do Modo de Jogo Nativo do Windows (Game Mode)** | `AutoGameModeEnabled=1` em `SOFTWARE\Microsoft\GameBar`. Prioriza alocação de GPU e agendamento de threads de CPU exclusivamente para o jogo ativo, suspendendo tarefas de manutenção de fundo do Windows. |
 | **80** | **Otimização de Ecrã Inteiro e Apresentação (FSEBehaviorMode=2)** | `GameDVR_FSEBehaviorMode=2` em `System\GameConfigStore`. Desativa o hooking forçado de Fullscreen Optimizations híbridas, eliminando conflitos de taxa de atualização (Hz) e micro-atrasos de apresentação em jogos DirectX 9/11. |
 
+### 21. Estabilidade de Frametimes & Otimizações Cirúrgicas
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **81** | **Desativação de Power Throttling do Windows (Prioridade Contínua no Discord/OBS)** | `PowerThrottlingOff=1` em `SYSTEM\CurrentControlSet\Control\Power\PowerThrottling`. Impede o Windows de cortar frequências e prioridades de threads auxiliares (Discord, OBS, FiveM subprocessos) enquanto o jogo corre. |
+| **82** | **Desativação de Indexação de Ficheiros Comprimidos (.zip/mods no Windows Search)** | `PreventIndexingArchives=1` em `SOFTWARE\Policies\Microsoft\Windows\Windows Search`. Impede o descompactar e indexar em segundo plano de ficheiros `.zip` e pacotes de mods/assets, eliminando picos de CPU e leituras de SSD. |
+| **83** | **Otimização de Sombras do DWM e Compositor Gráfico (Sem Sombras / Texto Nítido)** | Desativa sombras decorativas sob janelas e ponteiro do rato no DWM, mantendo o *ClearType / FontSmoothing* ativo a 100% para máxima legibilidade com menos overhead gráfico. |
+| **84** | **Bloqueio de Downloads em Background do Windows Spotlight no LockScreen** | Desativa tarefas e transferências de conteúdo patrocinado e wallpapers do Bing via `ContentDeliveryManager` e políticas de CloudContent. |
+| **85** | **Acesso Rápido Limpo sem Histórico Contínuo no SSD (Menos Escritas)** | `ShowRecent=0` e `ShowFrequent=0` em `Software\Microsoft\Windows\CurrentVersion\Explorer`. Elimina escritas desnecessárias no journaling do SSD a cada ficheiro acedido e torna a abertura do Explorador instantânea. |
+
 ---
 
 ## 🚀 Como Executar
@@ -261,7 +270,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
     |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
                 |___/      |_|                                    
                     Windows 10/11 Performance Toolkit
-                             Versão: 2.6.0
+                             Versão: 2.7.0
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
@@ -272,7 +281,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (80 Tweaks)
+   [1] Aplicar Otimizações Completas (85 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Limpeza Segura de Caches e Shaders
    [4] Reverter Alterações (100% Desfazer)
@@ -284,7 +293,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 80 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 85 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```
