@@ -68,7 +68,7 @@ Contendo 5 utilitários essenciais com **elevação automática de Administrador
 
 ---
 
-## ⚡ As 85 Otimizações Incluídas (v2.7)
+## ⚡ As 90 Otimizações Incluídas (v2.8)
 
 ### 1. Sistema & Desempenho (Kernel & Power)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -239,6 +239,15 @@ Contendo 5 utilitários essenciais com **elevação automática de Administrador
 | **84** | **Bloqueio de Downloads em Background do Windows Spotlight no LockScreen** | Desativa tarefas e transferências de conteúdo patrocinado e wallpapers do Bing via `ContentDeliveryManager` e políticas de CloudContent. |
 | **85** | **Acesso Rápido Limpo sem Histórico Contínuo no SSD (Menos Escritas)** | `ShowRecent=0` e `ShowFrequent=0` em `Software\Microsoft\Windows\CurrentVersion\Explorer`. Elimina escritas desnecessárias no journaling do SSD a cada ficheiro acedido e torna a abertura do Explorador instantânea. |
 
+### 22. Latência Extrema & Resposta de Fundo
+| # | Tweak | Descrição Técnica & Segurança |
+|---|-------|--------------------------------|
+| **86** | **Desativação de Telemetria de Localização e Sensores (Serviço lfsvc Off)** | Desativa o serviço `lfsvc` e as políticas `LocationAndSensors`. Elimina varreduras em segundo plano de redes Wi-Fi e sondagens por IP para estimativa de localização. |
+| **87** | **Desativação de Aplicações Pré-Lançadas Especulativamente (ApplicationPreLaunch Off)** | `Disable-MMAgent -ApplicationPreLaunch`. Impede o Windows de injetar instâncias silenciosas de apps UWP em RAM antes de serem abertas, poupando ciclos de CPU e RAM. |
+| **88** | **Desativação de Varreduras em Segundo Plano do Storage Sense (StoragePolicy Off)** | `01=0` em `StorageSense\Parameters\StoragePolicy`. Impede varreduras e limpezas automáticas no disco durante sessões de jogo, eliminando picos de I/O em SSDs. |
+| **89** | **Desativação de Broadcasts Legados NetBIOS sobre TCP/IP (NetBT Off)** | `NetbiosOptions=2` em todas as interfaces ativas. Elimina o ruído de pacotes broadcast periódicos UDP (portas 137/138) na rede local, mantendo a navegação e resolução DNS puras. |
+| **90** | **Desativação de Sincronização da Área de Transferência na Cloud (Clipboard Local)** | `AllowCrossDeviceClipboard=0` em `Policies\Microsoft\Windows\System`. Mantém o histórico local de copiar/colar (Win+V) a funcionar perfeitamente, mas bloqueia o envio contínuo de dados para a cloud. |
+
 ---
 
 ## 🚀 Como Executar
@@ -269,7 +278,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
     |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
                 |___/      |_|                                    
                     Windows 10/11 Performance Toolkit
-                             Versão: 2.7.0
+                             Versão: 2.8.0
    ================================================================================
      Dispositivo:   MEU-PC
      Sistema:       Windows 11 Pro
@@ -280,7 +289,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant / CS2 no FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (85 Tweaks)
+   [1] Aplicar Otimizações Completas (90 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)
    [4] Limpeza de Caches e Shaders
@@ -293,7 +302,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
 ---
 
 ### 3. Automação via Linha de Comando
-* **Aplicar todas as 85 otimizações e gerar o Painel do Cliente:**
+* **Aplicar todas as 90 otimizações e gerar o Painel do Cliente:**
   ```powershell
   .\SkyOptimizer.ps1 -Apply
   ```

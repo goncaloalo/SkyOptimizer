@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.6 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.8 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
@@ -673,13 +673,16 @@ function Disable-GameDVR {
     Ensure-RegistryPath -KeyPath $appCapture
     Backup-RegistryKey -KeyPath $appCapture -BackupName "09_GameDVR_User"
     Set-ItemProperty -Path $appCapture -Name "AppCaptureEnabled" -Value 0 -Type DWord -Force
+    Set-ItemProperty -Path $appCapture -Name "HistoricalCaptureEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Set-ItemProperty -Path $configStore -Name "GameDVR_HistoricalCaptureEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
 
     $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
     Ensure-RegistryPath -KeyPath $policyKey
     Backup-RegistryKey -KeyPath $policyKey -BackupName "09_GameDVR_Policy"
     Set-ItemProperty -Path $policyKey -Name "AllowGameDVR" -Value 0 -Type DWord -Force
 
-    Write-SkyLog -Message "Gravação em segundo plano do Game DVR / Xbox Game Bar desativada." -Level "Success"
+    Write-SkyLog -Message "Gravação em segundo plano do Game DVR / Xbox Game Bar desativada (captura contínua e GPU encoder libertados)." -Level "Success"
     return $true
 }
 
@@ -1707,7 +1710,10 @@ function Disable-MaintenanceScheduledTasks {
         "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
         "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
         "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
-        "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting"
+        "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting",
+        "\Microsoft\Windows\Maintenance\WinSAT",
+        "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem",
+        "\Microsoft\Windows\DiskFootprint\Diagnostics"
     )
 
     $disabledCount = 0
@@ -2266,13 +2272,16 @@ function Optimize-NetshTcpGlobal {
     # Desativar RSC a nível de stack TCP global
     $null = netsh int tcp set global rsc=disabled 2>&1
 
+    # Desativar heurística TCP (evita restrições dinâmicas da janela TCP e lag em gaming)
+    $null = netsh int tcp set heuristics disabled 2>&1
+
     # Ativar RSS (Receive Side Scaling - distribui processamento de rede por múltiplos núcleos de CPU)
     $null = netsh int tcp set global rss=enabled 2>&1
 
     # PROTEÇÃO CRÍTICA: Manter SEMPRE autotuninglevel=normal para garantir velocidade máxima em fibra 500M/1Gbps
     $null = netsh int tcp set global autotuninglevel=normal 2>&1
 
-    Write-SkyLog -Message "Pilha TCP global otimizada via netsh (Timestamps=Disabled, ECN=Disabled, RSC=Disabled, RSS=Enabled, AutoTuning=Normal protegido)." -Level "Success"
+    Write-SkyLog -Message "Pilha TCP global otimizada via netsh (Timestamps=Off, ECN=Off, RSC=Off, Heuristics=Off, RSS=On, AutoTuning=Normal)." -Level "Success"
     return $true
 }
 
@@ -2410,7 +2419,115 @@ function Optimize-QuickAccessHistory {
 }
 
 # ==============================================================================
-# 4.19 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
+# 4.19 BATCH DE TWEAKS DE LATÊNCIA EXTREMA & BACKGROUND (TWEAKS 86 A 90)
+# ==============================================================================
+
+function Disable-LocationAndSensors {
+    [CmdletBinding()]
+    param()
+
+    # 1. Políticas de Localização e Sensores
+    $locPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
+    Ensure-RegistryPath -KeyPath $locPolKey
+    Backup-RegistryKey -KeyPath $locPolKey -BackupName "86_LocationAndSensors_Policy"
+
+    Set-ItemProperty -Path $locPolKey -Name "DisableLocation" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $locPolKey -Name "DisableLocationScripting" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $locPolKey -Name "DisableSensors" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # 2. Consentimento de Aplicações para Localização (Deny)
+    $consentKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"
+    Ensure-RegistryPath -KeyPath $consentKey
+    Backup-RegistryKey -KeyPath $consentKey -BackupName "86_Location_Consent"
+    Set-ItemProperty -Path $consentKey -Name "Value" -Value "Deny" -Type String -Force -ErrorAction SilentlyContinue
+
+    # 3. Serviço de Geolocalização (lfsvc)
+    $svc = Get-Service -Name "lfsvc" -ErrorAction SilentlyContinue
+    if ($svc) {
+        Stop-Service -Name "lfsvc" -Force -ErrorAction SilentlyContinue
+        Set-Service -Name "lfsvc" -StartupType Disabled -ErrorAction SilentlyContinue
+    }
+
+    Write-SkyLog -Message "Telemetria de localização e sensores desativada (serviço lfsvc parado; zero varreduras Wi-Fi em background)." -Level "Success"
+    return $true
+}
+
+function Disable-ApplicationPreLaunch {
+    [CmdletBinding()]
+    param()
+
+    # Desativação do pré-arranque especulativo de aplicações UWP/Store em segundo plano
+    try {
+        Disable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue
+    } catch {}
+
+    $appxPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Appx"
+    Ensure-RegistryPath -KeyPath $appxPolKey
+    Backup-RegistryKey -KeyPath $appxPolKey -BackupName "87_Appx_PreLaunchPolicy"
+    Set-ItemProperty -Path $appxPolKey -Name "AllowDeploymentInSpecialProfiles" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Pré-arranque especulativo de aplicações desativado (ApplicationPreLaunch Off / RAM e CPU poupados em idle)." -Level "Success"
+    return $true
+}
+
+function Disable-StorageSenseBackgroundScans {
+    [CmdletBinding()]
+    param()
+
+    $ssUserKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
+    Ensure-RegistryPath -KeyPath $ssUserKey
+    Backup-RegistryKey -KeyPath $ssUserKey -BackupName "88_StorageSense_User"
+    Set-ItemProperty -Path $ssUserKey -Name "01" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    $ssPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense"
+    Ensure-RegistryPath -KeyPath $ssPolKey
+    Backup-RegistryKey -KeyPath $ssPolKey -BackupName "88_StorageSense_Policy"
+    Set-ItemProperty -Path $ssPolKey -Name "AllowStorageSenseGlobal" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Varreduras automáticas do Sensor de Armazenamento em background desativadas (zero picos de I/O em SSDs)." -Level "Success"
+    return $true
+}
+
+function Disable-NetBiosOverTcpip {
+    [CmdletBinding()]
+    param()
+
+    $netbtBase = "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces"
+    Ensure-RegistryPath -KeyPath $netbtBase
+    Backup-RegistryKey -KeyPath $netbtBase -BackupName "89_NetBT_Interfaces"
+
+    $interfaces = Get-ChildItem -Path $netbtBase -ErrorAction SilentlyContinue
+    $configuredCount = 0
+
+    foreach ($iface in $interfaces) {
+        # NetbiosOptions: 2 = Desativar NetBIOS sobre TCP/IP (elimina broadcasts periódicos UDP portas 137/138 na LAN)
+        Set-ItemProperty -Path $iface.PSPath -Name "NetbiosOptions" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
+        $configuredCount++
+    }
+
+    Write-SkyLog -Message "NetBIOS sobre TCP/IP desativado em $configuredCount interface(s) (elimina ruído de broadcast UDP)." -Level "Success"
+    return $true
+}
+
+function Disable-CloudClipboardSync {
+    [CmdletBinding()]
+    param()
+
+    $sysPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
+    Ensure-RegistryPath -KeyPath $sysPolKey
+    Backup-RegistryKey -KeyPath $sysPolKey -BackupName "90_System_CloudClipboard"
+
+    # AllowCrossDeviceClipboard = 0: Impede envio de dados copiados (texto/imagens) para a cloud da Microsoft
+    Set-ItemProperty -Path $sysPolKey -Name "AllowCrossDeviceClipboard" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    # AllowClipboardHistory = 1: Preserva a funcionalidade local do histórico Win+V para o utilizador
+    Set-ItemProperty -Path $sysPolKey -Name "AllowClipboardHistory" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    Write-SkyLog -Message "Sincronização do Clipboard na Cloud desativada (histórico Win+V local protegido sem telemetria)." -Level "Success"
+    return $true
+}
+
+# ==============================================================================
+# 4.20 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
 function Deploy-ClientPanel {
@@ -2802,13 +2919,21 @@ Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehav
 Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
 
-# Reposicao de Otimizacoes Cirurgicas (Tweaks 81 a 85)
+# Reposicao de Otimizacoes Cirurgicas e de Fundo (Tweaks 81 a 90)
 Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+# Tweaks 86 a 90
+Set-Service -Name "lfsvc" -StartupType Manual -ErrorAction SilentlyContinue
+try { Enable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue } catch {}
+$null = netsh int tcp set heuristics default 2>&1
+schtasks /Change /TN "\Microsoft\Windows\Maintenance\WinSAT" /Enable 2>&1 | Out-Null
+schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1 | Out-Null
+schtasks /Change /TN "\Microsoft\Windows\DiskFootprint\Diagnostics" /Enable 2>&1 | Out-Null
 
 # 4. Finalizacao
 Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
@@ -2951,7 +3076,7 @@ Comunidade Oficial & Suporte: https://discord.gg/cE8ZaDRGV5
 ================================================================================
 
 Boas! O teu computador foi otimizado a fundo pelo teu técnico do SkyOptimizer.
-Foram aplicadas 85 otimizações cirúrgicas de kernel, rede, input de rato/teclado,
+Foram aplicadas 90 otimizações cirúrgicas de kernel, rede, input de rato/teclado,
 gestão de memória e energia para espremer o máximo de fluidez, reduzir a latência
 ao milissegundo e estabilizar os teus frametimes.
 
@@ -3147,8 +3272,8 @@ function Invoke-SkyOptimize {
         $ProgressPreference = $prevProgress
     }
 
-    # 2. Execução das 85 Otimizações
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (85 Tweaks)" -ForegroundColor Magenta
+    # 2. Execução das 90 Otimizações
+    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (90 Tweaks)" -ForegroundColor Magenta
     Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
 
     $tweaks = @(
@@ -3277,7 +3402,14 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 82; Category = "Armazenamento & I/O"; Name = "Desativação de Indexação de Ficheiros Comprimidos (.zip/mods no Windows Search)"; Action = { Disable-ZipIndexing } },
         [ordered]@{ Id = 83; Category = "Interface & Multimédia"; Name = "Otimização de Sombras do DWM e Compositor Gráfico (Sem Sombras / Texto Nítido)"; Action = { Optimize-DwmVisualEffects } },
         [ordered]@{ Id = 84; Category = "Privacidade & Telemetria"; Name = "Bloqueio de Downloads em Segundo Plano do Windows Spotlight no LockScreen"; Action = { Disable-WindowsSpotlightDownloads } },
-        [ordered]@{ Id = 85; Category = "Explorador & QoL"; Name = "Acesso Rápido Limpo sem Histórico Contínuo no SSD (Menos Escritas)"; Action = { Optimize-QuickAccessHistory } }
+        [ordered]@{ Id = 85; Category = "Explorador & QoL"; Name = "Acesso Rápido Limpo sem Histórico Contínuo no SSD (Menos Escritas)"; Action = { Optimize-QuickAccessHistory } },
+
+        # Categoria 22: Latência Extrema & Resposta de Fundo
+        [ordered]@{ Id = 86; Category = "Privacidade & Telemetria"; Name = "Desativação de Telemetria de Localização e Sensores (Serviço lfsvc Off)"; Action = { Disable-LocationAndSensors } },
+        [ordered]@{ Id = 87; Category = "Processos em Segundo Plano"; Name = "Desativação de Aplicações Pré-Lançadas Especulativamente (ApplicationPreLaunch Off)"; Action = { Disable-ApplicationPreLaunch } },
+        [ordered]@{ Id = 88; Category = "Armazenamento & I/O"; Name = "Desativação de Varreduras em Segundo Plano do Storage Sense (StoragePolicy Off)"; Action = { Disable-StorageSenseBackgroundScans } },
+        [ordered]@{ Id = 89; Category = "Rede & Latência"; Name = "Desativação de Broadcasts Legados NetBIOS sobre TCP/IP (NetBT Off)"; Action = { Disable-NetBiosOverTcpip } },
+        [ordered]@{ Id = 90; Category = "Privacidade & Telemetria"; Name = "Desativação de Sincronização da Área de Transferência na Cloud (Clipboard Local)"; Action = { Disable-CloudClipboardSync } }
     )
 
     $currentCategory = ""
@@ -3822,13 +3954,21 @@ function Invoke-SkyUndo {
     Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
 
-    # Reposição de Otimizações Cirúrgicas (Tweaks 81 a 85)
+    # Reposição de Otimizações Cirúrgicas e de Fundo (Tweaks 81 a 90)
     Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+
+    # Tweaks 86 a 90
+    Set-Service -Name "lfsvc" -StartupType Manual -ErrorAction SilentlyContinue
+    try { Enable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue } catch {}
+    $null = netsh int tcp set heuristics default 2>&1
+    schtasks /Change /TN "\Microsoft\Windows\Maintenance\WinSAT" /Enable 2>&1 | Out-Null
+    schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1 | Out-Null
+    schtasks /Change /TN "\Microsoft\Windows\DiskFootprint\Diagnostics" /Enable 2>&1 | Out-Null
 
     # 4. Finalização, Limpeza do Painel e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
@@ -4066,10 +4206,10 @@ while ($true) {
              |___/      |_|                                    
 '@ -ForegroundColor Cyan
     Write-Host "                 Windows 10/11 Performance Toolkit" -ForegroundColor White
-    Write-Host "                          Versão: 2.7.0" -ForegroundColor White
+    Write-Host "                          Versão: 2.8.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (90 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Magenta
     Write-Host "[3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)" -ForegroundColor Yellow
     Write-Host "[4] Limpeza de Caches e Shaders" -ForegroundColor Cyan
