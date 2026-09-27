@@ -403,7 +403,7 @@ function Show-SystemHardwareInfo {
         Write-Host "$powerPlan" -ForegroundColor $planColor
         Write-Host "  Núcleo VBS:    " -NoNewline -ForegroundColor Gray
         $vbsColor = if ($vbsState -eq "Ativado") { "Yellow" } else { "Green" }
-        Write-Host "$vbsState $(if ($vbsState -eq "Ativado") { "(Valorant/FACEIT Suportados)" } else { "(Máxima Performance)" })" -ForegroundColor $vbsColor
+        Write-Host "$vbsState $(if ($vbsState -eq "Ativado") { "(Valorant / CS2 no FACEIT Suportados)" } else { "(Máxima Performance)" })" -ForegroundColor $vbsColor
         Write-Host "================================================================================" -ForegroundColor Cyan
     } catch {}
 }
@@ -2837,11 +2837,15 @@ Read-Host "`nPressione ENTER para concluir..."
         # Limpar atalhos antigos ou duplicados se existirem
         $obsoleteFiles = @(
             "[1] Desfazer Tudo (Reverter Otimizacoes).cmd",
+            "[4] Alternar Pesquisa na Barra de Tarefas.cmd",
             "[5] Limpar Shaders e Cache (FiveM e CS2).cmd",
+            "[6] Limpar Shaders e Cache (FiveM e CS2).cmd",
             "[6] Alternar Isolamento do Nucleo (VBS).cmd",
             "[6] Alternar Isolamento do Nucleo (Jogos e FPS).cmd",
             "[6] Desinstalar SkyOptimizer e Apagar Tudo.cmd",
-            "[7] Desinstalar SkyOptimizer e Apagar Tudo.cmd"
+            "[7] Desinstalar SkyOptimizer e Apagar Tudo.cmd",
+            "LEIA-ME (Suporte SkyOptimizer).txt",
+            "Guia_VIP_Maximo_FPS.txt"
         )
         foreach ($old in $obsoleteFiles) {
             $oldPath = Join-Path $panelDir $old
@@ -2860,11 +2864,7 @@ Read-Host "`nPressione ENTER para concluir..."
         $btCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Bluetooth`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'bthserv' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico Bluetooth nao encontrado neste sistema.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'bthserv' -StartupType Manual; Start-Service -Name 'bthserv' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  BLUETOOTH ATIVADO COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'Ja pode ligar comandos (Xbox/PS5), auscultadores e outros.' -ForegroundColor White } else { Stop-Service -Name 'bthserv' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'bthserv' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  BLUETOOTH DESATIVADO COM SUCESSO' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Processos de pesquisa sem fios desativados.' -ForegroundColor White } }`"`r`necho.`r`npause"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd"), $btCmd, [System.Text.Encoding]::ASCII)
 
-        # 4. Atalho Pesquisa Barra de Tarefas
-        $searchCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Pesquisa do Windows`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'WSearch' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico Windows Search nao encontrado.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'WSearch' -StartupType Automatic; Start-Service -Name 'WSearch' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  PESQUISA NA BARRA DE TAREFAS ATIVADA COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'A barra de tarefas voltara a pesquisar todos os ficheiros.' -ForegroundColor White } else { Stop-Service -Name 'WSearch' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'WSearch' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  PESQUISA EM SEGUNDO PLANO DESATIVADA' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Escritas e leituras constantes no disco/SSD eliminadas.' -ForegroundColor White } }`"`r`necho.`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[4] Alternar Pesquisa na Barra de Tarefas.cmd"), $searchCmd, [System.Text.Encoding]::ASCII)
-
-        # 5. Atalho Isolamento do Núcleo (VBS e Jogos)
+        # 4. Atalho Isolamento do Núcleo (VBS e Jogos)
         $vbsCmd = @'
 @echo off
 title SkyOptimizer - Controlo de Isolamento do Nucleo (VBS e Jogos)
@@ -2883,198 +2883,126 @@ echo ===========================================================================
 echo.
 echo  O Isolamento do Nucleo (VBS/HVCI) e uma camada de seguranca do Windows.
 echo  Desativa-lo liberta a CPU, garantindo mais 5%% a 15%% de FPS e eliminando
-echo  micro-stutters e latencia em quase todos os jogos competitivos.
+echo  micro-stutters e latencia em praticamente todos os jogos.
 echo.
 echo  ------------------------------------------------------------------------------
-echo  GUIA RAPIDO DE COMPATIBILIDADE:
+echo  GUIA DE COMPATIBILIDADE DE JOGOS:
 echo  ------------------------------------------------------------------------------
 echo.
 echo  [!] EXIGEM ESTE RECURSO ATIVADO (Se desligar, o jogo nao arranca no Win11):
 echo      * VALORANT (Anti-cheat Riot Vanguard)
-echo      * FACEIT CS2 (Faceit Anti-Cheat Client)
+echo      * CS2 no FACEIT (Anti-cheat Faceit Client no Win11)
 echo      * League of Legends (Anti-cheat Riot Vanguard)
 echo.
 echo  [+] GANHAM +5%% A +15%% FPS E MENOS LATENCIA COM ISTO DESATIVADO:
-echo      * FiveM / GTA V
-echo      * Counter-Strike 2 (Matchmaking Oficial / Premier da Valve / VAC)
+echo      * Counter-Strike 2 (Premier, Valve Matchmaking, Servidores Comunidade)
+echo      * FiveM, RedM e GTA V
 echo      * ARC Raiders
-echo      * Call of Duty / Warzone
-echo      * Fortnite (Modo Desempenho / DX11 / DX12)
-echo      * Apex Legends
-echo      * Rust
-echo      * Escape from Tarkov
-echo      * EA SPORTS FC 24 / 25 (FIFA)
-echo      * Rocket League
-echo      * PUBG: Battlegrounds
-echo      * Rainbow Six Siege
-echo      * Overwatch 2
+echo      * Call of Duty: Warzone, Modern Warfare e Black Ops
+echo      * Fortnite (Modo Desempenho, DX11 e DX12)
+echo      * Apex Legends, PUBG: Battlegrounds e The Finals
+echo      * Rust, Escape from Tarkov e DayZ
+echo      * Tom Clancy's Rainbow Six Siege e Overwatch 2
+echo      * EA SPORTS FC 24 / 25 e Rocket League
+echo      * Assetto Corsa, Forza Horizon e F1
+echo      * Todos os titulos competitivos e AAA DirectX 11, DirectX 12 e Vulkan
 echo.
 echo ================================================================================
 echo.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "& { $hvciKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity'; $dgKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard'; $curVal = 0; if (Test-Path $hvciKey) { $curVal = (Get-ItemProperty $hvciKey -ErrorAction SilentlyContinue).Enabled }; if ($curVal -eq 1) { Write-Host 'Estado Atual: ATIVADO (Seguranca Ligada / Menos FPS)' -ForegroundColor Yellow; Write-Host 'Compatibilidade: VALORANT e FACEIT funcionam a 100%.' -ForegroundColor Gray; Write-Host ''; $resp = Read-Host 'Pretende DESATIVAR para ganhar mais FPS em FiveM, CS2, ARC Raiders, etc.? (S/N)'; if ($resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }; Set-ItemProperty -Path $hvciKey -Name 'Enabled' -Value 0 -Type DWord -Force; Set-ItemProperty -Path $dgKey -Name 'EnableVirtualizationBasedSecurity' -Value 0 -Type DWord -Force; Write-Host '`n[OK] Isolamento do Nucleo DESATIVADO com sucesso!' -ForegroundColor Green; Write-Host 'E necessario reiniciar o computador para aplicar.' -ForegroundColor Yellow } } else { Write-Host 'Estado Atual: DESATIVADO (Maxima Performance / Sem VBS)' -ForegroundColor Green; Write-Host 'Compatibilidade: FiveM, CS2, ARC Raiders com maxima fluidez.' -ForegroundColor Gray; Write-Host ''; $resp = Read-Host 'Pretende ATIVAR para poder jogar VALORANT ou FACEIT? (S/N)'; if ($resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }; Set-ItemProperty -Path $hvciKey -Name 'Enabled' -Value 1 -Type DWord -Force; Set-ItemProperty -Path $dgKey -Name 'EnableVirtualizationBasedSecurity' -Value 1 -Type DWord -Force; Write-Host '`n[OK] Isolamento do Nucleo ATIVADO com sucesso!' -ForegroundColor Green; Write-Host 'E necessario reiniciar o computador para aplicar.' -ForegroundColor Yellow } } }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "& { $hvciKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity'; $dgKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard'; $curVal = 0; if (Test-Path $hvciKey) { $curVal = (Get-ItemProperty $hvciKey -ErrorAction SilentlyContinue).Enabled }; if ($curVal -eq 1) { Write-Host 'Estado Atual: ATIVADO (Seguranca Ligada / Menos FPS)' -ForegroundColor Yellow; Write-Host 'Compatibilidade: VALORANT e jogos no FACEIT funcionam a 100%.' -ForegroundColor Gray; Write-Host ''; $resp = Read-Host 'Pretende DESATIVAR para ganhar mais FPS em FiveM, CS2, COD, Fortnite, etc.? (S/N)'; if ($resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }; Set-ItemProperty -Path $hvciKey -Name 'Enabled' -Value 0 -Type DWord -Force; Set-ItemProperty -Path $dgKey -Name 'EnableVirtualizationBasedSecurity' -Value 0 -Type DWord -Force; Write-Host '`n[OK] Isolamento do Nucleo DESATIVADO com sucesso!' -ForegroundColor Green; Write-Host 'E necessario reiniciar o computador para aplicar.' -ForegroundColor Yellow } } else { Write-Host 'Estado Atual: DESATIVADO (Maxima Performance / Sem VBS)' -ForegroundColor Green; Write-Host 'Compatibilidade: FiveM, CS2, ARC Raiders, COD com maxima fluidez.' -ForegroundColor Gray; Write-Host ''; $resp = Read-Host 'Pretende ATIVAR para poder jogar VALORANT ou no FACEIT? (S/N)'; if ($resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }; Set-ItemProperty -Path $hvciKey -Name 'Enabled' -Value 1 -Type DWord -Force; Set-ItemProperty -Path $dgKey -Name 'EnableVirtualizationBasedSecurity' -Value 1 -Type DWord -Force; Write-Host '`n[OK] Isolamento do Nucleo ATIVADO com sucesso!' -ForegroundColor Green; Write-Host 'E necessario reiniciar o computador para aplicar.' -ForegroundColor Yellow } } }"
 echo.
 echo Discord da Comunidade: https://discord.gg/cE8ZaDRGV5
 echo.
 pause
 '@
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd"), $vbsCmd, [System.Text.Encoding]::ASCII)
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd"), $vbsCmd, [System.Text.Encoding]::ASCII)
 
-        # 6. Atalho Limpeza de Shaders e Caches (Motor Autónomo e Seguro)
-        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Cache`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { Write-Host '===================================================' -ForegroundColor Cyan; Write-Host '   SkyOptimizer - Limpeza de Shaders e Caches' -ForegroundColor Cyan; Write-Host '===================================================' -ForegroundColor Cyan; `$cleared = 0; `$dirs = @(\`"`$env:LOCALAPPDATA\NVIDIA\DXCache\`", \`"`$env:LOCALAPPDATA\NVIDIA\GLCache\`", \`"`$env:LOCALAPPDATA\D3DSCache\`", \`"`$env:LOCALAPPDATA\CitizenFX\cache\`", \`"`$env:TEMP\`", \`"`$env:SystemRoot\Temp\`); foreach (`$d in `$dirs) { if (Test-Path `$d) { Get-ChildItem -Path `$d -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { try { Remove-Item -Path `$_.FullName -Force -ErrorAction SilentlyContinue; `$cleared++ } catch {} } } }; Write-Host '`n[OK] Limpeza concluida com sucesso! ' -NoNewline -ForegroundColor Green; Write-Host \`"`$cleared ficheiro(s) de cache e shaders removidos.\`" -ForegroundColor White; pause }`"`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[6] Limpar Shaders e Cache (FiveM e CS2).cmd"), $cleanCmd, [System.Text.Encoding]::ASCII)
+        # 5. Atalho Limpeza de Shaders e Caches de Jogos
+        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Caches`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { Write-Host '===================================================' -ForegroundColor Cyan; Write-Host '   SkyOptimizer - Limpeza de Shaders e Caches' -ForegroundColor Cyan; Write-Host '===================================================' -ForegroundColor Cyan; `$cleared = 0; `$dirs = @(\`"`$env:LOCALAPPDATA\NVIDIA\DXCache\`", \`"`$env:LOCALAPPDATA\NVIDIA\GLCache\`", \`"`$env:LOCALAPPDATA\D3DSCache\`", \`"`$env:LOCALAPPDATA\CitizenFX\cache\`", \`"`$env:TEMP\`", \`"`$env:SystemRoot\Temp\`); foreach (`$d in `$dirs) { if (Test-Path `$d) { Get-ChildItem -Path `$d -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { try { Remove-Item -Path `$_.FullName -Force -ErrorAction SilentlyContinue; `$cleared++ } catch {} } } }; Write-Host '`n[OK] Limpeza concluida com sucesso! ' -NoNewline -ForegroundColor Green; Write-Host \`"`$cleared ficheiro(s) de cache e shaders removidos.\`" -ForegroundColor White; pause }`"`r`npause"
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[5] Limpar Shaders e Caches de Jogos.cmd"), $cleanCmd, [System.Text.Encoding]::ASCII)
 
         # Relatório Antes vs. Depois
         if ($ReportContent) {
             [System.IO.File]::WriteAllText((Join-Path $panelDir "Relatorio_Otimizacao.txt"), $ReportContent, [System.Text.Encoding]::UTF8)
         }
 
-        # Ficheiro LEIA-ME
+        # Ficheiro LÊ-ME (Suporte SkyOptimizer)
         $readmeTxt = @"
 ================================================================================
                     SkyOptimizer - Painel de Controlo & Suporte
 ================================================================================
-
-Este painel foi preparado para o teu PC pelo teu técnico SkyOptimizer.
-Todas as 85 otimizações foram aplicadas para garantir a menor latência de input,
-frametimes estáveis e máxima fluidez em jogos (FiveM, CS2, ARC Raiders, etc.).
-
-Como utilizar estes atalhos de 1 clique:
---------------------------------------------------------------------------------
-1. [1] Reverter Todas as Otimizacoes.cmd
-   - Reverte 100% de todas as alterações efetuadas, repondo as configurações
-     e registos originais da tua máquina com segurança total.
-
-2. [2] Alternar Impressora (Ligar-Desligar).cmd
-   - Se precisares de imprimir documentos ou ligar uma impressora, clica 2x
-     para reativar o serviço de impressão na hora.
-
-3. [3] Alternar Bluetooth (Ligar-Desligar).cmd
-   - Caso uses comandos sem fios (Xbox, PS5, PS4) ou auscultadores Bluetooth,
-     clica 2x para ativar a comunicação sem fios.
-
-4. [4] Alternar Pesquisa na Barra de Tarefas.cmd
-   - Ativa ou desativa a indexação constante de ficheiros do Windows Search.
-
-5. [5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd
-   - Permite alternar o Isolamento do Núcleo. Desativar dá mais 5% a 15% de FPS
-     em FiveM, CS2, ARC Raiders, Warzone, Fortnite, Apex, etc.
-     Mantém ATIVADO apenas se jogares VALORANT ou CS2 na FACEIT.
-
-6. [6] Limpar Shaders e Cache (FiveM e CS2).cmd
-   - Executa mensalmente ou sempre que notares micro-stutters para limpar
-     ficheiros temporários e caches de shaders da gráfica.
-
-7. Guia_VIP_Maximo_FPS.txt
-   - Consulta este guia para aprenderes a ativar o XMP/EXPO na tua BIOS,
-     garantir que o teu monitor está a 144Hz/240Hz reais e afinar
-     o Painel NVIDIA/AMD para a menor latência de clique.
-
---------------------------------------------------------------------------------
-Comunidade & Suporte SkyOptimizer:
-Tens dúvidas sobre o teu setup ou queres otimizar outro PC?
-Entra no nosso Discord da comunidade:
-👉 https://discord.gg/cE8ZaDRGV5
-================================================================================
-"@
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "LEIA-ME (Suporte SkyOptimizer).txt"), $readmeTxt, [System.Text.Encoding]::UTF8)
-
-        # Ficheiro Guia VIP de Hardware, BIOS e FPS
-        $vipGuideTxt = @"
-================================================================================
-                    SkyOptimizer - Guia VIP de Hardware & FPS
-                   Segredos de BIOS, Gráfica e Periféricos
-================================================================================
 Comunidade Oficial & Suporte: https://discord.gg/cE8ZaDRGV5
 ================================================================================
 
-Parabéns! O teu Windows foi profundamente otimizado ao nível de sistema operativo
-pelo SkyOptimizer (85 Tweaks de Elite de latência de kernel, I/O e energia).
+Boas! O teu computador foi otimizado a fundo pelo teu técnico do SkyOptimizer.
+Foram aplicadas 85 otimizações cirúrgicas de kernel, rede, input de rato/teclado,
+gestão de memória e energia para espremer o máximo de fluidez, reduzir a latência
+ao milissegundo e estabilizar os teus frametimes.
 
-Para extraíres 100% do potencial da tua máquina e garantires a máxima fluidez,
-existem 5 configurações externas essenciais que deves verificar:
-
---------------------------------------------------------------------------------
-1. ATIVAR O PERFIL XMP / EXPO (DOCP) NA BIOS (Ganho de +10% a +25% de 1% Lows)
---------------------------------------------------------------------------------
-O QUE É:
-Por padrão de fábrica, quase todas as motherboards configuram a memória RAM
-para a velocidade base mínima de segurança (ex: 2133 MHz em DDR4 ou 4800 MHz em DDR5),
-mesmo que tenhas comprado memórias de 3200 MHz, 3600 MHz ou 6000 MHz!
-Isso cria um gargalo imenso na CPU e causa micro-travamentos frequentes em jogos.
-
-COMO ATIVAR:
-1. Reinicia o computador e pressiona continuamente a tecla 'DEL' ou 'F2' ao ligar.
-2. Na BIOS, procura pela opção:
-   - Processador Intel: 'X.M.P.' (Extreme Memory Profile) -> Muda para 'Profile 1' ou 'Enabled'.
-   - Processador AMD:   'EXPO' ou 'D.O.C.P.' -> Muda para 'Profile 1' ou 'Enabled'.
-3. Pressiona 'F10' para Guardar e Reiniciar (Save & Exit).
-4. Ao entrar no Windows, abre o Gestor de Tarefas (Ctrl+Shift+Esc), clica no
-   separador 'Desempenho' -> 'Memória' e verifica se a velocidade aumentou!
+🎮 Compatibilidade Total de Jogos:
+Estas otimizações cobrem todos os teus jogos favoritos em DirectX 11, DirectX 12
+e Vulkan:
+- Shooters Competitivos: CS2, VALORANT, Rainbow Six Siege, Overwatch 2, Apex Legends
+- Roleplay & Open-World: FiveM, RedM, GTA V, Rust, DayZ, Escape from Tarkov
+- Battle Royale & Ação: Warzone, Fortnite, PUBG, ARC Raiders, The Finals
+- Desporto & Simulação: EA SPORTS FC 24/25, Rocket League, Assetto Corsa, F1, Forza
 
 --------------------------------------------------------------------------------
-2. RESIZABLE BAR / AMD SMART ACCESS MEMORY (SAM) (Ganho de +5% a +15% FPS)
+ATALHOS DE 1 CLIQUE NO AMBIENTE DE TRABALHO:
 --------------------------------------------------------------------------------
-O QUE É:
-Permite que o processador aceda à totalidade da memória da placa gráfica (VRAM)
-em simultâneo, em vez de pequenos blocos de 256MB.
 
-COMO ATIVAR NA BIOS:
-1. Entra na BIOS (tecla 'DEL' ou 'F2').
-2. Vai às definições avançadas de PCI / Gráfica ('Advanced' -> 'PCI Subsystem Settings').
-3. Ativa as opções:
-   - 'Above 4G Decoding': ENABLED
-   - 'Re-Size BAR Support': AUTO ou ENABLED
-   - 'CSM Support' (Compatibility Support Module): DISABLED (Necessário UEFI puro).
-4. Pressiona 'F10' para Guardar e Reiniciar.
+1. [1] Reverter Todas as Otimizacoes.cmd
+   - Se por algum motivo quiseres repor o teu Windows exatamente como estava antes,
+     dá 2 cliques aqui. O restauro repõe 100% dos teus ficheiros de registo e
+     serviços originais com segurança total.
 
---------------------------------------------------------------------------------
-3. TAXA DE ATUALIZAÇÃO DO MONITOR (HZ) (O Erro nº 1 dos Jogadores!)
---------------------------------------------------------------------------------
-Muitos jogadores compram monitores de 144Hz, 165Hz ou 240Hz, mas estão a jogar
-a 60Hz no Windows sem saber, porque o Windows predefine 60Hz ao detetar o cabo!
+2. [2] Alternar Impressora (Ligar-Desligar).cmd
+   - O serviço de spooler de impressão consome processos em segundo plano.
+     Se precisares de imprimir faturas ou documentos, clica aqui para ligar na hora.
+     Quando acabares, clica de novo para desligar e poupar CPU.
 
-COMO CONFIRMAR:
-1. Clica com o botão direito no Ambiente de Trabalho -> 'Definições de visualização'.
-2. Rola até ao fundo e clica em 'Ecrã avançado' (Advanced display).
-3. No campo 'Escolher uma taxa de atualização', seleciona a frequência MÁXIMA
-   (ex: 144 Hz, 165 Hz, 240 Hz ou 360 Hz).
-4. NOTA: Se usas cabo HDMI antigo, podes estar limitado a 60Hz. Usa sempre um
-   cabo DisplayPort (DP) de qualidade para monitores de alta frequência.
+3. [3] Alternar Bluetooth (Ligar-Desligar).cmd
+   - Se usares comandos sem fios (Xbox, PS5, PS4) ou auscultadores Bluetooth,
+     clica 2 cliques para ativar. Se usas rato e teclado por cabo/dongle 2.4GHz,
+     mantém desligado para latência zero.
 
---------------------------------------------------------------------------------
-4. DEFINIÇÕES DO PAINEL DA PLACA GRÁFICA (NVIDIA / AMD)
---------------------------------------------------------------------------------
-PAINEL DE CONTROLO NVIDIA (Clica botão direito no Desktop -> Painel NVIDIA):
-- 'Gerir definições 3D' (Manage 3D Settings):
-  * Modo de Gestão de Energia: 'Preferir desempenho máximo'
-  * Modo de Baixa Latência (Low Latency Mode): 'Ultra' (ou 'Ligado')
-  * Tamanho da Cache de Shaders: '10 GB' ou 'Ilimitado'
-  * Filtragem de Texturas - Qualidade: 'Alto Desempenho'
+4. [4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd
+   - O Isolamento do Núcleo (VBS/HVCI) protege o Windows, mas rouba 5% a 15% de FPS
+     e cria micro-stutters na CPU:
+     * Queres mais FPS em FiveM, CS2, Warzone, Fortnite, Rust, Tarkov, etc.? DESLIGA.
+     * Queres jogar VALORANT, LoL ou CS2 no FACEIT? LIGA (obrigatório pelo anti-cheat).
 
-PAINEL AMD ADRENALIN:
-- 'Jogos' -> 'Gráficos':
-  * Radeon Anti-Lag: 'Ativado' (reduz o atraso de input entre cliques e o ecrã)
-  * Radeon Enhanced Sync: 'Ativado' (se não usares FreeSync)
-  * Redefinir Cache de Shaders: Faz após cada grande atualização de driver.
+5. [5] Limpar Shaders e Caches de Jogos.cmd
+   - Executa uma vez por mês ou sempre que notares engasgos após um update de driver
+     da gráfica. Limpa em segundos caches corrompidas de DirectX, NVIDIA e FiveM.
 
 --------------------------------------------------------------------------------
-5. GESTÃO DE APLICAÇÕES DE ARRANQUE (Libertar 1.5 GB a 3 GB de RAM)
+🚀 QUERES AINDA MAIS FPS? SESSÃO VIP DE BIOS & HARDWARE TUNING
 --------------------------------------------------------------------------------
-Aplicações como Discord, Spotify, Steam, Epic Games e Razer abrem em segundo plano
-e consomem ciclos valiosos de CPU e memória RAM enquanto jogas.
+O teu Windows já está afinado ao limite. Mas sabias que pode haver 15% a 30% de
+performance extra ainda "adormecida" na tua máquina?
 
-COMO LIMPAR:
-1. Pressiona 'Ctrl + Shift + Esc' para abrir o Gestor de Tarefas.
-2. Clica no separador 'Aplicações de arranque' (ícone do velocímetro ou lista).
-3. Desativa tudo o que não seja essencial no arranque (podes abrir manualmente quando fores jogar).
-4. NO DISCORD: Vai às Definições do Discord -> Avançadas -> Desativa 'Aceleração por Hardware'
-   para evitar que o Discord roube recursos da tua placa gráfica em jogo.
+Muitos computadores saem de fábrica ou de montagem com:
+- Memória RAM a correr à velocidade mínima base (sem XMP/EXPO ativo na BIOS)
+- Re-Size BAR desativado (a GPU e a CPU comunicam com limites de banda)
+- Curvas de ventoinhas desreguladas (levando a thermal throttling / perdas de clock)
+- Voltagens excessivas de fábrica que aquecem a CPU e reduzem frequências Boost
 
-================================================================================
-Dúvidas ou novo setup? Junta-te à comunidade: https://discord.gg/cE8ZaDRGV5
+⚠️ AVISO IMPORTANTE:
+Alterar opções na BIOS sem conhecimento avançado pode impedir o computador de
+ligar, dar ecrã preto ou até danificar componentes por sobretensão.
+Não mexas sozinho na BIOS através de tutoriais genéricos da internet!
+
+👉 Se queres desbloquear o potencial máximo do teu hardware em segurança absoluta,
+fala comigo no Discord oficial da SkyOptimizer para agendares uma sessão VIP
+dedicada de BIOS & Hardware Tuning!
+
+--------------------------------------------------------------------------------
+Comunidade Oficial SkyOptimizer:
+👉 Discord: https://discord.gg/cE8ZaDRGV5
 ================================================================================
 "@
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "Guia_VIP_Maximo_FPS.txt"), $vipGuideTxt, [System.Text.Encoding]::UTF8)
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "LÊ-ME (Suporte SkyOptimizer).txt"), $readmeTxt, [System.Text.Encoding]::UTF8)
 
         Write-SkyLog -Message "Painel do Cliente criado com sucesso no Ambiente de Trabalho ('$panelDir')." -Level "Success"
         return $true
@@ -3915,7 +3843,7 @@ O seu sistema foi revertido com segurança para o estado anterior.
 }
 
 # ==============================================================================
-# 6.1 AUDITORIA DE HARDWARE, ECRÃ E OPORTUNIDADES DE FPS
+# 6.1 INSPEÇÃO DO TÉCNICO (HARDWARE, ECRÃ, ARRANQUE & BIOS)
 # ==============================================================================
 
 function Invoke-SkyHardwareAudit {
@@ -3932,10 +3860,10 @@ function Invoke-SkyHardwareAudit {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
 '@ -ForegroundColor Cyan
-    Write-Host "         Auditoria de Hardware, Ecrã & Oportunidades de FPS" -ForegroundColor White
+    Write-Host "         Inspeção do Técnico - Hardware, Frequências & Arranque" -ForegroundColor White
     Write-Host "                          Versão: 2.7.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host "`nA analisar componentes de hardware, periféricos e arranque...`n" -ForegroundColor Gray
+    Write-Host "`nA analisar componentes do cliente para diagnóstico técnico...`n" -ForegroundColor Gray
 
     # 1. Memória RAM & Análise de XMP / EXPO
     Write-Host "--- [1/4] Memória RAM & Perfil XMP / EXPO (BIOS) ---" -ForegroundColor Yellow
@@ -3950,19 +3878,19 @@ function Invoke-SkyHardwareAudit {
         $nominalSpeed = $firstMod.Speed
         $channelCount = $ramModules.Count
 
-        Write-Host "  Capacidade Total:          $totalRamGB GB ($channelCount pentes instalados - $(if ($channelCount -ge 2) { 'Dual Channel / Multi-Channel Ativo' } else { 'Single Channel - Recomenda-se adicionar 2º pente' }))" -ForegroundColor White
+        Write-Host "  Capacidade Total:          $totalRamGB GB ($channelCount pentes instalados - $(if ($channelCount -ge 2) { 'Dual Channel / Multi-Channel Ativo' } else { 'Single Channel - Recomendar 2º módulo ao cliente' }))" -ForegroundColor White
         Write-Host "  Velocidade Atual:          $currentSpeed MHz" -ForegroundColor $(if ($currentSpeed -ge $nominalSpeed -and $currentSpeed -gt 2400) { "Green" } else { "Yellow" })
         Write-Host "  Velocidade Nominal Módulo: $nominalSpeed MHz" -ForegroundColor White
 
         if ($currentSpeed -lt $nominalSpeed) {
-            Write-Host "  [ALERTA XMP/EXPO] A tua RAM está a $($currentSpeed) MHz mas suporta $($nominalSpeed) MHz de fábrica!" -ForegroundColor Yellow
-            Write-Host "    -> Acede à BIOS (DEL ou F2 ao ligar o PC) e ativa o perfil 'XMP' (Intel) ou 'EXPO/DOCP' (AMD)." -ForegroundColor Cyan
-            Write-Host "    -> Ganho estimado: +10% a +25% de estabilidade e menos micro-stutters nos 1% Low FPS!" -ForegroundColor Green
+            Write-Host "  [DIAGNÓSTICO TÉCNICO] RAM a $($currentSpeed) MHz (Capacidade Nominal: $($nominalSpeed) MHz)!" -ForegroundColor Yellow
+            Write-Host "    -> Perfil XMP (Intel) ou EXPO/DOCP (AMD) DESATIVADO na BIOS da motherboard." -ForegroundColor Cyan
+            Write-Host "    -> OPORTUNIDADE: Propor afinação de BIOS ao cliente (+10% a +25% de estabilidade nos 1% Lows)." -ForegroundColor Green
         } elseif ($currentSpeed -in @(2133, 2400) -and $nominalSpeed -eq $currentSpeed) {
-            Write-Host "  [INFO JEDEC] A tua RAM está a $currentSpeed MHz (frequência base padrão)." -ForegroundColor Gray
-            Write-Host "    -> Se compraste memórias de 3200MHz/3600MHz/6000MHz, confirma se o perfil XMP/EXPO está ativo na BIOS." -ForegroundColor Cyan
+            Write-Host "  [INFO JEDEC] A RAM está a correr a $currentSpeed MHz (frequência base)." -ForegroundColor Gray
+            Write-Host "    -> Confirmar com o cliente se as memórias suportam frequências superiores para ativar perfil na BIOS." -ForegroundColor Cyan
         } else {
-            Write-Host "  [OK] Frequência da RAM otimizada ($currentSpeed MHz)." -ForegroundColor Green
+            Write-Host "  [OK] Frequência da RAM afinada ($currentSpeed MHz)." -ForegroundColor Green
         }
     } else {
         Write-Host "  Capacidade Total:          $totalRamGB GB" -ForegroundColor White
@@ -3982,10 +3910,9 @@ function Invoke-SkyHardwareAudit {
             Write-Host "  Taxa de Atualização:       $hz Hz" -ForegroundColor $(if ($hz -gt 60) { "Green" } else { "Yellow" })
 
             if ($hz -le 60) {
-                Write-Host "  [ATENÇÃO] O monitor está a correr a 60 Hz no Windows." -ForegroundColor Yellow
-                Write-Host "    -> Se o teu monitor é de 144Hz, 165Hz ou 240Hz, ativa os Hertz máximos em:" -ForegroundColor Cyan
-                Write-Host "       Definições do Windows > Sistema > Ecrã > Ecrã Avançado." -ForegroundColor White
-                Write-Host "    -> Certifica-te também de usar um cabo DisplayPort (DP) de qualidade." -ForegroundColor Gray
+                Write-Host "  [DIAGNÓSTICO TÉCNICO] O monitor está a correr a 60 Hz no Windows." -ForegroundColor Yellow
+                Write-Host "    -> Se o monitor do cliente for de 144Hz/165Hz/240Hz, ajustar nas definições do Windows (Ecrã Avançado)." -ForegroundColor Cyan
+                Write-Host "    -> Confirmar se o cliente está a utilizar cabo DisplayPort (DP) adequado." -ForegroundColor Gray
             } else {
                 Write-Host "  [OK] Monitor de Alta Frequência ativo ($hz Hz - Fluidez Máxima)." -ForegroundColor Green
             }
@@ -4016,9 +3943,9 @@ function Invoke-SkyHardwareAudit {
             }
         }
         if ($detectedHeavy.Count -gt 0) {
-            Write-Host "`n  [RECOMENDAÇÃO] Detetadas $($detectedHeavy.Count) aplicações de jogos/comunicação que abrem no boot." -ForegroundColor Yellow
-            Write-Host "    -> Abre o Gestor de Tarefas (Ctrl+Shift+Esc) > Separador 'Arranque' e desativa as que não precisas de imediato." -ForegroundColor Cyan
-            Write-Host "    -> Libertarás entre 1.0 GB e 2.5 GB de RAM antes de abrir qualquer jogo!" -ForegroundColor Green
+            Write-Host "`n  [DIAGNÓSTICO TÉCNICO] Detetadas $($detectedHeavy.Count) aplicações pesadas no arranque do cliente." -ForegroundColor Yellow
+            Write-Host "    -> Recomenda-se abrir Gestor de Tarefas > Arranque e desativar com o consentimento do cliente." -ForegroundColor Cyan
+            Write-Host "    -> Libertará entre 1.0 GB e 2.5 GB de RAM antes de abrir qualquer jogo!" -ForegroundColor Green
         } else {
             Write-Host "  [OK] Arranque limpo! Nenhuma aplicação pesada detetada na inicialização." -ForegroundColor Green
         }
@@ -4031,18 +3958,18 @@ function Invoke-SkyHardwareAudit {
     $vbsState = Get-VbsStatus
     if ($vbsState -eq "Ativado") {
         Write-Host "  Estado do VBS:             ATIVADO (Segurança de Virtualização Ligada)" -ForegroundColor Yellow
-        Write-Host "  Compatibilidade:           VALORANT e FACEIT funcionam a 100%." -ForegroundColor White
-        Write-Host "  Dica de Performance:       Se apenas jogas FiveM, CS2, ARC Raiders ou Warzone, desativar o VBS" -ForegroundColor Cyan
-        Write-Host "                             no 'Painel do Cliente' dá +5% a +15% de FPS e elimina micro-stutters." -ForegroundColor Cyan
+        Write-Host "  Compatibilidade:           VALORANT e jogos no FACEIT funcionam a 100%." -ForegroundColor White
+        Write-Host "  Diagnóstico Técnico:       Se o cliente não joga VALORANT nem no FACEIT, desativar no Painel" -ForegroundColor Cyan
+        Write-Host "                             do Cliente garante +5% a +15% de FPS e elimina micro-stutters." -ForegroundColor Cyan
     } else {
         Write-Host "  Estado do VBS:             DESATIVADO (Modo Máxima Performance / Menor Latência)" -ForegroundColor Green
         Write-Host "  Compatibilidade:           FiveM, CS2 (Premier/VAC), ARC Raiders, COD com fluidez máxima." -ForegroundColor White
-        Write-Host "  Aviso:                     Se precisares de jogar VALORANT ou CS2 na FACEIT, ativa-o no Painel do Cliente." -ForegroundColor Gray
+        Write-Host "  Aviso:                     Se o cliente precisar de jogar VALORANT ou CS2 no FACEIT, deve ativar no Painel do Cliente." -ForegroundColor Gray
     }
 
     Write-Host "`n================================================================================" -ForegroundColor Cyan
-    Write-Host "Deseja consultar o Guia Completo de Otimização de BIOS e Gráfica?" -ForegroundColor Cyan
-    Write-Host "Encontra-se disponível no Ambiente de Trabalho em 'SkyOptimizer - Painel de Controlo\Guia_VIP_Maximo_FPS.txt'." -ForegroundColor Gray
+    Write-Host "Inspeção Técnica de Hardware e Arranque concluída." -ForegroundColor Green
+    Write-Host "Utiliza estas informações para afinar o setup do cliente ou propor serviços VIP de BIOS." -ForegroundColor Gray
     Write-Host "================================================================================" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
@@ -4105,10 +4032,10 @@ while ($true) {
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
     Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks de Elite)" -ForegroundColor Green
-    Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Cyan
-    Write-Host "[3] Diagnóstico de Setup & Hardware (RAM/XMP, Monitor Hz, Arranque)" -ForegroundColor Cyan
-    Write-Host "[4] Limpeza Segura de Caches e Shaders" -ForegroundColor Yellow
-    Write-Host "[5] Reverter Alterações (100% Desfazer)" -ForegroundColor Magenta
+    Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Magenta
+    Write-Host "[3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)" -ForegroundColor Yellow
+    Write-Host "[4] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
+    Write-Host "[5] Reverter Alterações (100% Desfazer)" -ForegroundColor DarkYellow
     Write-Host "[6] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Blue
     Write-Host "[7] Sair" -ForegroundColor Red
     Write-Host "================================================================================" -ForegroundColor Cyan

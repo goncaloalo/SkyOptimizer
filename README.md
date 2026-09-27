@@ -16,7 +16,7 @@ O **SkyOptimizer** é um utilitário consolidado num **único ficheiro PowerShel
 5. **Reversão Completa Integrada (UNDO):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original através da opção `[5]` do menu ou com o parâmetro `.\SkyOptimizer.ps1 -Undo`.
 6. **Reversão Total de 1 Clique:** O cliente dispõe de um atalho direto no Ambiente de Trabalho para restaurar 100% dos ficheiros de registo e configurações originais da máquina com segurança absoluta.
 7. **Regras Estritas de Hardware & Anti-Cheat:**
-   - **VBS / HVCI Seguro & Guia de Jogos:** O script base não força alterações cegas de VBS. O cliente dispõe do utilitário `[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd` com a lista dos jogos mais jogados do mundo para alternar quando quiser.
+   - **VBS / HVCI Seguro & Guia de Jogos:** O script base não força alterações cegas de VBS. O cliente dispõe do utilitário `[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd` com uma lista abrangente de compatibilidade de jogos para alternar quando quiser.
    - **Modo MSI Exclusivo:** Aplicado estritamente à GPU dedicada (NVIDIA/AMD) com prioridade padrão (`Undefined`). NUNCA em controladores de áudio, USB ou rede.
    - **Deteção de Energia:** Otimizações de rede (EEE) e portas USB operam exclusivamente em Desktop ou quando ligado à tomada (AC Power), preservando a bateria de portáteis.
    - **HAGS Inteligente:** Só é ativado em sistemas com $\ge$ 6 GB de VRAM dedicada real (64-bit) e drivers WDDM 2.7+.
@@ -34,7 +34,7 @@ No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava
   Data/Hora:     25/09/2026 16:45:10
   Computador:    DESKTOP-CLIENTE
   Sistema:       Microsoft Windows 11 Pro
-  Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
+  Núcleo VBS:    Ativado (Valorant / CS2 no FACEIT Suportados)
 --------------------------------------------------------------------------------
   Métrica                      Antes             Depois            Impacto Real
   ------------------------------------------------------------------------------
@@ -57,15 +57,14 @@ No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava
 Ao aplicar a otimização, o SkyOptimizer gera automaticamente a pasta:  
 📁 **`SkyOptimizer - Painel de Controlo`**
 
-Contendo 6 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
+Contendo 5 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
 * **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa o motor leve de reversão (`SkyRevert.ps1`), restaurando 100% das definições originais da máquina com segurança e proteção total de propriedade intelectual (zero exposição de código de tuning).
 * **`[2] Alternar Impressora (Ligar-Desligar).cmd`** — Liga ou desliga o serviço de impressão `Spooler` na hora.
 * **`[3] Alternar Bluetooth (Ligar-Desligar).cmd`** — Liga ou desliga os serviços Bluetooth (para comandos sem fios Xbox/PS5 ou auscultadores).
-* **`[4] Alternar Pesquisa na Barra de Tarefas.cmd`** — Liga ou desliga a indexação em segundo plano do `WSearch`.
-* **`[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd`** — Permite alternar o VBS com o guia dos jogos mais jogados do mundo (desativar para FiveM/CS2/ARC Raiders/Warzone/Fortnite/Apex; ativar para VALORANT/FACEIT).
-* **`[6] Limpar Shaders e Cache (FiveM e CS2).cmd`** — Rotina rápida de manutenção mensal para eliminar micro-stutters causados por caches corrompidas.
+* **`[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd`** — Permite alternar o VBS com o guia abrangente de compatibilidade (desativar para FiveM/CS2/Warzone/Fortnite/Apex/Rust/Tarkov/ARC Raiders; ativar para VALORANT/LoL/CS2 no FACEIT).
+* **`[5] Limpar Shaders e Caches de Jogos.cmd`** — Rotina rápida de manutenção mensal para eliminar micro-stutters causados por caches corrompidas de DirectX, NVIDIA e jogos.
 * **`Relatorio_Otimizacao.txt`** — Comprovativo detalhado de RAM libertada, processos reduzidos e GBs recuperados.
-* **`LEIA-ME (Suporte SkyOptimizer).txt`** — Ficheiro de instruções simples em português com o Discord oficial da comunidade.
+* **`LÊ-ME (Suporte SkyOptimizer).txt`** — Guia amigável com suporte, instruções dos atalhos e oportunidade exclusiva de agendamento de sessão VIP de BIOS & Hardware Tuning.
 
 ---
 
@@ -279,11 +278,11 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Memória RAM:   32 GB
      Disco do SO:   SSD (NVMe)
      Plano Energia: Desempenho Máximo
-     Núcleo VBS:    Ativado (Valorant/FACEIT Suportados)
+     Núcleo VBS:    Ativado (Valorant / CS2 no FACEIT Suportados)
    ================================================================================
    [1] Aplicar Otimizações Completas (85 Tweaks de Elite)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
-   [3] Diagnóstico de Setup & Hardware (RAM/XMP, Monitor Hz, Arranque)
+   [3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)
    [4] Limpeza Segura de Caches e Shaders
    [5] Reverter Alterações (100% Desfazer)
    [6] Reparar Integridade do Windows (DISM / SFC)
@@ -304,7 +303,7 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
   .\SkyOptimizer.ps1 -DeployPanel
   ```
 
-* **Executar Auditoria de Hardware e Setup (RAM/XMP, Hz do Monitor, Apps no Arranque):**
+* **Executar Inspeção do Técnico (RAM/XMP, Hz do Monitor, Apps no Arranque):**
   ```powershell
   .\SkyOptimizer.ps1 -Audit
   ```
