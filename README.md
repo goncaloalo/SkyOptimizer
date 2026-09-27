@@ -120,7 +120,7 @@ Contendo 5 utilitários essenciais com **elevação automática de Administrador
 |---|-------|--------------------------------|
 | **22** | **Desativação de Armazenamento Reservado** | Liberta **7 GB a 10 GB úteis no disco C:** via DISM (`/Set-ReservedStorageState /State:Disabled`). |
 | **23** | **Otimização de Sistema de Ficheiros NTFS** | `disablelastaccess=1` e `disable8dot3=1`. Reduz overhead de I/O em carregamento de texturas. |
-| **24** | **Limpeza Segura de Caches e Shaders** | Limpa caches DirectX (`D3DSCache`), NVIDIA (`DXCache`), temporários órfãos e corre `SilentCleanup`. |
+| **24** | **Limpeza de Caches e Shaders** | Limpa caches DirectX (`D3DSCache`), NVIDIA (`DXCache`), temporários órfãos e corre `SilentCleanup`. |
 
 ### 8. Processos em Segundo Plano (Debloat Não-Destrutivo)
 | # | Tweak | Descrição Técnica & Segurança |
@@ -280,10 +280,10 @@ O iniciador solicita automaticamente privilégios de Administrador (UAC), define
      Plano Energia: Desempenho Máximo
      Núcleo VBS:    Ativado (Valorant / CS2 no FACEIT Suportados)
    ================================================================================
-   [1] Aplicar Otimizações Completas (85 Tweaks de Elite)
+   [1] Aplicar Otimizações Completas (85 Tweaks)
    [2] Gerar 'Painel do Cliente' no Ambiente de Trabalho
    [3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)
-   [4] Limpeza Segura de Caches e Shaders
+   [4] Limpeza de Caches e Shaders
    [5] Reverter Alterações (100% Desfazer)
    [6] Reparar Integridade do Windows (DISM / SFC)
    [7] Sair

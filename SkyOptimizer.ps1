@@ -2812,6 +2812,21 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 
 # 4. Finalizacao
 Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
+
+# Limpeza da pasta do Painel do Cliente no Ambiente de Trabalho
+$desktopFolders = @(
+    (Join-Path ([Environment]::GetFolderPath('Desktop')) "SkyOptimizer - Painel de Controlo"),
+    (Join-Path $env:USERPROFILE "Desktop\SkyOptimizer - Painel de Controlo"),
+    (Join-Path $env:PUBLIC "Desktop\SkyOptimizer - Painel de Controlo")
+) | Select-Object -Unique
+
+foreach ($df in $desktopFolders) {
+    if (Test-Path $df) {
+        if ($PWD.Path -like "$df*") { Set-Location $env:TEMP }
+        Remove-Item -Path $df -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
 if ($restartExplorer -match '^(s|sim|y|yes)$') {
     Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
@@ -2827,6 +2842,7 @@ Write-Host @"
   Ficheiros de registo restaurados: $restoredRegCount
   Definicoes de hardware e energia: Repostas
   Estado dos Servicos:              Restaurado
+  Painel do Ambiente de Trabalho:   Removido
 ================================================================================
 O seu sistema foi revertido com seguranca para o estado anterior.
 "@ -ForegroundColor Green
@@ -2853,7 +2869,7 @@ Read-Host "`nPressione ENTER para concluir..."
         }
 
         # 1. Atalho Reverter Otimizações (Executa exclusivamente o motor SkyRevert.ps1)
-        $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyRevert.ps1`"`r`npause"
+        $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncd /d `"%TEMP%`"`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyRevert.ps1`"`r`nexit /b"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd"), $undoCmd, [System.Text.Encoding]::ASCII)
 
         # 2. Atalho Impressora
@@ -3814,8 +3830,30 @@ function Invoke-SkyUndo {
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
     Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
-    # 4. Finalização e Explorer
+    # 4. Finalização, Limpeza do Painel e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
+
+    # Limpeza da pasta do Painel do Cliente no Ambiente de Trabalho
+    $desktopFolders = @(
+        (Join-Path ([Environment]::GetFolderPath('Desktop')) "SkyOptimizer - Painel de Controlo"),
+        (Join-Path $env:USERPROFILE "Desktop\SkyOptimizer - Painel de Controlo"),
+        (Join-Path $env:PUBLIC "Desktop\SkyOptimizer - Painel de Controlo")
+    ) | Select-Object -Unique
+
+    $panelRemoved = $false
+    foreach ($df in $desktopFolders) {
+        if (Test-Path $df) {
+            if ($PWD.Path -like "$df*") { Set-Location $env:TEMP }
+            Remove-Item -Path $df -Recurse -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path $df)) {
+                $panelRemoved = $true
+            }
+        }
+    }
+    if ($panelRemoved) {
+        Write-Host "  [OK] Pasta 'SkyOptimizer - Painel de Controlo' removida do Ambiente de Trabalho." -ForegroundColor Green
+    }
+
     Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
     $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
 
@@ -3835,7 +3873,7 @@ function Invoke-SkyUndo {
   Definições de hardware e energia: Repostas com Sucesso
   Estado dos Serviços:              Restaurado
   Parâmetros de I/O e Sistema:      Repostos
-================================================================================
+$(if ($panelRemoved) { "  Painel do Ambiente de Trabalho:   Removido com Sucesso`n" })================================================================================
 O seu sistema foi revertido com segurança para o estado anterior.
 "@ -ForegroundColor Green
 
@@ -4031,10 +4069,10 @@ while ($true) {
     Write-Host "                          Versão: 2.7.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks de Elite)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Otimizações Completas (85 Tweaks)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Magenta
     Write-Host "[3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)" -ForegroundColor Yellow
-    Write-Host "[4] Limpeza Segura de Caches e Shaders" -ForegroundColor Cyan
+    Write-Host "[4] Limpeza de Caches e Shaders" -ForegroundColor Cyan
     Write-Host "[5] Reverter Alterações (100% Desfazer)" -ForegroundColor DarkYellow
     Write-Host "[6] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Blue
     Write-Host "[7] Sair" -ForegroundColor Red
