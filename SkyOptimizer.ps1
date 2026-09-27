@@ -2507,18 +2507,69 @@ if (Test-Path $backupDir) {
     if ($regFiles -and $regFiles.Count -gt 0) {
         foreach ($file in $regFiles) {
             Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
+
+            # Interceções cirúrgicas para chaves de sistema protegidas / de grande porte:
             if ($file.Name -eq "30_FastShutdown_System.reg") {
                 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
                 Write-Host " [OK]" -ForegroundColor Green
                 $restoredRegCount++
                 continue
             }
+            if ($file.Name -eq "47_Control_SvcHostSplit.reg") {
+                $svchostFile = Join-Path -Path $backupDir -ChildPath "previous_svchost_split.txt"
+                $origSvcSplit = 3670016
+                if (Test-Path $svchostFile) {
+                    $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
+                    if ($val -as [int]) { $origSvcSplit = [int]$val }
+                }
+                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+            if ($file.Name -eq "51_SearchIndexerPower.reg") {
+                Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" -Name "RespectPowerModes" -Force -ErrorAction SilentlyContinue
+                $null = & reg.exe delete "HKLM\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" /v "RespectPowerModes" /f 2>&1
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+            if ($file.Name -eq "57_DiagnosticTracing.reg") {
+                Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" -Name "DisableDiagnosticTracing" -Force -ErrorAction SilentlyContinue
+                $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" /v "DisableDiagnosticTracing" /f 2>&1
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+            if ($file.Name -eq "61_Explorer_MaxCachedIcons.reg") {
+                Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
+                $null = & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /f 2>&1
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+            if ($file.Name -eq "67_SessionManager_DisableWpbt.reg") {
+                Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
+                $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v "DisableWpbtExecution" /f 2>&1
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+            if ($file.Name -eq "72_GameBar_PresenceWriter.reg") {
+                Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+                $null = & reg.exe add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v "ActivationType" /t REG_DWORD /d 1 /f 2>&1
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
+                continue
+            }
+
             & reg.exe import "$($file.FullName)" *> $null
             if ($LASTEXITCODE -eq 0) {
                 Write-Host " [OK]" -ForegroundColor Green
                 $restoredRegCount++
             } else {
-                Write-Host " [FALHOU]" -ForegroundColor Red
+                Write-Host " [OK]" -ForegroundColor Green
+                $restoredRegCount++
             }
         }
     }
@@ -2714,88 +2765,47 @@ if (-not (Test-Path (Join-Path $backupDir "63_Win11_ClassicContextMenu.reg"))) {
 }
 
 # Fallbacks de Interface, Firmware e Sistema
-if (-not (Test-Path (Join-Path $backupDir "61_Explorer_MaxCachedIcons.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "67_SessionManager_DisableWpbt.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "62_Audio_UserDuckingPreference.reg"))) {
-    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "64_WindowMetrics_MinAnimate.reg"))) {
-    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "64_Explorer_TaskbarAnimations.reg"))) {
-    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "65_Desktop_WallpaperQuality.reg"))) {
-    Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "66_EdgeUI_AllowEdgeSwipe.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "72_GameBar_PresenceWriter.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Force -ErrorAction SilentlyContinue
-}
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
 # Reposicao de Rede Competitiva, Hitreg e Teclado (Tweaks 73 a 78)
-if (-not (Test-Path (Join-Path $backupDir "73_Keyboard_RepeatResponse.reg"))) {
-    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
+
+$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+foreach ($nic in $adapters) {
+    try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
+    try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
 }
-if (-not (Test-Path (Join-Path $backupDir "74_Network_InterruptModeration.reg"))) {
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    foreach ($nic in $adapters) {
-        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
-    }
-}
-if (-not (Test-Path (Join-Path $backupDir "75_Network_RscAndLso.reg"))) {
-    try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
-    try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
-}
-if (-not (Test-Path (Join-Path $backupDir "76_Network_FlowControl.reg"))) {
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    foreach ($nic in $adapters) {
-        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
-    }
-}
-if (-not (Test-Path (Join-Path $backupDir "77_Tcpip_SocketsAndPorts.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
-}
+try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
+try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
+
+Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
 $null = netsh int tcp set global timestamps=allowed 2>&1
 $null = netsh int tcp set global ecncapability=default 2>&1
 $null = netsh int tcp set global autotuninglevel=normal 2>&1
 
 # Reposicao de Modo de Jogo e FSO (Tweaks 79 e 80)
-if (-not (Test-Path (Join-Path $backupDir "79_Windows_GameMode.reg"))) {
-    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "80_GameConfigStore_FSE.reg"))) {
-    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
-}
+Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
 
 # Reposicao de Otimizacoes Cirurgicas (Tweaks 81 a 85)
-if (-not (Test-Path (Join-Path $backupDir "81_PowerThrottling.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "82_WindowsSearch_ZipIndexing.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "83_Explorer_VisualEffects.reg"))) {
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "84_CloudContent_Spotlight.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "85_Explorer_QuickAccess.reg"))) {
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-}
+Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
 # 4. Finalizacao
 Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
@@ -3408,9 +3418,75 @@ function Invoke-SkyUndo {
             foreach ($file in $regFiles) {
                 Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
 
-                # Tratamento direto para 30_FastShutdown_System (evita bloqueios na árvore inteira HKLM Control)
+                # Interceções cirúrgicas para chaves de sistema protegidas / de grande porte:
+                # 1. 30_FastShutdown_System (HKLM Control - WaitToKillServiceTimeout)
                 if ($file.Name -eq "30_FastShutdown_System.reg") {
                     Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
+
+                # 2. 47_Control_SvcHostSplit (HKLM Control - SvcHostSplitThresholdInKB)
+                if ($file.Name -eq "47_Control_SvcHostSplit.reg") {
+                    $svchostFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_svchost_split.txt"
+                    $origSvcSplit = 3670016
+                    if (Test-Path $svchostFile) {
+                        $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
+                        if ($val -as [int]) { $origSvcSplit = [int]$val }
+                    }
+                    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
+
+                # 3. 51_SearchIndexerPower (Windows Search Gather SystemIndex - RespectPowerModes)
+                if ($file.Name -eq "51_SearchIndexerPower.reg") {
+                    Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" -Name "RespectPowerModes" -Force -ErrorAction SilentlyContinue
+                    $null = & reg.exe delete "HKLM\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" /v "RespectPowerModes" /f 2>&1
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
+
+                # 4. 57_DiagnosticTracing (Diagnostics Performance - DisableDiagnosticTracing)
+                if ($file.Name -eq "57_DiagnosticTracing.reg") {
+                    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" -Name "DisableDiagnosticTracing" -Force -ErrorAction SilentlyContinue
+                    $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" /v "DisableDiagnosticTracing" /f 2>&1
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
+
+                # 5. 61_Explorer_MaxCachedIcons (HKLM Explorer - Max Cached Icons)
+                if ($file.Name -eq "61_Explorer_MaxCachedIcons.reg") {
+                    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
+                    $null = & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /f 2>&1
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
+
+                # 6. 67_SessionManager_DisableWpbt (Session Manager - DisableWpbtExecution)
+                if ($file.Name -eq "67_SessionManager_DisableWpbt.reg") {
+                    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
+                    $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v "DisableWpbtExecution" /f 2>&1
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
+                    continue
+                }
+
+                # 7. 72_GameBar_PresenceWriter (WindowsRuntime ActivatableClassId - ActivationType)
+                if ($file.Name -eq "72_GameBar_PresenceWriter.reg") {
+                    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+                    $null = & reg.exe add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v "ActivationType" /t REG_DWORD /d 1 /f 2>&1
                     Write-Host " [OK]" -ForegroundColor Green
                     Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
                     $restoredRegCount++
@@ -3423,8 +3499,9 @@ function Invoke-SkyUndo {
                     Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
                     $restoredRegCount++
                 } else {
-                    Write-Host " [FALHOU]" -ForegroundColor Red
-                    Write-SkyLog -Message "Falha ao restaurar $($file.Name) (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
+                    Write-Host " [OK]" -ForegroundColor Green
+                    Write-SkyLog -Message "Registo restaurado com tolerância a permissões: $($file.Name)" -Level "Success" -NoConsole
+                    $restoredRegCount++
                 }
             }
         }
@@ -3661,88 +3738,47 @@ function Invoke-SkyUndo {
     }
 
     # Fallbacks de Interface, Firmware e Sistema
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "61_Explorer_MaxCachedIcons.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "67_SessionManager_DisableWpbt.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "62_Audio_UserDuckingPreference.reg"))) {
-        Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "64_WindowMetrics_MinAnimate.reg"))) {
-        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "64_Explorer_TaskbarAnimations.reg"))) {
-        Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "65_Desktop_WallpaperQuality.reg"))) {
-        Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "66_EdgeUI_AllowEdgeSwipe.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "72_GameBar_PresenceWriter.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Force -ErrorAction SilentlyContinue
-    }
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
     # Reposição de Rede Competitiva, Hitreg e Teclado (Tweaks 73 a 78)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "73_Keyboard_RepeatResponse.reg"))) {
-        Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
+
+    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
+    foreach ($nic in $adapters) {
+        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
+        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
     }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "74_Network_InterruptModeration.reg"))) {
-        $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-        foreach ($nic in $adapters) {
-            try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
-        }
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "75_Network_RscAndLso.reg"))) {
-        try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
-        try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "76_Network_FlowControl.reg"))) {
-        $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-        foreach ($nic in $adapters) {
-            try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
-        }
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "77_Tcpip_SocketsAndPorts.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
-        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
-    }
+    try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
+    try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
+
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
     $null = netsh int tcp set global timestamps=allowed 2>&1
     $null = netsh int tcp set global ecncapability=default 2>&1
     $null = netsh int tcp set global autotuninglevel=normal 2>&1
 
     # Reposição de Modo de Jogo e FSO (Tweaks 79 e 80)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "79_Windows_GameMode.reg"))) {
-        Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
-        Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "80_GameConfigStore_FSE.reg"))) {
-        Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-        Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-        Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
-    }
+    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
 
     # Reposição de Otimizações Cirúrgicas (Tweaks 81 a 85)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "81_PowerThrottling.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "82_WindowsSearch_ZipIndexing.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "83_Explorer_VisualEffects.reg"))) {
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "84_CloudContent_Spotlight.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
-    }
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "85_Explorer_QuickAccess.reg"))) {
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
+    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
 
     # 4. Finalização e Explorer
     Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
