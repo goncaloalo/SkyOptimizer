@@ -57,12 +57,13 @@ No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava
 Ao aplicar a otimização, o SkyOptimizer gera automaticamente a pasta:  
 📁 **`SkyOptimizer - Painel de Controlo`**
 
-Contendo 5 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
+Contendo 6 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
 * **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa o motor leve de reversão (`SkyRevert.ps1`), restaurando 100% das definições originais da máquina com segurança e proteção total de propriedade intelectual (zero exposição de código de tuning).
 * **`[2] Alternar Impressora (Ligar-Desligar).cmd`** — Liga ou desliga o serviço de impressão `Spooler` na hora.
 * **`[3] Alternar Bluetooth (Ligar-Desligar).cmd`** — Liga ou desliga os serviços Bluetooth (para comandos sem fios Xbox/PS5 ou auscultadores).
 * **`[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd`** — Permite alternar o VBS com o guia abrangente de compatibilidade (desativar para FiveM/CS2/Warzone/Fortnite/Apex/Rust/Tarkov/ARC Raiders; ativar para VALORANT/LoL/CS2 no FACEIT).
 * **`[5] Limpar Shaders e Caches de Jogos.cmd`** — Rotina rápida de manutenção mensal para eliminar micro-stutters causados por caches corrompidas de DirectX, NVIDIA e jogos.
+* **`[6] Alternar Localizacao e GPS (Ligar-Desligar).cmd`** — Liga ou desliga a telemetria de localização e serviço `lfsvc` (mantém desligado no gaming para evitar varreduras Wi-Fi; ativa na hora para Mapas/GPS).
 * **`Relatorio_Otimizacao.txt`** — Comprovativo detalhado de RAM libertada, processos reduzidos e GBs recuperados.
 * **`LÊ-ME (Suporte SkyOptimizer).txt`** — Guia amigável com suporte, instruções dos atalhos e oportunidade exclusiva de agendamento de sessão VIP de BIOS & Hardware Tuning.
 
