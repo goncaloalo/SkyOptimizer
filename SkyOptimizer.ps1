@@ -260,17 +260,62 @@ function Ensure-RegistryPath {
     param([string]$KeyPath)
     $psPath = Convert-ToPSRegPath -Path $KeyPath
     if (-not (Test-Path $psPath)) {
-        New-Item -Path $psPath -Force | Out-Null
+        New-Item -Path $psPath -Force -ErrorAction SilentlyContinue | Out-Null
     }
 }
 
 function Save-SkyManifest {
     $manifestPath = Join-Path -Path $Global:SkyBackupDir -ChildPath "state_backup.json"
     $json = $Global:SkyManifest | ConvertTo-Json -Depth 5
-    Set-Content -Path $manifestPath -Value $json -Encoding UTF8 -Force
+    [System.IO.File]::WriteAllText($manifestPath, $json, [System.Text.Encoding]::UTF8)
     if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
         Copy-Item -Path $manifestPath -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Test-IsDesktopOrAcPower {
+    try {
+        # Verificar se existe hardware de bateria instalado
+        $battery = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
+        if (-not $battery) {
+            # Se não tem bateria, é 100% garantido um Desktop / Torre
+            return $true
+        }
+
+        # Se tem bateria (Portátil), verificar se está ligado à tomada (AC Power)
+        $batteryStatus = Get-CimInstance -Namespace root\wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue
+        if ($batteryStatus -and $batteryStatus.PowerOnline -eq $true) {
+            return $true # Portátil ligado à tomada elétrica
+        }
+
+        # Verificar tipo de chassis para confirmação
+        $chassis = Get-CimInstance Win32_SystemEnclosure -ErrorAction SilentlyContinue
+        if ($chassis.ChassisTypes -match '^(3|4|5|6|7|15|16|23|24)$') {
+            return $true
+        }
+
+        return $false # Portátil a funcionar na bateria
+    } catch {
+        return $true
+    }
+}
+
+function Test-IsOnBattery {
+    return (-not (Test-IsDesktopOrAcPower))
+}
+
+function Get-AccurateVramBytes {
+    try {
+        $gpuItem = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000*' -ErrorAction SilentlyContinue | Where-Object DriverDesc | Select-Object -First 1
+        if ($gpuItem -and $gpuItem.'HardwareInformation.qwMemorySize') {
+            return [PSCustomObject]@{ Bytes = [int64]$gpuItem.'HardwareInformation.qwMemorySize' }
+        }
+        $vc = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($vc -and $vc.AdapterRAM) {
+            return [PSCustomObject]@{ Bytes = [int64]$vc.AdapterRAM }
+        }
+    } catch {}
+    return [PSCustomObject]@{ Bytes = [int64]0 }
 }
 
 function Get-VbsStatus {
@@ -313,8 +358,9 @@ function Show-SystemHardwareInfo {
         $gpuItem = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000*' -ErrorAction SilentlyContinue | Where-Object DriverDesc | Select-Object -First 1
         $gpuName = if ($gpuItem) { $gpuItem.DriverDesc } else { "GPU Genérica" }
         $vramGB  = 0
-        if ($gpuItem -and $gpuItem.'HardwareInformation.qwMemorySize') {
-            $vramGB = [math]::Round($gpuItem.'HardwareInformation.qwMemorySize' / 1GB)
+        $vramInfo = Get-AccurateVramBytes
+        if ($vramInfo.Bytes -gt 0) {
+            $vramGB = [math]::Round($vramInfo.Bytes / 1GB)
         }
 
         # Deteção de Disco do Sistema
@@ -1210,33 +1256,6 @@ function Enable-HAGSConditional {
 # 4.11 HARDWARE, REDE & PERIFÉRICOS (BAIXA LATÊNCIA)
 # ==============================================================================
 
-function Test-IsDesktopOrAcPower {
-    try {
-        # Verificar se existe hardware de bateria instalado
-        $battery = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
-        if (-not $battery) {
-            # Se não tem bateria, é 100% garantido um Desktop / Torre
-            return $true
-        }
-
-        # Se tem bateria (Portátil), verificar se está ligado à tomada (AC Power)
-        $batteryStatus = Get-CimInstance -Namespace root\wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue
-        if ($batteryStatus -and $batteryStatus.PowerOnline -eq $true) {
-            return $true # Portátil ligado à tomada elétrica
-        }
-
-        # Verificar tipo de chassis para confirmação
-        $chassis = Get-CimInstance Win32_SystemEnclosure -ErrorAction SilentlyContinue
-        if ($chassis.ChassisTypes -match '^(3|4|5|6|7|15|16|23|24)$') {
-            return $true
-        }
-
-        return $false # Portátil a funcionar na bateria
-    } catch {
-        return $true
-    }
-}
-
 function Optimize-NetworkAdapterPower {
     [CmdletBinding()]
     param()
@@ -1601,7 +1620,11 @@ function Optimize-SearchIndexerPower {
     Ensure-RegistryPath -KeyPath $searchKey
 
     # RespectPowerModes: Força a indexação de ficheiros a suspender quando o sistema está em Desempenho Máximo / Gaming
-    Set-ItemProperty -Path $searchKey -Name "RespectPowerModes" -Value 1 -Type DWord -Force
+    try {
+        Set-ItemProperty -Path $searchKey -Name "RespectPowerModes" -Value 1 -Type DWord -Force -ErrorAction Stop
+    } catch {
+        $null = & reg.exe add "HKLM\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" /v "RespectPowerModes" /t REG_DWORD /d 1 /f 2>&1
+    }
 
     Write-SkyLog -Message "Windows Search configurado para respeitar planos de energia (pausa indexação durante jogos)." -Level "Success"
     return $true
@@ -1712,7 +1735,11 @@ function Disable-ActivityHistoryAndDiagnosticTracing {
     $diagKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance"
     Backup-RegistryKey -KeyPath $diagKey -BackupName "57_DiagnosticTracing"
     Ensure-RegistryPath -KeyPath $diagKey
-    Set-ItemProperty -Path $diagKey -Name "DisableDiagnosticTracing" -Value 1 -Type DWord -Force
+    try {
+        Set-ItemProperty -Path $diagKey -Name "DisableDiagnosticTracing" -Value 1 -Type DWord -Force -ErrorAction Stop
+    } catch {
+        $null = & reg.exe add "HKLM\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" /v "DisableDiagnosticTracing" /t REG_DWORD /d 1 /f 2>&1
+    }
 
     # Programa de Melhoria de Experiência (CEIP)
     $sqmKey = "HKLM:\SOFTWARE\Policies\Microsoft\SQMClient\Windows"
@@ -1927,7 +1954,7 @@ function Disable-NvidiaTelemetry {
     } catch {}
 
     $nvKey = "HKCU:\Software\NVIDIA Corporation\NVControlPanel2\Client"
-    if (Test-Path "HKCU:\Software\NVIDIA Corporation" -or $isNvidia) {
+    if ((Test-Path "HKCU:\Software\NVIDIA Corporation") -or $isNvidia) {
         Backup-RegistryKey -KeyPath $nvKey -BackupName "68_Nvidia_Telemetry"
         Ensure-RegistryPath -KeyPath $nvKey
         Set-ItemProperty -Path $nvKey -Name "OptInOrOutPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
@@ -2039,7 +2066,11 @@ function Disable-GameBarPresenceWriter {
     Ensure-RegistryPath -KeyPath $gbKey
 
     # ActivationType = 0 impede o arranque em segundo plano do GameBarPresenceWriter.exe ao abrir qualquer jogo
-    Set-ItemProperty -Path $gbKey -Name "ActivationType" -Value 0 -Type DWord -Force
+    try {
+        Set-ItemProperty -Path $gbKey -Name "ActivationType" -Value 0 -Type DWord -Force -ErrorAction Stop
+    } catch {
+        $null = & reg.exe add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v "ActivationType" /t REG_DWORD /d 0 /f 2>&1
+    }
     Write-SkyLog -Message "GameBarPresenceWriter em segundo plano desativado (elimina micro-stutter e polling de jogos)." -Level "Success"
     return $true
 }
@@ -2670,7 +2701,7 @@ O seu sistema foi revertido com seguranca para o estado anterior.
 "@ -ForegroundColor Green
 Read-Host "`nPressione ENTER para concluir..."
 '@
-        Set-Content -Path $revertScriptPath -Value $revertScriptCode -Encoding UTF8 -Force
+        [System.IO.File]::WriteAllText($revertScriptPath, $revertScriptCode, [System.Text.Encoding]::UTF8)
 
         # Limpar atalhos antigos ou duplicados se existirem
         $obsoleteFiles = @(
@@ -2688,19 +2719,19 @@ Read-Host "`nPressione ENTER para concluir..."
 
         # 1. Atalho Reverter Otimizações (Executa exclusivamente o motor SkyRevert.ps1)
         $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyRevert.ps1`"`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd") -Value $undoCmd -Encoding ASCII -Force
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd"), $undoCmd, [System.Text.Encoding]::ASCII)
 
         # 2. Atalho Impressora
         $printerCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Impressora`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'Spooler' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico de impressao nao encontrado neste sistema.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'Spooler' -StartupType Automatic; Start-Service -Name 'Spooler' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  SERVICO DE IMPRESSORA ATIVADO COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'O Windows ja pode comunicar com impressoras e faturas.' -ForegroundColor White } else { Stop-Service -Name 'Spooler' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'Spooler' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  SERVICO DE IMPRESSORA DESATIVADO COM SUCESSO' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Processos em segundo plano suspensos para poupar RAM e CPU.' -ForegroundColor White } }`"`r`necho.`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[2] Alternar Impressora (Ligar-Desligar).cmd") -Value $printerCmd -Encoding ASCII -Force
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[2] Alternar Impressora (Ligar-Desligar).cmd"), $printerCmd, [System.Text.Encoding]::ASCII)
 
         # 3. Atalho Bluetooth
         $btCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Bluetooth`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'bthserv' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico Bluetooth nao encontrado neste sistema.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'bthserv' -StartupType Manual; Start-Service -Name 'bthserv' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  BLUETOOTH ATIVADO COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'Ja pode ligar comandos (Xbox/PS5), auscultadores e outros.' -ForegroundColor White } else { Stop-Service -Name 'bthserv' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'bthserv' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  BLUETOOTH DESATIVADO COM SUCESSO' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Processos de pesquisa sem fios desativados.' -ForegroundColor White } }`"`r`necho.`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd") -Value $btCmd -Encoding ASCII -Force
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd"), $btCmd, [System.Text.Encoding]::ASCII)
 
         # 4. Atalho Pesquisa Barra de Tarefas
         $searchCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Pesquisa do Windows`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'WSearch' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico Windows Search nao encontrado.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'WSearch' -StartupType Automatic; Start-Service -Name 'WSearch' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  PESQUISA NA BARRA DE TAREFAS ATIVADA COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'A barra de tarefas voltara a pesquisar todos os ficheiros.' -ForegroundColor White } else { Stop-Service -Name 'WSearch' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'WSearch' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  PESQUISA EM SEGUNDO PLANO DESATIVADA' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Escritas e leituras constantes no disco/SSD eliminadas.' -ForegroundColor White } }`"`r`necho.`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[4] Alternar Pesquisa na Barra de Tarefas.cmd") -Value $searchCmd -Encoding ASCII -Force
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[4] Alternar Pesquisa na Barra de Tarefas.cmd"), $searchCmd, [System.Text.Encoding]::ASCII)
 
         # 5. Atalho Isolamento do Núcleo (VBS e Jogos)
         $vbsCmd = @'
@@ -2755,15 +2786,15 @@ echo Discord da Comunidade: https://discord.gg/cE8ZaDRGV5
 echo.
 pause
 '@
-        Set-Content -Path (Join-Path $panelDir "[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd") -Value $vbsCmd -Encoding ASCII -Force
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[5] Alternar Isolamento do Nucleo (VBS e Jogos).cmd"), $vbsCmd, [System.Text.Encoding]::ASCII)
 
-        # 6. Atalho Limpeza de Shaders
-        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Cache`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$engine = '$permScript'; if (Test-Path `$engine) { & `$engine -Clean } else { Write-Host '[ERRO] Motor SkyOptimizer nao encontrado em C:\ProgramData\SkyOptimizer\' -ForegroundColor Red; pause } }`"`r`npause"
-        Set-Content -Path (Join-Path $panelDir "[6] Limpar Shaders e Cache (FiveM e CS2).cmd") -Value $cleanCmd -Encoding ASCII -Force
+        # 6. Atalho Limpeza de Shaders e Caches (Motor Autónomo e Seguro)
+        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Cache`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { Write-Host '===================================================' -ForegroundColor Cyan; Write-Host '   SkyOptimizer - Limpeza de Shaders e Caches' -ForegroundColor Cyan; Write-Host '===================================================' -ForegroundColor Cyan; `$cleared = 0; `$dirs = @(\`"`$env:LOCALAPPDATA\NVIDIA\DXCache\`", \`"`$env:LOCALAPPDATA\NVIDIA\GLCache\`", \`"`$env:LOCALAPPDATA\D3DSCache\`", \`"`$env:LOCALAPPDATA\CitizenFX\cache\`", \`"`$env:TEMP\`", \`"`$env:SystemRoot\Temp\`); foreach (`$d in `$dirs) { if (Test-Path `$d) { Get-ChildItem -Path `$d -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { try { Remove-Item -Path `$_.FullName -Force -ErrorAction SilentlyContinue; `$cleared++ } catch {} } } }; Write-Host '`n[OK] Limpeza concluida com sucesso! ' -NoNewline -ForegroundColor Green; Write-Host \`"`$cleared ficheiro(s) de cache e shaders removidos.\`" -ForegroundColor White; pause }`"`r`npause"
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "[6] Limpar Shaders e Cache (FiveM e CS2).cmd"), $cleanCmd, [System.Text.Encoding]::ASCII)
 
         # Relatório Antes vs. Depois
         if ($ReportContent) {
-            Set-Content -Path (Join-Path $panelDir "Relatorio_Otimizacao.txt") -Value $ReportContent -Encoding UTF8 -Force
+            [System.IO.File]::WriteAllText((Join-Path $panelDir "Relatorio_Otimizacao.txt"), $ReportContent, [System.Text.Encoding]::UTF8)
         }
 
         # Ficheiro LEIA-ME
@@ -2809,7 +2840,7 @@ Entra no nosso Discord da comunidade:
 👉 https://discord.gg/cE8ZaDRGV5
 ================================================================================
 "@
-        Set-Content -Path (Join-Path $panelDir "LEIA-ME (Suporte SkyOptimizer).txt") -Value $readmeTxt -Encoding UTF8 -Force
+        [System.IO.File]::WriteAllText((Join-Path $panelDir "LEIA-ME (Suporte SkyOptimizer).txt"), $readmeTxt, [System.Text.Encoding]::UTF8)
 
         Write-SkyLog -Message "Painel do Cliente criado com sucesso no Ambiente de Trabalho ('$panelDir')." -Level "Success"
         return $true
