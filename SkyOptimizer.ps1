@@ -3216,8 +3216,8 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer v2.6 concluído com êxito! Para reverter qualquer alteração, execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
-    Read-Host "`nPressione ENTER para concluir..."
+    Write-Host "`n[+] SkyOptimizer v2.6 concluído com êxito! Para reverter qualquer alteração, utilize a Opção [4] ou execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 
 # ==============================================================================
@@ -3624,7 +3624,7 @@ function Invoke-SkyUndo {
 O seu sistema foi revertido com segurança para o estado anterior.
 "@ -ForegroundColor Green
 
-    Read-Host "`nPressione ENTER para concluir..."
+    Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 
 # ==============================================================================
@@ -3692,7 +3692,6 @@ while ($true) {
     switch ($choice.Trim()) {
         "1" {
             Invoke-SkyOptimize
-            exit 0
         }
         "2" {
             Clear-Host
@@ -3708,7 +3707,6 @@ while ($true) {
         }
         "4" {
             Invoke-SkyUndo
-            exit 0
         }
         "5" {
             Repair-WindowsSystemIntegrity

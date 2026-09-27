@@ -13,3 +13,8 @@ if %errorLevel% neq 0 (
 chcp 65001 >nul
 cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0SkyOptimizer.ps1"
+if %errorLevel% neq 0 (
+    echo.
+    echo [!] O SkyOptimizer terminou com o codigo: %errorLevel%
+    pause
+)
