@@ -960,6 +960,8 @@ function Clear-ShaderCache {
     param()
 
     $clearedCount = 0
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $maxDurationMs = 6000 # Limite de tempo de segurança absoluto: 6 segundos
 
     # Pastas de cache de shaders (NVIDIA e DirectX)
     $shaderDirs = @(
@@ -969,34 +971,50 @@ function Clear-ShaderCache {
     )
 
     foreach ($dir in $shaderDirs) {
+        if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
         if (Test-Path $dir) {
-            Get-ChildItem -Path $dir -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+            # Evita recursão infinita e bloqueios em ficheiros mapeados em memória pelo driver
+            $files = Get-ChildItem -Path $dir -File -ErrorAction SilentlyContinue | Select-Object -First 300
+            foreach ($f in $files) {
+                if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
                 try {
-                    Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
+                    Remove-Item -Path $f.FullName -Force -ErrorAction SilentlyContinue
                     $clearedCount++
                 } catch {}
             }
         }
     }
 
-    # Limpeza segura de ficheiros temporários órfãos com mais de 24h
+    # Limpeza segura de ficheiros temporários órfãos com mais de 7 dias (ignora ficheiros recentes em uso)
     $tempDirs = @($env:TEMP, "$env:SystemRoot\Temp")
-    $cutoff = (Get-Date).AddDays(-1)
+    $cutoff = (Get-Date).AddDays(-7)
+
     foreach ($td in $tempDirs) {
+        if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
         if (Test-Path $td) {
-            Get-ChildItem -Path $td -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt $cutoff } | ForEach-Object {
+            # Ignora junções e pontos de nova análise para evitar loops em symlinks
+            $tempFiles = Get-ChildItem -Path $td -File -Attributes !ReparsePoint -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $cutoff } |
+                Select-Object -First 300
+
+            foreach ($tf in $tempFiles) {
+                if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
                 try {
-                    Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue
+                    Remove-Item -Path $tf.FullName -Force -ErrorAction SilentlyContinue
                     $clearedCount++
                 } catch {}
             }
         }
     }
 
-    # Invocar a limpeza silenciosa nativa do Windows (CleanMgr SilentCleanup)
+    # Invocar a limpeza silenciosa nativa do Windows em segundo plano (CleanMgr SilentCleanup)
     $null = Start-ScheduledTask -TaskPath "\Microsoft\Windows\DiskCleanup" -TaskName "SilentCleanup" -ErrorAction SilentlyContinue
 
-    Write-SkyLog -Message "Caches de shaders e ficheiros temporários limpos ($clearedCount ficheiros removidos com segurança)." -Level "Success"
+    if ($sw.ElapsedMilliseconds -ge $maxDurationMs) {
+        Write-SkyLog -Message "Caches de shaders e ficheiros temporários limpos ($clearedCount ficheiros removidos; limite de segurança de 6s respeitado para evitar congelamentos)." -Level "Success"
+    } else {
+        Write-SkyLog -Message "Caches de shaders e ficheiros temporários limpos ($clearedCount ficheiros removidos com segurança em $($sw.ElapsedMilliseconds)ms)." -Level "Success"
+    }
     return $true
 }
 
@@ -1433,20 +1451,62 @@ function Invoke-SsdReTrim {
 
     try {
         $isSsd = $false
-        $disk = Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -eq "SSD" }
-        if ($disk) {
-            $isSsd = $true
-        } else {
-            $pnp = Get-CimInstance Win32_DiskDrive -ErrorAction SilentlyContinue
-            if ($pnp.Model -match "NVMe|SSD") { $isSsd = $true }
+        $diskDesc = "Desconhecido"
+
+        # 1. Verificação rigorosa do disco físico
+        $physDisk = Get-PhysicalDisk -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($physDisk) {
+            $diskDesc = "$($physDisk.MediaType) ($($physDisk.BusType))"
+            
+            # Se for HDD mecânico ou tiver rotação física, ignorar imediatamente
+            if ($physDisk.MediaType -eq "HDD" -or ($physDisk.SpindleSpeed -gt 0)) {
+                Write-SkyLog -Message "Drive C: detetado como disco mecânico ($diskDesc). Re-Trim ignorado com segurança para preservar o disco." -Level "Info"
+                return $false
+            }
+            
+            # Se for explicitamente SSD ou NVMe, ou rotação 0 sem ser Unspecified duvidoso
+            if ($physDisk.MediaType -eq "SSD" -or $physDisk.BusType -eq "NVMe" -or ($physDisk.SpindleSpeed -eq 0 -and $physDisk.MediaType -ne "Unspecified")) {
+                $isSsd = $true
+            }
         }
 
-        if ($isSsd) {
-            $null = Optimize-Volume -DriveLetter C -ReTrim -ErrorAction SilentlyContinue
-            Write-SkyLog -Message "Re-Trim executado com sucesso no SSD (Drive C:) para streaming rápido de texturas sem engasgos." -Level "Success"
-            return $true
+        # Fallback de verificação se não foi confirmado via PhysicalDisk
+        if (-not $isSsd) {
+            $pnp = Get-CimInstance Win32_DiskDrive -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($pnp -and $pnp.Model -match "NVMe|SSD") {
+                $isSsd = $true
+                $diskDesc = "$($pnp.Model)"
+            }
+        }
+
+        # Se o disco for 'Unspecified (SATA)' ou não comprovadamente SSD, ignorar para evitar congelamento
+        if (-not $isSsd) {
+            Write-SkyLog -Message "Drive C: reportado como '$diskDesc'. Re-Trim ignorado com segurança (evita incompatibilidade ou congelamento em controladores SATA / Unspecified)." -Level "Info"
+            return $false
+        }
+
+        # 2. Execução assíncrona com timeout estrito de 5 segundos contra congelamento
+        Write-SkyLog -Message "A executar Re-Trim no SSD ($diskDesc)..." -Level "Info"
+        $job = Start-Job -ScriptBlock {
+            Optimize-Volume -DriveLetter C -ReTrim -ErrorAction Stop
+        } -ErrorAction SilentlyContinue
+
+        if ($job) {
+            $completed = Wait-Job -Job $job -Timeout 5
+            if ($completed) {
+                $null = Receive-Job -Job $job -ErrorAction SilentlyContinue
+                Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+                Write-SkyLog -Message "Re-Trim executado com sucesso no SSD (Drive C:) para streaming rápido de texturas sem engasgos." -Level "Success"
+                return $true
+            } else {
+                Stop-Job -Job $job -ErrorAction SilentlyContinue
+                Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+                Write-SkyLog -Message "Re-Trim cancelado por timeout (>5s) de resposta do controlador de armazenamento. A prosseguir com segurança." -Level "Warning"
+                return $false
+            }
         } else {
-            Write-SkyLog -Message "Drive C: não detetado como SSD. Re-Trim ignorado para preservar disco mecânico." -Level "Info"
+            # Se não conseguir criar o job, fallback não-bloqueante
+            Write-SkyLog -Message "Não foi possível criar processo isolado para Re-Trim. Ignorado com segurança." -Level "Info"
             return $false
         }
     } catch {
