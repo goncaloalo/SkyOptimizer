@@ -1,0 +1,12 @@
+﻿{
+    "Date":  "2026-10-21",
+    "PowerShell":  "5.1.26100.9711",
+    "Pester":  "3.4.0",
+    "Command":  "Invoke-Pester -Script .\\tests -PassThru; exit 1 se FailedCount \u003e 0",
+    "Total":  44,
+    "Passed":  44,
+    "Failed":  0,
+    "Skipped":  0,
+    "Pending":  0,
+    "WindowsChangesApplied":  false
+}

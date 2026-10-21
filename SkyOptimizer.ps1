@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.8 - Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10/11.
+    SkyOptimizer v2.8 - Toolkit de Otimização Windows 10/11, com reversão legada ainda em validação.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário

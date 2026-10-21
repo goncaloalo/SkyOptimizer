@@ -13,23 +13,19 @@ O **SkyOptimizer** é um utilitário consolidado num **único ficheiro PowerShel
 
 ## 🛡️ Pilares de Segurança e Confiabilidade
 
-1. **Ponto de Restauro Automático (`System Restore`):** Cria um ponto de restauro (`SkyOptimizer Pre-Tweak`) antes de efetuar qualquer alteração. Remove nativamente a restrição de frequência de 24h do Windows para permitir pontos a qualquer momento.
-2. **Backups de Registo Individuais (`.reg`):** Antes de cada modificação, a chave original é exportada via `reg export` para a pasta `.\Backups\`.
-3. **Registo de Chaves Criadas (`created_keys.txt`):** Se uma chave ou valor não existia previamente, é registada para que a reversão a elimine de raiz em vez de tentar restaurar ficheiros inexistentes.
-4. **Manifesto de Estado (`state_backup.json`):** Armazena o plano de energia original, estado da hibernação, modo do SysMain, estado do Armazenamento Reservado e histórico de execução.
-5. **Reversão Completa Integrada (UNDO):** Restaura todo o registo, serviços e parâmetros de hardware ao estado original através da opção `[5]` do menu ou com o parâmetro `.\SkyOptimizer.ps1 -Undo`.
-6. **Reversão Total de 1 Clique:** O cliente dispõe de um atalho direto no Ambiente de Trabalho para restaurar 100% dos ficheiros de registo e configurações originais da máquina com segurança absoluta.
-7. **Regras Estritas de Hardware & Anti-Cheat:**
-   - **VBS / HVCI Seguro & Guia de Jogos:** O script base não força alterações cegas de VBS. O cliente dispõe do utilitário `[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd` com uma lista abrangente de compatibilidade de jogos para alternar quando quiser.
-   - **Modo MSI Exclusivo:** Aplicado estritamente à GPU dedicada (NVIDIA/AMD) com prioridade padrão (`Undefined`). NUNCA em controladores de áudio, USB ou rede.
-   - **Deteção de Energia:** Otimizações de rede (EEE) e portas USB operam exclusivamente em Desktop ou quando ligado à tomada (AC Power), preservando a bateria de portáteis.
-   - **HAGS Inteligente:** Só é ativado em sistemas com $\ge$ 6 GB de VRAM dedicada real (64-bit) e drivers WDDM 2.7+.
+1. **Ponto de Restauro:** O programa tenta criar `SkyOptimizer Pre-Tweak`. Pode falhar; não substitui backups nem garante recuperação integral.
+2. **Backups de registo:** Exportações passam por ficheiro temporário e exit code verificado, em `C:\ProgramData\SkyOptimizer\Backups`. Uma falha impede continuar essa ação. Exportar chaves inteiras ainda não resolve valores novos nem backups sobrepostos.
+3. **Chaves criadas:** `created_keys.txt` é um mecanismo legado. Ainda não representa corretamente todos os valores inicialmente ausentes.
+4. **Energia:** `power_state.json` regista a baseline antes de criar uma cópia do plano original. Apply repetido reutiliza a cópia; Undo reativa o original sem lhe impor defaults. Core parking e suspensão USB no plano alteram apenas AC. A rotina de hubs USB continua pendente.
+5. **Undo:** A opção existente e `-Undo` mantêm-se. Sem backups, não alteram configurações. A energia usa a mesma implementação no programa e no painel; a reversão de registo, serviços e outros recursos ainda contém P0 legados.
+6. **Resultados:** `execution_results.json` distingue `Applied`, `AlreadyCompliant`, `Incompatible`, `Failed` e `Unverified`, com motivo e requisito de reinício. Atualmente apenas as ações migradas têm pós-verificação completa.
+7. **Compatibilidade:** HAGS, MSI, USB por dispositivo e VBS/anti-cheat ainda precisam de revisão. Não há certificação de compatibilidade por fabricante, jogo ou build nesta branch.
 
 ---
 
 ## 📊 Relatório de Impacto (Antes vs. Depois)
 
-No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava o resumo num ficheiro `Relatorio_Otimizacao.txt` dentro do Painel do Cliente:
+No final de cada sessão, o SkyOptimizer grava snapshots do sistema em `Relatorio_Otimizacao.txt`. Não são benchmarks de FPS ou input lag. O exemplo abaixo ilustra o formato; os números não são resultados medidos desta versão:
 
 ```text
 ================================================================================
@@ -45,8 +41,9 @@ No final de cada sessão, o SkyOptimizer calcula o delta real do sistema e grava
   Processos Ativos:            188               124               -64 processos
   Memória RAM em Uso:          5.80 GB           3.40 GB           -2.40 GB libertados
   Espaço Livre Disco C:        42.10 GB          51.70 GB          +9.60 GB recuperados
-  Resolução de Temporizador:   15.6 ms (Padrão)  0.5-1.0 ms        Estabilizado (DynamicTick Off)
-  Modo de Interrupção GPU:     Partilhado        Modo MSI          Prioridade Exclusiva Ativa
+  Resolução de Temporizador:   Não medida nesta execução.
+  Modo de Interrupção GPU:     Não verificado nesta execução.
+  FPS, frametimes/input lag:   Não medidos.
 ================================================================================
   Comunidade & Suporte SkyOptimizer:
   Dúvidas ou novos setups? Dá um salto no nosso Discord:
@@ -62,7 +59,7 @@ Ao aplicar a otimização, o SkyOptimizer gera automaticamente a pasta:
 📁 **`SkyOptimizer - Painel de Controlo`**
 
 Contendo 6 utilitários essenciais com **elevação automática de Administrador** (UAC) e execução com **1 clique**:
-* **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa o motor leve de reversão (`SkyRevert.ps1`), restaurando 100% das definições originais da máquina com segurança e proteção total de propriedade intelectual (zero exposição de código de tuning).
+* **`[1] Reverter Todas as Otimizacoes.cmd`** — Executa `SkyRevert.ps1`. A recuperação de energia é partilhada com o programa; as limitações da reversão legada continuam a aplicar-se.
 * **`[2] Alternar Impressora (Ligar-Desligar).cmd`** — Liga ou desliga o serviço de impressão `Spooler` na hora.
 * **`[3] Alternar Bluetooth (Ligar-Desligar).cmd`** — Liga ou desliga os serviços Bluetooth (para comandos sem fios Xbox/PS5 ou auscultadores).
 * **`[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd`** — Permite alternar o VBS com o guia abrangente de compatibilidade (desativar para FiveM/CS2/Warzone/Fortnite/Apex/Rust/Tarkov/ARC Raiders; ativar para VALORANT/LoL/CS2 no FACEIT).
