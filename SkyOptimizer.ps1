@@ -437,11 +437,244 @@ function Set-SkyAcPowerSettings {
     } finally { $lock.Dispose() }
 }
 
+function Get-SkyUserSid {
+    [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+}
+
+function Get-SkyLegacyBackupFiles {
+    param([string]$BackupDirectory)
+    if ([IO.Directory]::Exists($BackupDirectory)) {
+        Get-ChildItem -LiteralPath $BackupDirectory -File -ErrorAction Stop | Where-Object {
+            $_.Extension -eq '.reg' -or $_.Name -eq 'created_keys.txt' -or
+            ($_.Name -like 'previous_*' -and $_.Name -ne 'previous_power_plan.txt')
+        }
+    }
+}
+
+function Enter-SkyMutationLock {
+    param([string]$BackupDirectory)
+    if (-not [IO.Directory]::Exists($BackupDirectory)) { throw 'Diretório de backups inexistente.' }
+    [IO.File]::Open((Join-Path $BackupDirectory 'mutation_state.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
+}
+
+function Read-SkyMutationState {
+    param([string]$BackupDirectory)
+    $path = Join-Path $BackupDirectory 'mutation_state.json'
+    if (-not [IO.File]::Exists($path)) {
+        return [pscustomobject]@{ SchemaVersion = 1; MachineId = Get-SkyMachineId; UserSid = Get-SkyUserSid; Entries = @() }
+    }
+    $state = [IO.File]::ReadAllText($path) | ConvertFrom-Json -ErrorAction Stop
+    if ($state.SchemaVersion -ne 1 -or $state.MachineId -ne (Get-SkyMachineId) -or
+        $state.UserSid -ne (Get-SkyUserSid) -or $null -eq $state.Entries) {
+        throw 'Diário inválido ou pertencente a outra máquina/utilizador. Nenhuma baseline será substituída.'
+    }
+    $ids = @{}
+    foreach ($entry in $state.Entries) {
+        if (-not $entry.Id -or $ids.ContainsKey($entry.Id) -or $entry.Status -notin @('Pending', 'Applied', 'Restoring', 'Restored')) {
+            throw 'Entrada inválida ou duplicada no diário.'
+        }
+        $ids[$entry.Id] = $true
+        Assert-SkyResourceState -Resource $entry.Resource -State $entry.Original
+        Assert-SkyResourceState -Resource $entry.Resource -State $entry.Before
+        Assert-SkyResourceState -Resource $entry.Resource -State $entry.Desired
+    }
+    return $state
+}
+
+function Save-SkyMutationState {
+    param($State, [string]$BackupDirectory)
+    Write-SkyAtomicFile -Path (Join-Path $BackupDirectory 'mutation_state.json') -Content ($State | ConvertTo-Json -Depth 15)
+}
+
+function ConvertTo-SkyRegistryResource {
+    param([string]$Path, [AllowEmptyString()][string]$Name)
+    $canonical = $Path -replace '^Microsoft.PowerShell.Core\\Registry::', '' -replace '^Registry::', ''
+    $canonical = $canonical -replace '^HKLM:\\?', 'HKEY_LOCAL_MACHINE\' -replace '^HKCU:\\?', 'HKEY_CURRENT_USER\'
+    if ($canonical -notmatch '^(HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER)\\(.+)$') { throw "Caminho de registo não suportado: $Path" }
+    $hive = $Matches[1]; $key = $Matches[2].TrimEnd('\')
+    if ($key -match '[\x00]' -or $Name -match '[\x00]') { throw 'Caminho ou nome inválido.' }
+    [pscustomobject]@{ Type = 'Registry'; Hive = $hive; Key = $key; Name = $Name
+        View = $(if ([Environment]::Is64BitOperatingSystem) { 'Registry64' } else { 'Registry32' }) }
+}
+
+function ConvertTo-SkyRegistryState {
+    param([bool]$Exists, [string]$Kind = 'None', [AllowNull()]$Value)
+    if (-not $Exists) { return [pscustomobject]@{ Exists = $false; Kind = 'None'; Data = $null } }
+    $data = switch ($Kind) {
+        'DWord' { ([long]$Value).ToString([Globalization.CultureInfo]::InvariantCulture) }
+        'QWord' { ([long]$Value).ToString([Globalization.CultureInfo]::InvariantCulture) }
+        'Binary' { [Convert]::ToBase64String([byte[]]$Value) }
+        'None' { [Convert]::ToBase64String([byte[]]$Value) }
+        'MultiString' { ,([string[]]$Value) }
+        'String' { [string]$Value }
+        'ExpandString' { [string]$Value }
+        default { throw "Tipo de registo não suportado: $Kind" }
+    }
+    [pscustomobject]@{ Exists = $true; Kind = $Kind; Data = $data }
+}
+
+function ConvertFrom-SkyRegistryState {
+    param($State)
+    switch ($State.Kind) {
+        'DWord' { return [int]::Parse($State.Data, [Globalization.CultureInfo]::InvariantCulture) }
+        'QWord' { return [long]::Parse($State.Data, [Globalization.CultureInfo]::InvariantCulture) }
+        'Binary' { return ,([Convert]::FromBase64String($State.Data)) }
+        'None' { return ,([Convert]::FromBase64String($State.Data)) }
+        'MultiString' { return ,([string[]]$State.Data) }
+        default { return [string]$State.Data }
+    }
+}
+
+function Open-SkyRegistryBase {
+    param($Resource)
+    $hive = if ($Resource.Hive -eq 'HKEY_LOCAL_MACHINE') { 'LocalMachine' } else { 'CurrentUser' }
+    [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]$hive, [Microsoft.Win32.RegistryView]$Resource.View)
+}
+
+function Get-SkyResourceState {
+    param($Resource)
+    if ($Resource.Type -ne 'Registry') { throw 'Tipo de recurso não suportado.' }
+    $base = Open-SkyRegistryBase $Resource
+    $key = $null
+    try {
+        $key = $base.OpenSubKey($Resource.Key, $false)
+        if ($null -eq $key -or $key.GetValueNames() -notcontains $Resource.Name) {
+            return ConvertTo-SkyRegistryState -Exists $false
+        }
+        $value = $key.GetValue($Resource.Name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        ConvertTo-SkyRegistryState -Exists $true -Kind ($key.GetValueKind($Resource.Name).ToString()) -Value $value
+    } finally { if ($key) { $key.Dispose() }; $base.Dispose() }
+}
+
+function Set-SkyResourceState {
+    param($Resource, $State)
+    if ($Resource.Type -ne 'Registry') { throw 'Tipo de recurso não suportado.' }
+    $base = Open-SkyRegistryBase $Resource
+    $key = $null
+    try {
+        if ($State.Exists) {
+            $key = $base.CreateSubKey($Resource.Key)
+            $key.SetValue($Resource.Name, (ConvertFrom-SkyRegistryState $State), [Microsoft.Win32.RegistryValueKind]$State.Kind)
+        } else {
+            $key = $base.OpenSubKey($Resource.Key, $true)
+            if ($key) { $key.DeleteValue($Resource.Name, $false) }
+        }
+        if ($key) { $key.Flush() }
+        # Empty keys are retained: deleting a subtree could erase another application's data.
+    } finally { if ($key) { $key.Dispose() }; $base.Dispose() }
+}
+
+function Assert-SkyResourceState {
+    param($Resource, $State)
+    if ($Resource.Type -ne 'Registry' -or $Resource.Hive -notin @('HKEY_LOCAL_MACHINE', 'HKEY_CURRENT_USER') -or
+        $Resource.View -notin @('Registry64', 'Registry32') -or -not $Resource.Key -or $null -eq $Resource.Name -or
+        $null -eq $State -or $State.Exists -isnot [bool]) { throw 'Recurso/estado de registo inválido.' }
+    if ($State.Exists) {
+        if ($State.Kind -notin @('String', 'ExpandString', 'MultiString', 'Binary', 'DWord', 'QWord', 'None') -or $null -eq $State.Data) {
+            throw 'Tipo/conteúdo de registo inválido.'
+        }
+        $null = ConvertFrom-SkyRegistryState $State
+    } elseif ($State.Kind -ne 'None' -or $null -ne $State.Data) { throw 'Estado ausente inválido.' }
+}
+
+function Test-SkyStateEqual {
+    param($Left, $Right)
+    # Ordered, typed state constructors provide stable serialization, including empty arrays.
+    ($Left | ConvertTo-Json -Depth 10 -Compress) -ceq ($Right | ConvertTo-Json -Depth 10 -Compress)
+}
+
+function Invoke-SkyTrackedChange {
+    [CmdletBinding()]
+    param($Resource, $Desired, [string]$BackupDirectory = $Global:SkyBackupDir)
+    Assert-SkyResourceState -Resource $Resource -State $Desired
+    $lock = Enter-SkyMutationLock $BackupDirectory
+    try {
+        if (@(Get-SkyLegacyBackupFiles $BackupDirectory).Count) { throw 'Backups legados exigem revisão antes de uma nova baseline. Ficheiros preservados.' }
+        $journal = Read-SkyMutationState $BackupDirectory
+        $current = Get-SkyResourceState $Resource
+        Assert-SkyResourceState -Resource $Resource -State $current
+        $identity = ($Resource | ConvertTo-Json -Compress)
+        $entries = @($journal.Entries | Where-Object { $_.Status -ne 'Restored' -and ($_.Resource | ConvertTo-Json -Compress) -ieq $identity })
+        if ($entries.Count -gt 1) { throw 'Mais de uma baseline ativa para o recurso.' }
+        $entry = $entries | Select-Object -First 1
+        if ($entry) {
+            if ($entry.Status -eq 'Restoring') { throw 'Undo interrompido: concluir a reversão antes de aplicar.' }
+            $expected = Test-SkyStateEqual $current $entry.Desired
+            $pendingBefore = $entry.Status -eq 'Pending' -and (Test-SkyStateEqual $current $entry.Before)
+            if (-not ($expected -or $pendingBefore)) { throw 'Conflito: recurso alterado fora do SkyOptimizer. Estado preservado.' }
+        }
+        if (Test-SkyStateEqual $current $Desired) {
+            if ($entry -and $entry.Status -eq 'Pending') {
+                $entry.Status = 'Applied'; Save-SkyMutationState $journal $BackupDirectory
+            }
+            return New-SkyActionResult -Status AlreadyCompliant -Reason 'Estado configurado já conforme; baseline preservada.'
+        }
+        if (-not $entry) {
+            $entry = [pscustomobject]@{ Id = [guid]::NewGuid().ToString(); Resource = $Resource
+                Original = $current; Before = $current; Desired = $Desired; Status = 'Pending' }
+            $journal.Entries = @($journal.Entries) + $entry
+        } else { $entry.Before = $current; $entry.Desired = $Desired; $entry.Status = 'Pending' }
+        # Durable intent precedes the first system write; a crash can leave only Before or Desired.
+        Save-SkyMutationState $journal $BackupDirectory
+        if (-not (Test-SkyStateEqual (Get-SkyResourceState $Resource) $current)) { throw 'Conflito detetado antes da escrita.' }
+        Set-SkyResourceState -Resource $Resource -State $Desired
+        if (-not (Test-SkyStateEqual (Get-SkyResourceState $Resource) $Desired)) { throw 'Pós-verificação falhou; diário preservado para Undo.' }
+        $entry.Status = 'Applied'; Save-SkyMutationState $journal $BackupDirectory
+        New-SkyActionResult -Status Applied -Reason 'Alteração verificada e baseline persistida. Ganho de desempenho não medido.'
+    } finally { $lock.Dispose() }
+}
+
+function Restore-SkyTrackedChanges {
+    param([string]$BackupDirectory)
+    if (-not [IO.File]::Exists((Join-Path $BackupDirectory 'mutation_state.json'))) { return }
+    $lock = Enter-SkyMutationLock $BackupDirectory
+    try {
+        $journal = Read-SkyMutationState $BackupDirectory
+        $entries = @($journal.Entries); [array]::Reverse($entries)
+        foreach ($entry in $entries) {
+            if ($entry.Status -eq 'Restored') { continue }
+            try {
+                $current = Get-SkyResourceState $entry.Resource
+                if (-not (Test-SkyStateEqual $current $entry.Original)) {
+                    $expected = Test-SkyStateEqual $current $entry.Desired
+                    $pendingBefore = $entry.Status -in @('Pending', 'Restoring') -and (Test-SkyStateEqual $current $entry.Before)
+                    if (-not ($expected -or $pendingBefore)) { throw 'Conflito externo; recurso preservado para revisão.' }
+                    $entry.Status = 'Restoring'; Save-SkyMutationState $journal $BackupDirectory
+                    if (-not (Test-SkyStateEqual (Get-SkyResourceState $entry.Resource) $current)) { throw 'Conflito antes da reversão.' }
+                    Set-SkyResourceState -Resource $entry.Resource -State $entry.Original
+                    if (-not (Test-SkyStateEqual (Get-SkyResourceState $entry.Resource) $entry.Original)) { throw 'Reversão não confirmada.' }
+                }
+                $entry.Status = 'Restored'; Save-SkyMutationState $journal $BackupDirectory
+                New-SkyActionResult -Status Applied -Reason "Baseline restaurada: $($entry.Id)."
+            } catch { New-SkyActionResult -Status Failed -Reason "$($entry.Id): $($_.Exception.Message)" }
+        }
+    } finally { $lock.Dispose() }
+}
+
+function Set-SkyRegistryValue {
+    [CmdletBinding()]
+    param([string]$Path, [AllowEmptyString()][string]$Name, [AllowNull()]$Value,
+        [ValidateSet('String', 'ExpandString', 'MultiString', 'Binary', 'DWord', 'QWord', 'None')][string]$Type = 'DWord', [switch]$Force)
+    $resource = ConvertTo-SkyRegistryResource $Path $Name
+    $desired = ConvertTo-SkyRegistryState -Exists $true -Kind $Type -Value $Value
+    Invoke-SkyTrackedChange -Resource $resource -Desired $desired
+}
+
+function Remove-SkyRegistryValue {
+    [CmdletBinding()]
+    param([string]$Path, [AllowEmptyString()][string]$Name, [switch]$Force)
+    Invoke-SkyTrackedChange -Resource (ConvertTo-SkyRegistryResource $Path $Name) -Desired (ConvertTo-SkyRegistryState -Exists $false)
+}
+
+
 function Get-SkyPowerRestoreSource {
     # Embed the same implementation in the existing standalone Undo; no runtime module dependency.
     $names = @('Invoke-SkyNativeProcess', 'Invoke-SkyNativeCommand', 'Write-SkyAtomicFile',
         'New-SkyActionResult', 'Get-SkyMachineId', 'Enter-SkyPowerLock', 'Read-SkyPowerState',
-        'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope')
+        'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope', 'Invoke-SkyVerifiedUndo',
+        'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
+        'ConvertTo-SkyRegistryState', 'ConvertFrom-SkyRegistryState', 'Open-SkyRegistryBase',
+        'Get-SkyResourceState', 'Set-SkyResourceState', 'Assert-SkyResourceState', 'Test-SkyStateEqual', 'Restore-SkyTrackedChanges')
     ($names | ForEach-Object { "function $_ {`r`n$((Get-Command $_ -CommandType Function).Definition)`r`n}" }) -join "`r`n"
 }
 
@@ -450,6 +683,7 @@ function Get-SkyUndoScope {
     if (-not [IO.Directory]::Exists($BackupDirectory)) { return 'None' }
     $files = @(Get-ChildItem -LiteralPath $BackupDirectory -File -ErrorAction Stop |
         Where-Object { $_.Length -gt 0 -and ($_.Extension -eq '.reg' -or $_.Name -match '^(previous_|created_keys\.txt$|power_state\.json$)') })
+    if ([IO.File]::Exists((Join-Path $BackupDirectory 'mutation_state.json'))) { return 'Tracked' }
     if ($files.Count -eq 0) { return 'None' }
     if (@($files | Where-Object { $_.Name -notin @('power_state.json', 'previous_power_plan.txt') }).Count -eq 0) { return 'PowerOnly' }
     return 'LegacyMixed'
@@ -466,7 +700,15 @@ function Invoke-SkyAction {
         $output = @(& $Action)
         if ($script:SkyActionContext.ErrorLogged) { throw 'A ação registou um erro; consultar o log.' }
         $verified = @($output | Where-Object { $_ -and $_.PSTypeNames -contains 'SkyOptimizer.ActionResult' })
-        if ($verified.Count -eq 1) { return $verified[0] }
+        if ($verified.Count -gt 0) {
+            if (@($verified | Where-Object Status -eq 'Failed').Count) { throw 'Uma altera??o falhou; consultar os resultados.' }
+            if (@($verified | Where-Object Status -eq 'Unverified').Count) { return New-SkyActionResult -Status Unverified -Reason 'Verifica??o incompleta.' }
+            $status = if (@($verified | Where-Object Status -eq 'Applied').Count) { 'Applied' }
+                elseif (@($verified | Where-Object Status -eq 'Incompatible').Count) { 'Incompatible' } else { 'AlreadyCompliant' }
+            $restart = if (@($verified | Where-Object RestartRequired -eq 'Yes').Count) { 'Yes' }
+                elseif (@($verified | Where-Object RestartRequired -eq 'Unknown').Count) { 'Unknown' } else { 'No' }
+            return New-SkyActionResult -Status $status -Reason (($verified.Reason | Select-Object -Unique) -join ' ') -RestartRequired $restart
+        }
         return New-SkyActionResult -Status Unverified -Reason 'Implementação legada sem verificação completa do estado; não contabilizada como sucesso.'
     } catch {
         return New-SkyActionResult -Status Failed -Reason $_.Exception.Message
@@ -950,22 +1192,16 @@ function Disable-GameDVR {
     param()
 
     $configStore = "HKCU:\System\GameConfigStore"
-    Ensure-RegistryPath -KeyPath $configStore
-    Backup-RegistryKey -KeyPath $configStore -BackupName "09_GameConfigStore"
-    Set-ItemProperty -Path $configStore -Name "GameDVR_Enabled" -Value 0 -Type DWord -Force
+    Set-SkyRegistryValue -Path $configStore -Name "GameDVR_Enabled" -Value 0 -Type DWord -Force
 
     $appCapture = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\GameDVR"
-    Ensure-RegistryPath -KeyPath $appCapture
-    Backup-RegistryKey -KeyPath $appCapture -BackupName "09_GameDVR_User"
-    Set-ItemProperty -Path $appCapture -Name "AppCaptureEnabled" -Value 0 -Type DWord -Force
-    Set-ItemProperty -Path $appCapture -Name "HistoricalCaptureEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-SkyRegistryValue -Path $appCapture -Name "AppCaptureEnabled" -Value 0 -Type DWord -Force
+    Set-SkyRegistryValue -Path $appCapture -Name "HistoricalCaptureEnabled" -Value 0 -Type DWord -Force -ErrorAction Stop
 
-    Set-ItemProperty -Path $configStore -Name "GameDVR_HistoricalCaptureEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-SkyRegistryValue -Path $configStore -Name "GameDVR_HistoricalCaptureEnabled" -Value 0 -Type DWord -Force -ErrorAction Stop
 
     $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
-    Ensure-RegistryPath -KeyPath $policyKey
-    Backup-RegistryKey -KeyPath $policyKey -BackupName "09_GameDVR_Policy"
-    Set-ItemProperty -Path $policyKey -Name "AllowGameDVR" -Value 0 -Type DWord -Force
+    Set-SkyRegistryValue -Path $policyKey -Name "AllowGameDVR" -Value 0 -Type DWord -Force
 
     Write-SkyLog -Message "Gravação em segundo plano do Game DVR / Xbox Game Bar desativada (captura contínua e GPU encoder libertados)." -Level "Success"
     return $true
@@ -1034,10 +1270,8 @@ function Set-TelemetryBasic {
     param()
 
     $dataColKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
-    Ensure-RegistryPath -KeyPath $dataColKey
-    Backup-RegistryKey -KeyPath $dataColKey -BackupName "13_DataCollection_Telemetry"
 
-    Set-ItemProperty -Path $dataColKey -Name "AllowTelemetry" -Value 1 -Type DWord -Force
+    Set-SkyRegistryValue -Path $dataColKey -Name "AllowTelemetry" -Value 1 -Type DWord -Force
 
     Write-SkyLog -Message "Telemetria configurada para nível Básico/Necessário (Windows Update e Store seguros)." -Level "Success"
     return $true
@@ -1121,10 +1355,8 @@ function Show-FileExtensions {
     param()
 
     $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-    Ensure-RegistryPath -KeyPath $advKey
-    Backup-RegistryKey -KeyPath $advKey -BackupName "17_Explorer_FileExtensions"
 
-    Set-ItemProperty -Path $advKey -Name "HideFileExt" -Value 0 -Type DWord -Force
+    Set-SkyRegistryValue -Path $advKey -Name "HideFileExt" -Value 0 -Type DWord -Force
 
     Write-SkyLog -Message "Exibição de extensões de ficheiros ativada (.exe, .ps1, etc.)." -Level "Success"
     return $true
@@ -2661,12 +2893,10 @@ function Enable-WindowsGameMode {
     param()
 
     $gameBarKey = "HKCU:\SOFTWARE\Microsoft\GameBar"
-    Ensure-RegistryPath -KeyPath $gameBarKey
-    Backup-RegistryKey -KeyPath $gameBarKey -BackupName "79_Windows_GameMode"
 
     # AutoGameModeEnabled = 1 (Prioriza alocação de GPU e threads de CPU para o jogo ativo, reduzindo manutenção do SO)
-    Set-ItemProperty -Path $gameBarKey -Name "AutoGameModeEnabled" -Value 1 -Type DWord -Force
-    Set-ItemProperty -Path $gameBarKey -Name "AllowAutoGameMode" -Value 1 -Type DWord -Force
+    Set-SkyRegistryValue -Path $gameBarKey -Name "AutoGameModeEnabled" -Value 1 -Type DWord -Force
+    Set-SkyRegistryValue -Path $gameBarKey -Name "AllowAutoGameMode" -Value 1 -Type DWord -Force
 
     Write-SkyLog -Message "Modo de Jogo nativo do Windows ativado (AutoGameModeEnabled=1; prioridade de hardware para o processo do jogo)." -Level "Success"
     return $true
@@ -2987,358 +3217,12 @@ if (-not (Test-Path $backupDir)) {
 }
 
 # SKY_POWER_RESTORE_FUNCTIONS
-$undoScope = Get-SkyUndoScope -BackupDirectory $backupDir
-if ($undoScope -eq 'None') {
-    Write-Host 'Sem backups de alterações: nenhuma configuração será modificada.' -ForegroundColor Yellow
-    exit 0
-}
-if ($undoScope -eq 'PowerOnly') {
-    try {
-        $result = Restore-SkyPowerPlan -BackupDirectory $backupDir
-        Write-Host "[$($result.Status)] $($result.Reason)" -ForegroundColor Cyan
-        exit 0
-    } catch {
-        Write-Host $_.Exception.Message -ForegroundColor Red
-        exit 1
-    }
-}
-Write-Host 'Aviso: reversão legada de registo/serviços ainda não garante o estado original exato.' -ForegroundColor Yellow
+$results = @(Invoke-SkyVerifiedUndo -BackupDirectory $backupDir)
+foreach ($result in $results) { Write-Host "[$($result.Status)] $($result.Reason)" }
+Write-Host 'Backups e painel preservados. Reinicie quando indicado; ganhos n?o foram medidos.'
+if (@($results | Where-Object Status -eq 'Failed').Count) { exit 1 }
+exit 0
 
-# 1. Restaurar Backups de Registo (.reg)
-Write-Host "`n>>> [Passo 1/4] A restaurar ficheiros de Registo (.reg)..." -ForegroundColor Magenta
-$restoredRegCount = 0
-$failedRegCount = 0
-if (Test-Path $backupDir) {
-    $regFiles = Get-ChildItem -Path $backupDir -Filter "*.reg" -ErrorAction SilentlyContinue
-    if ($regFiles -and $regFiles.Count -gt 0) {
-        foreach ($file in $regFiles) {
-            Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
-
-            # Interceções cirúrgicas para chaves de sistema protegidas / de grande porte:
-            if ($file.Name -eq "30_FastShutdown_System.reg") {
-                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-            if ($file.Name -eq "47_Control_SvcHostSplit.reg") {
-                $svchostFile = Join-Path -Path $backupDir -ChildPath "previous_svchost_split.txt"
-                $origSvcSplit = 3670016
-                if (Test-Path $svchostFile) {
-                    $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
-                    if ($val -as [int]) { $origSvcSplit = [int]$val }
-                }
-                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-            if ($file.Name -eq "51_SearchIndexerPower.reg") {
-                Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" -Name "RespectPowerModes" -Force -ErrorAction SilentlyContinue
-                $null = & reg.exe delete "HKLM\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" /v "RespectPowerModes" /f 2>&1
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-            if ($file.Name -eq "57_DiagnosticTracing.reg") {
-                Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" -Name "DisableDiagnosticTracing" -Force -ErrorAction SilentlyContinue
-                $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" /v "DisableDiagnosticTracing" /f 2>&1
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-            if ($file.Name -eq "61_Explorer_MaxCachedIcons.reg") {
-                Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
-                $null = & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /f 2>&1
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-            if ($file.Name -eq "67_SessionManager_DisableWpbt.reg") {
-                Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
-                $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v "DisableWpbtExecution" /f 2>&1
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-            if ($file.Name -eq "72_GameBar_PresenceWriter.reg") {
-                Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-                $null = & reg.exe add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v "ActivationType" /t REG_DWORD /d 1 /f 2>&1
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-                continue
-            }
-
-            & reg.exe import "$($file.FullName)" *> $null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
-            } else {
-                Write-Host " [FALHOU: $LASTEXITCODE] Backup preservado." -ForegroundColor Red
-                $failedRegCount++
-            }
-        }
-    }
-}
-
-# 2. Remover Chaves Criadas de Raiz
-Write-Host "`n>>> [Passo 2/4] A limpar chaves de registo criadas de raiz..." -ForegroundColor Magenta
-$createdKeysFile = Join-Path -Path $backupDir -ChildPath "created_keys.txt"
-if (Test-Path $createdKeysFile) {
-    $createdKeys = Get-Content -Path $createdKeysFile -ErrorAction SilentlyContinue
-    foreach ($key in $createdKeys) {
-        if (-not [string]::IsNullOrWhiteSpace($key)) {
-            Write-Host "  [*] A remover chave recem-criada '$key'..." -ForegroundColor Gray -NoNewline
-            & reg.exe delete "$key" /f *> $null
-            if ($LASTEXITCODE -eq 0) { Write-Host " [OK]" -ForegroundColor Green } else { Write-Host " [IGNORADO]" -ForegroundColor Gray }
-        }
-    }
-}
-
-# 3. Restaurar Energia, BCD, Servicos e Agendador
-Write-Host "`n>>> [Passo 3/4] A restaurar Definicoes de Energia, BCD, Servicos e Armazenamento..." -ForegroundColor Magenta
-
-# Plano de Energia
-# Core Parking e USB são revertidos trocando a cópia pelo original, sem impor defaults.
-try {
-    $powerResult = Restore-SkyPowerPlan -BackupDirectory $backupDir
-    Write-Host "  [$($powerResult.Status)] $($powerResult.Reason)" -ForegroundColor Cyan
-} catch {
-    Write-Host "Falha na reversão de energia: $($_.Exception.Message). Backups preservados." -ForegroundColor Red
-    exit 1
-}
-# Dynamic Tick
-$null = bcdedit /deletevalue disabledynamictick 2>&1
-if ($LASTEXITCODE -ne 0) { $null = bcdedit /set disabledynamictick no 2>&1 }
-Write-Host "  [OK] Dynamic Tick (BCD) reposto." -ForegroundColor Green
-
-# Hibernacao
-$hibFile = Join-Path -Path $backupDir -ChildPath "previous_hibernation.txt"
-if (Test-Path $hibFile) {
-    $origHib = (Get-Content -Path $hibFile -ErrorAction SilentlyContinue).Trim()
-    if ($origHib -eq 1 -or $origHib -eq "1") { powercfg -h on 2>$null; Write-Host "  [OK] Hibernacao reativada." -ForegroundColor Green }
-    else { powercfg -h off 2>$null; Write-Host "  [INFO] Hibernacao mantida desligada." -ForegroundColor Gray }
-}
-
-# SysMain
-$sysmainFile = Join-Path -Path $backupDir -ChildPath "previous_sysmain.txt"
-if (Test-Path $sysmainFile) {
-    $origSysMain = (Get-Content -Path $sysmainFile -ErrorAction SilentlyContinue).Trim()
-    if ($origSysMain -in @("Auto", "Automatic", "Manual")) {
-        $startupType = if ($origSysMain -eq "Manual") { "Manual" } else { "Automatic" }
-        Set-Service -Name SysMain -StartupType $startupType -ErrorAction SilentlyContinue
-        Start-Service -Name SysMain -ErrorAction SilentlyContinue
-        Write-Host "  [OK] Servico SysMain restaurado para $startupType." -ForegroundColor Green
-    }
-}
-
-# NTFS
-$null = fsutil behavior set disablelastaccess 0 2>&1
-$null = fsutil behavior set disable8dot3 0 2>&1
-Write-Host "  [OK] Parametros NTFS repostos." -ForegroundColor Green
-
-# Armazenamento Reservado
-$resFile = Join-Path -Path $backupDir -ChildPath "previous_reserved_storage.txt"
-if (Test-Path $resFile) {
-    $origRes = (Get-Content -Path $resFile -ErrorAction SilentlyContinue).Trim()
-    if ($origRes -eq "Enabled") {
-        $null = dism.exe /Online /Set-ReservedStorageState /State:Enabled 2>&1
-        Write-Host "  [OK] Armazenamento Reservado reposto." -ForegroundColor Green
-    }
-}
-
-# SleepStudy
-'y' | & wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:true /q:true 2>&1 | Out-Null
-'y' | & wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:true /q:true 2>&1 | Out-Null
-'y' | & wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:true /q:true 2>&1 | Out-Null
-$null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1
-Write-Host "  [OK] Canais SleepStudy reativados." -ForegroundColor Green
-
-# HAGS
-if (-not (Test-Path (Join-Path $backupDir "37_GraphicsDrivers_HAGS.reg"))) {
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -Force -ErrorAction SilentlyContinue
-}
-
-# Placas de Rede
-$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-foreach ($nic in $adapters) {
-    foreach ($prop in @("*EEE", "*GreenEthernet", "*GigaLite", "PowerSavingMode", "EnergyEfficientEthernet")) {
-        try {
-            $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -ErrorAction SilentlyContinue
-            if ($exists) { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -RegistryValue 1 -ErrorAction SilentlyContinue }
-        } catch {}
-    }
-}
-Write-Host "  [OK] Gestao de energia de adaptadores de rede reposta." -ForegroundColor Green
-
-# SvcHost
-$svchostFile = Join-Path -Path $backupDir -ChildPath "previous_svchost_split.txt"
-$origSvcSplit = 3670016
-if (Test-Path $svchostFile) {
-    $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
-    if ($val -as [int]) { $origSvcSplit = [int]$val }
-}
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
-Write-Host "  [OK] SvcHostSplitThresholdInKB reposto ($origSvcSplit KB)." -ForegroundColor Green
-
-# Servicos de Telemetria
-$telemetrySvcFile = Join-Path -Path $backupDir -ChildPath "previous_telemetry_services.json"
-if (Test-Path $telemetrySvcFile) {
-    try {
-        $svcMap = Get-Content -Path $telemetrySvcFile -Raw | ConvertFrom-Json
-        foreach ($prop in $svcMap.PSObject.Properties) {
-            $sName = $prop.Name
-            $sMode = $prop.Value
-            $startup = if ($sMode -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
-            Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
-            if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
-        }
-        Write-Host "  [OK] Modos de arranque de servicos repostos." -ForegroundColor Green
-    } catch {}
-}
-
-# Tarefas Agendadas
-$maintTasks = @(
-    "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
-    "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
-    "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
-    "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
-    "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
-    "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
-    "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting"
-)
-foreach ($t in $maintTasks) { $null = schtasks /Change /TN $t /Enable 2>&1 }
-Write-Host "  [OK] Tarefas agendadas reativadas." -ForegroundColor Green
-
-# Reposicao de Kernel Paging e CrashControl
-if (-not (Test-Path (Join-Path $backupDir "50_KernelMemoryManagement.reg"))) {
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePagingExecutive" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePageCombining" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-}
-if (-not (Test-Path (Join-Path $backupDir "55_CrashControlDiagnostics.reg"))) {
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-}
-
-# Servicos de Diagnostico Adicionais
-$diagSvcFile = Join-Path -Path $backupDir -ChildPath "previous_diagnostic_services.json"
-if (Test-Path $diagSvcFile) {
-    try {
-        $diagMap = Get-Content -Path $diagSvcFile -Raw | ConvertFrom-Json
-        foreach ($prop in $diagMap.PSObject.Properties) {
-            $sName = $prop.Name
-            $sVal = $prop.Value
-            if ($sName -eq "OneSyncSvc_RegStart") {
-                Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc" -Name "Start" -Value ([int]$sVal) -Type DWord -Force -ErrorAction SilentlyContinue
-            } else {
-                $startup = if ($sVal -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
-                Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
-                if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
-            }
-        }
-        Write-Host "  [OK] Servicos de diagnostico adicionais restaurados." -ForegroundColor Green
-    } catch {}
-}
-
-# Tarefas Nvidia Telemetry
-$nvTasks = Get-ScheduledTask -TaskPath "\" -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match '^NvTm' }
-foreach ($t in $nvTasks) { $null = schtasks /Change /TN "$($t.TaskName)" /Enable 2>&1 }
-
-# Menu de Contexto Classico Win11 (se chave nao existia previamente)
-if (-not (Test-Path (Join-Path $backupDir "63_Win11_ClassicContextMenu.reg"))) {
-    & reg.exe delete "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" /f *> $null
-}
-
-# Fallbacks de Interface, Firmware e Sistema
-Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-
-# Reposicao de Rede Competitiva, Hitreg e Teclado (Tweaks 73 a 78)
-Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
-
-$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-foreach ($nic in $adapters) {
-    $isWireless = ($nic.PhysicalMediaType -match '802\.11' -or $nic.MediaType -match '802\.11' -or $nic.InterfaceDescription -match 'Wireless|Wi-Fi|WLAN')
-    try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
-    if (-not $isWireless) {
-        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
-    }
-}
-try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
-try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
-
-Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
-$null = netsh int tcp set global timestamps=allowed 2>&1
-$null = netsh int tcp set global ecncapability=default 2>&1
-$null = netsh int tcp set global autotuninglevel=normal 2>&1
-
-# Reposicao de Modo de Jogo e FSO (Tweaks 79 e 80)
-Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
-
-# Reposicao de Otimizacoes Cirurgicas e de Fundo (Tweaks 81 a 90)
-Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-
-# Tweaks 86 a 90
-Set-Service -Name "lfsvc" -StartupType Manual -ErrorAction SilentlyContinue
-try { Enable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue } catch {}
-$null = netsh int tcp set heuristics default 2>&1
-schtasks /Change /TN "\Microsoft\Windows\Maintenance\WinSAT" /Enable 2>&1 | Out-Null
-schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1 | Out-Null
-schtasks /Change /TN "\Microsoft\Windows\DiskFootprint\Diagnostics" /Enable 2>&1 | Out-Null
-
-# 4. Finalizacao
-Write-Host "`n>>> [Passo 4/4] Finalizacao" -ForegroundColor Magenta
-
-# Limpeza da pasta do Painel do Cliente no Ambiente de Trabalho
-$desktopFolders = @(
-    (Join-Path ([Environment]::GetFolderPath('Desktop')) "SkyOptimizer - Painel de Controlo"),
-    (Join-Path $env:USERPROFILE "Desktop\SkyOptimizer - Painel de Controlo"),
-    (Join-Path $env:PUBLIC "Desktop\SkyOptimizer - Painel de Controlo")
-) | Select-Object -Unique
-
-foreach ($df in $desktopFolders) {
-    if (Test-Path $df) {
-        if ($PWD.Path -like "$df*") { Set-Location $env:TEMP }
-        Remove-Item -Path $df -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-
-$restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
-if ($restartExplorer -match '^(s|sim|y|yes)$') {
-    Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 1
-    Write-Host "[OK] Windows Explorer reiniciado." -ForegroundColor Green
-}
-
-Write-Host @"
-
-================================================================================
-                         PROCESSAMENTO DE REVERSAO CONCLUIDO
-================================================================================
-  Ficheiros de registo restaurados: $restoredRegCount
-  Falhas de importacao conhecidas: $failedRegCount
-  Reversao integral legada:         Nao verificada; consultar os erros e preservar backups
-  Painel do Ambiente de Trabalho:   Removido
-================================================================================
-Este resumo nao certifica a reversao integral do sistema.
-"@ -ForegroundColor Green
-Read-Host "`nPressione ENTER para concluir..."
 '@
         $revertScriptCode = $revertScriptCode.Replace('# SKY_POWER_RESTORE_FUNCTIONS', (Get-SkyPowerRestoreSource))
         [System.IO.File]::WriteAllText($revertScriptPath, $revertScriptCode, [System.Text.Encoding]::UTF8)
@@ -3576,6 +3460,11 @@ function Invoke-SkyOptimize {
     [CmdletBinding()]
     param()
 
+    if (@(Get-SkyLegacyBackupFiles $Global:SkyBackupDir).Count) {
+        Write-SkyLog -Message 'Apply bloqueado: backups legados precisam de revisão. Não serão substituídos nem interpretados como baseline exata.' -Level Error
+        return
+    }
+
     Clear-Host
     $banner = @"
 ===============================================================================
@@ -3808,7 +3697,7 @@ function Invoke-SkyOptimize {
         Write-Host ("[*] [{0,2}/{1}] {2}" -f $item.Id, $tweaks.Count, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
-        $result = Invoke-SkyAction -Action $item.Action
+        $result = Invoke-SkyEligibleAction -Id $item.Id -Action $item.Action
         $actionResults += [pscustomobject]@{
             Id = $item.Id; Name = $item.Name; Status = $result.Status
             Reason = $result.Reason; RestartRequired = $result.RestartRequired
@@ -3942,469 +3831,39 @@ function Invoke-SkyOptimize {
 # 6. FUNÇÃO DE REVERSÃO / UNDO (RESTAURAR ESTADO ORIGINAL)
 # ==============================================================================
 
+function Invoke-SkyEligibleAction {
+    param([int]$Id, [scriptblock]$Action)
+    if ($Id -notin @(1, 3, 9, 13, 17, 79)) {
+        return New-SkyActionResult -Status Unverified -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.'
+    }
+    Invoke-SkyAction -Action $Action
+}
+
+function Invoke-SkyVerifiedUndo {
+    param([string]$BackupDirectory)
+    if (-not [IO.Directory]::Exists($BackupDirectory)) { return }
+    try { Restore-SkyTrackedChanges -BackupDirectory $BackupDirectory }
+    catch { New-SkyActionResult -Status Failed -Reason $_.Exception.Message }
+    try { Restore-SkyPowerPlan -BackupDirectory $BackupDirectory }
+    catch { New-SkyActionResult -Status Failed -Reason $_.Exception.Message }
+    if (@(Get-SkyLegacyBackupFiles $BackupDirectory).Count) {
+        New-SkyActionResult -Status Unverified -Reason 'Backups legados preservados. Sem prova das alterações por valor/recurso, não são importados nem substituídos por defaults.'
+    }
+}
+
 function Invoke-SkyUndo {
     [CmdletBinding()]
     param()
-
-    $undoScope = Get-SkyUndoScope -BackupDirectory $Global:SkyBackupDir
-    if ($undoScope -eq 'None') {
-        Write-SkyLog -Message 'Sem backups de alterações: nenhuma configuração será modificada.' -Level Warning
+    if ((Get-SkyUndoScope $Global:SkyBackupDir) -eq 'None') {
+        Write-SkyLog -Message 'Sem backups de altera??es: nenhuma configura??o ser? modificada.' -Level Warning
         return
     }
-
-    Clear-Host
-    $banner = @"
-================================================================================
-  ____  _            ___        _   _           _              
- / ___|| | _____   _/ _ \ _ __ | |_(_)_ __ ___ (_)_______ _ __ 
- \___ \| |/ / | | | | | | '_ \| __| | '_ ` _ \| |_  / _ \ '__|
-  ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
- |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
-             |___/      |_|                                    
-                   Módulo de Restauração / Reversão
-                           Versão: 2.7.0
-================================================================================
-"@
-    Write-Host $banner -ForegroundColor Cyan
-
-    Write-Host "`n[!] ATENÇÃO: Este procedimento irá reverter todas as configurações alteradas" -ForegroundColor Yellow
-    Write-Host "    pelo SkyOptimizer. A reversão legada ainda não garante o estado original exato." -ForegroundColor Yellow
-    Write-Host "    Os ficheiros em '$($Global:SkyBackupDir)' serão utilizados como fonte da verdade.`n" -ForegroundColor Gray
-
-    $confirm = Read-Host "Deseja realmente reverter todas as otimizações? (S/N)"
-    if ($confirm -notmatch '^(s|sim|y|yes)$') {
-        Write-Host "`nOperação de reversão cancelada pelo utilizador." -ForegroundColor Yellow
-        Start-Sleep -Seconds 2
-        return
+    $confirm = Read-Host 'Reverter apenas altera??es com baseline verific?vel? (S/N)'
+    if ($confirm -notmatch '^(s|sim|y|yes)$') { return }
+    foreach ($result in @(Invoke-SkyVerifiedUndo -BackupDirectory $Global:SkyBackupDir)) {
+        $level = if ($result.Status -eq 'Failed') { 'Error' } else { 'Info' }
+        Write-SkyLog -Message "[$($result.Status)] $($result.Reason)" -Level $level
     }
-
-    Write-SkyLog -Message "Início do processo de REVERSÃO (UNDO) no sistema $env:COMPUTERNAME" -Level "Info" -NoConsole
-
-    if ($undoScope -eq 'PowerOnly') {
-        try {
-            $result = Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir
-            Write-SkyLog -Message $result.Reason -Level Info
-        } catch { Write-SkyLog -Message $_.Exception.Message -Level Error }
-        return
-    }
-
-    # 1. Restauração de Backups de Registo (.reg)
-    Write-Host "`n>>> [Passo 1/4] A restaurar ficheiros de Registo (.reg)..." -ForegroundColor Magenta
-
-    # Fallback Automático para o Cofre Permanente (C:\ProgramData\SkyOptimizer\Backups)
-    # Garante que a reversão funciona mesmo que a pasta de execução inicial tenha sido apagada
-    $permBackupDir = Join-Path -Path $env:SystemDrive -ChildPath "ProgramData\SkyOptimizer\Backups"
-    $localHasRegs = (Test-Path $Global:SkyBackupDir) -and ((Get-ChildItem -Path $Global:SkyBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue).Count -gt 0)
-    if (-not $localHasRegs -and (Test-Path $permBackupDir)) {
-        $permHasRegs = (Get-ChildItem -Path $permBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue).Count -gt 0
-        if ($permHasRegs) {
-            $Global:SkyBackupDir = $permBackupDir
-            Write-Host "  [INFO] A utilizar cofre permanente de backups: '$Global:SkyBackupDir'." -ForegroundColor Gray
-            Write-SkyLog -Message "Pasta de backups local ausente. A utilizar cofre permanente em '$Global:SkyBackupDir'." -Level "Info" -NoConsole
-        }
-    }
-
-    $restoredRegCount = 0
-    $failedRegCount = 0
-    if (Test-Path $Global:SkyBackupDir) {
-        $regFiles = Get-ChildItem -Path $Global:SkyBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue
-
-        if (-not $regFiles -or $regFiles.Count -eq 0) {
-            Write-Host "  [*] Nenhum ficheiro de backup (.reg) encontrado em .\Backups\" -ForegroundColor Gray
-            Write-Host "      (Os backups individuais de registo são gerados ao executar a Opção [1])." -ForegroundColor DarkGray
-        } else {
-            foreach ($file in $regFiles) {
-                Write-Host "  [*] A importar $($file.Name)..." -ForegroundColor Gray -NoNewline
-
-                # Interceções cirúrgicas para chaves de sistema protegidas / de grande porte:
-                # 1. 30_FastShutdown_System (HKLM Control - WaitToKillServiceTimeout)
-                if ($file.Name -eq "30_FastShutdown_System.reg") {
-                    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "WaitToKillServiceTimeout" -Value "5000" -Type String -Force -ErrorAction SilentlyContinue
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                # 2. 47_Control_SvcHostSplit (HKLM Control - SvcHostSplitThresholdInKB)
-                if ($file.Name -eq "47_Control_SvcHostSplit.reg") {
-                    $svchostFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_svchost_split.txt"
-                    $origSvcSplit = 3670016
-                    if (Test-Path $svchostFile) {
-                        $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
-                        if ($val -as [int]) { $origSvcSplit = [int]$val }
-                    }
-                    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                # 3. 51_SearchIndexerPower (Windows Search Gather SystemIndex - RespectPowerModes)
-                if ($file.Name -eq "51_SearchIndexerPower.reg") {
-                    Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" -Name "RespectPowerModes" -Force -ErrorAction SilentlyContinue
-                    $null = & reg.exe delete "HKLM\Software\Microsoft\Windows Search\Gather\Windows\SystemIndex" /v "RespectPowerModes" /f 2>&1
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                # 4. 57_DiagnosticTracing (Diagnostics Performance - DisableDiagnosticTracing)
-                if ($file.Name -eq "57_DiagnosticTracing.reg") {
-                    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" -Name "DisableDiagnosticTracing" -Force -ErrorAction SilentlyContinue
-                    $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Diagnostics\Performance" /v "DisableDiagnosticTracing" /f 2>&1
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                # 5. 61_Explorer_MaxCachedIcons (HKLM Explorer - Max Cached Icons)
-                if ($file.Name -eq "61_Explorer_MaxCachedIcons.reg") {
-                    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
-                    $null = & reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /f 2>&1
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                # 6. 67_SessionManager_DisableWpbt (Session Manager - DisableWpbtExecution)
-                if ($file.Name -eq "67_SessionManager_DisableWpbt.reg") {
-                    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
-                    $null = & reg.exe delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v "DisableWpbtExecution" /f 2>&1
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                # 7. 72_GameBar_PresenceWriter (WindowsRuntime ActivatableClassId - ActivationType)
-                if ($file.Name -eq "72_GameBar_PresenceWriter.reg") {
-                    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-                    $null = & reg.exe add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v "ActivationType" /t REG_DWORD /d 1 /f 2>&1
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                    continue
-                }
-
-                & reg.exe import "$($file.FullName)" *> $null
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
-                } else {
-                    Write-Host " [FALHOU: $LASTEXITCODE]" -ForegroundColor Red
-                    Write-SkyLog -Message "Falha ao importar $($file.Name) (exit code $LASTEXITCODE). Backup preservado." -Level Error -NoConsole
-                    $failedRegCount++
-                }
-            }
-        }
-    } else {
-        Write-Host "  [!] Pasta de Backups não encontrada." -ForegroundColor Yellow
-    }
-
-    # 2. Remoção de Chaves Criadas de Raiz
-    Write-Host "`n>>> [Passo 2/4] A limpar chaves de registo criadas de raiz..." -ForegroundColor Magenta
-    $createdKeysFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "created_keys.txt"
-
-    if (Test-Path $createdKeysFile) {
-        $createdKeys = Get-Content -Path $createdKeysFile -ErrorAction SilentlyContinue
-        foreach ($key in $createdKeys) {
-            if (-not [string]::IsNullOrWhiteSpace($key)) {
-                Write-Host "  [*] A remover chave recém-criada '$key'..." -ForegroundColor Gray -NoNewline
-                & reg.exe delete "$key" /f *> $null
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host " [OK]" -ForegroundColor Green
-                } else {
-                    Write-Host " [IGNORADO]" -ForegroundColor Gray
-                }
-            }
-        }
-    } else {
-        Write-Host "  [*] Nenhuma chave necessitou de remoção manual." -ForegroundColor Gray
-    }
-
-    # 3. Restauração de Serviços, Hardware e Parâmetros de Sistema
-    Write-Host "`n>>> [Passo 3/4] A restaurar Definições de Energia, BCD, Serviços e Armazenamento..." -ForegroundColor Magenta
-
-    # Plano de Energia Original
-    # Core Parking e Suspensão Seletiva USB: nunca escrever defaults no plano original.
-    try {
-        $powerResult = Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir
-        Write-SkyLog -Message $powerResult.Reason -Level Info
-    } catch {
-        Write-SkyLog -Message "Falha na reversão de energia: $($_.Exception.Message). Backups preservados." -Level Error
-        return
-    }
-    # Dynamic Tick (BCD)
-    $null = bcdedit /deletevalue disabledynamictick 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  [OK] Dynamic Tick (BCD) reposto para o valor padrão." -ForegroundColor Green
-    } else {
-        $null = bcdedit /set disabledynamictick no 2>&1
-        Write-Host "  [OK] Dynamic Tick verificado e reposto." -ForegroundColor Green
-    }
-
-    # Hibernação
-    $hibFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_hibernation.txt"
-    $origHib = $null
-    if (Test-Path $hibFile) {
-        $origHib = (Get-Content -Path $hibFile -ErrorAction SilentlyContinue).Trim()
-    } elseif ($null -ne $Global:SkyManifest.Hibernation) {
-        $origHib = $Global:SkyManifest.Hibernation
-    }
-
-    if ($origHib -eq 1 -or $origHib -eq "1") {
-        powercfg -h on 2>$null
-        Write-Host "  [OK] Hibernação reativada." -ForegroundColor Green
-    } else {
-        powercfg -h off 2>$null
-        Write-Host "  [INFO] Hibernação mantida desativada (estado original)." -ForegroundColor Gray
-    }
-
-    # SysMain (Superfetch)
-    $sysmainFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_sysmain.txt"
-    $origSysMain = $null
-    if (Test-Path $sysmainFile) {
-        $origSysMain = (Get-Content -Path $sysmainFile -ErrorAction SilentlyContinue).Trim()
-    } elseif ($Global:SkyManifest.SysMain) {
-        $origSysMain = $Global:SkyManifest.SysMain
-    }
-
-    if ($origSysMain -in @("Auto", "Automatic", "Manual")) {
-        $startupType = if ($origSysMain -eq "Manual") { "Manual" } else { "Automatic" }
-        Set-Service -Name SysMain -StartupType $startupType -ErrorAction SilentlyContinue
-        Start-Service -Name SysMain -ErrorAction SilentlyContinue
-        Write-Host "  [OK] Serviço SysMain restaurado para $startupType e reiniciado." -ForegroundColor Green
-    }
-
-    # Otimização NTFS (Repor LastAccess e 8.3)
-    $null = fsutil behavior set disablelastaccess 0 2>&1
-    $null = fsutil behavior set disable8dot3 0 2>&1
-    Write-Host "  [OK] Parâmetros de I/O do sistema de ficheiros NTFS repostos." -ForegroundColor Green
-
-    # Armazenamento Reservado (Reativar caso estivesse ativo)
-    $resFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_reserved_storage.txt"
-    if (Test-Path $resFile) {
-        $origRes = (Get-Content -Path $resFile -ErrorAction SilentlyContinue).Trim()
-        if ($origRes -eq "Enabled") {
-            $null = dism.exe /Online /Set-ReservedStorageState /State:Enabled 2>&1
-            Write-Host "  [OK] Armazenamento Reservado reposto para o estado original." -ForegroundColor Green
-        }
-    }
-
-    # Diagnóstico SleepStudy (Reativar logs sem bloquear ou pedir confirmação)
-    'y' | & wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:true /q:true 2>&1 | Out-Null
-    'y' | & wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:true /q:true 2>&1 | Out-Null
-    'y' | & wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:true /q:true 2>&1 | Out-Null
-    $null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1
-    Write-Host "  [OK] Canais de diagnóstico SleepStudy reativados." -ForegroundColor Green
-
-    # HAGS (Limpeza de HwSchMode se não existia previamente)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "37_GraphicsDrivers_HAGS.reg"))) {
-        Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" -Name "HwSchMode" -Force -ErrorAction SilentlyContinue
-    }
-
-    # Adaptadores de Rede (Reativar propriedades de poupança de energia se suportado)
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    foreach ($nic in $adapters) {
-        foreach ($prop in @("*EEE", "*GreenEthernet", "*GigaLite", "PowerSavingMode", "EnergyEfficientEthernet")) {
-            try {
-                $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -ErrorAction SilentlyContinue
-                if ($exists) {
-                    Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -RegistryValue 1 -ErrorAction SilentlyContinue
-                }
-            } catch {}
-        }
-    }
-    Write-Host "  [OK] Propriedades avançadas de gestão de energia de rede repostas." -ForegroundColor Green
-
-    # SvcHostSplitThresholdInKB (Repor para o valor original ou 3670016 / 3.5GB padrão)
-    $svchostFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_svchost_split.txt"
-    $origSvcSplit = 3670016
-    if (Test-Path $svchostFile) {
-        $val = (Get-Content -Path $svchostFile -ErrorAction SilentlyContinue).Trim()
-        if ($val -as [int]) { $origSvcSplit = [int]$val }
-    }
-    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control" -Name "SvcHostSplitThresholdInKB" -Value $origSvcSplit -Type DWord -Force -ErrorAction SilentlyContinue
-    Write-Host "  [OK] SvcHostSplitThresholdInKB reposto para o valor original ($origSvcSplit KB)." -ForegroundColor Green
-
-    # Serviços de Telemetria Adicionais (DiagTrack, PcaSvc, TrkWks)
-    $telemetrySvcFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_telemetry_services.json"
-    if (Test-Path $telemetrySvcFile) {
-        try {
-            $svcMap = Get-Content -Path $telemetrySvcFile -Raw | ConvertFrom-Json
-            foreach ($prop in $svcMap.PSObject.Properties) {
-                $sName = $prop.Name
-                $sMode = $prop.Value
-                $startup = if ($sMode -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
-                Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
-                if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
-            }
-            Write-Host "  [OK] Serviços de telemetria adicionais repostos para os modos de arranque originais." -ForegroundColor Green
-        } catch {}
-    }
-
-    # Reativação de Tarefas Agendadas de Telemetria e Diagnóstico
-    $maintTasks = @(
-        "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
-        "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
-        "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
-        "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
-        "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
-        "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
-        "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting"
-    )
-    foreach ($t in $maintTasks) {
-        $null = schtasks /Change /TN $t /Enable 2>&1
-    }
-    Write-Host "  [OK] Tarefas agendadas de diagnóstico/telemetria reativadas." -ForegroundColor Green
-
-    # Reposição de Kernel Memory Paging (se não restaurado por .reg)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "50_KernelMemoryManagement.reg"))) {
-        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePagingExecutive" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" -Name "DisablePageCombining" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
-
-    # Reposição de CrashControl (AutoReboot)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "55_CrashControlDiagnostics.reg"))) {
-        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
-
-    # Serviços de Diagnóstico Adicionais (Tweak 71)
-    $diagSvcFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_diagnostic_services.json"
-    if (Test-Path $diagSvcFile) {
-        try {
-            $diagMap = Get-Content -Path $diagSvcFile -Raw | ConvertFrom-Json
-            foreach ($prop in $diagMap.PSObject.Properties) {
-                $sName = $prop.Name
-                $sVal = $prop.Value
-                if ($sName -eq "OneSyncSvc_RegStart") {
-                    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc" -Name "Start" -Value ([int]$sVal) -Type DWord -Force -ErrorAction SilentlyContinue
-                } else {
-                    $startup = if ($sVal -in @("Auto", "Automatic")) { "Automatic" } else { "Manual" }
-                    Set-Service -Name $sName -StartupType $startup -ErrorAction SilentlyContinue
-                    if ($startup -eq "Automatic") { Start-Service -Name $sName -ErrorAction SilentlyContinue }
-                }
-            }
-            Write-Host "  [OK] Serviços de diagnóstico adicionais repostos para os modos de arranque originais." -ForegroundColor Green
-        } catch {}
-    }
-
-    # Tarefas Nvidia Telemetry
-    $nvTasks = Get-ScheduledTask -TaskPath "\" -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match '^NvTm' }
-    foreach ($t in $nvTasks) { $null = schtasks /Change /TN "$($t.TaskName)" /Enable 2>&1 }
-
-    # Menu de Contexto Clássico Win11 (se chave não existia previamente)
-    if (-not (Test-Path (Join-Path $Global:SkyBackupDir "63_Win11_ClassicContextMenu.reg"))) {
-        & reg.exe delete "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" /f *> $null
-    }
-
-    # Fallbacks de Interface, Firmware e Sistema
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" -Name "Max Cached Icons" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" -Name "DisableWpbtExecution" -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Multimedia\Audio" -Name "UserDuckingPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "JPEGImportQuality" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI" -Name "AllowEdgeSwipe" -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" -Name "ActivationType" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    # Reposição de Rede Competitiva, Hitreg e Teclado (Tweaks 73 a 78)
-    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardDelay" -Value "1" -Type String -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Control Panel\Keyboard" -Name "KeyboardSpeed" -Value "31" -Type String -Force -ErrorAction SilentlyContinue
-
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    foreach ($nic in $adapters) {
-        $isWireless = ($nic.PhysicalMediaType -match '802\.11' -or $nic.MediaType -match '802\.11' -or $nic.InterfaceDescription -match 'Wireless|Wi-Fi|WLAN')
-        try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}
-        if (-not $isWireless) {
-            try { Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 3 -ErrorAction SilentlyContinue } catch {}
-        }
-    }
-    try { Enable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue } catch {}
-    try { Enable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue } catch {}
-
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "MaxUserPort" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" -Name "TcpTimedWaitDelay" -Force -ErrorAction SilentlyContinue
-    $null = netsh int tcp set global timestamps=allowed 2>&1
-    $null = netsh int tcp set global ecncapability=default 2>&1
-    $null = netsh int tcp set global autotuninglevel=normal 2>&1
-
-    # Reposição de Modo de Jogo e FSO (Tweaks 79 e 80)
-    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AutoGameModeEnabled" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\GameBar" -Name "AllowAutoGameMode" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_FSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_HonorUserFSEBehaviorMode" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_DXGIHonorFSEWindowsCompatible" -Force -ErrorAction SilentlyContinue
-
-    # Reposição de Otimizações Cirúrgicas e de Fundo (Tweaks 81 a 90)
-    Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" -Name "PowerThrottlingOff" -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "PreventIndexingArchives" -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ListviewShadow" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowRecent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer" -Name "ShowFrequent" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    # Tweaks 86 a 90
-    Set-Service -Name "lfsvc" -StartupType Manual -ErrorAction SilentlyContinue
-    try { Enable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue } catch {}
-    $null = netsh int tcp set heuristics default 2>&1
-    schtasks /Change /TN "\Microsoft\Windows\Maintenance\WinSAT" /Enable 2>&1 | Out-Null
-    schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Enable 2>&1 | Out-Null
-    schtasks /Change /TN "\Microsoft\Windows\DiskFootprint\Diagnostics" /Enable 2>&1 | Out-Null
-
-    # 4. Finalização, Limpeza do Painel e Explorer
-    Write-Host "`n>>> [Passo 4/4] Finalização" -ForegroundColor Magenta
-
-    # Limpeza da pasta do Painel do Cliente no Ambiente de Trabalho
-    $desktopFolders = @(
-        (Join-Path ([Environment]::GetFolderPath('Desktop')) "SkyOptimizer - Painel de Controlo"),
-        (Join-Path $env:USERPROFILE "Desktop\SkyOptimizer - Painel de Controlo"),
-        (Join-Path $env:PUBLIC "Desktop\SkyOptimizer - Painel de Controlo")
-    ) | Select-Object -Unique
-
-    $panelRemoved = $false
-    foreach ($df in $desktopFolders) {
-        if (Test-Path $df) {
-            if ($PWD.Path -like "$df*") { Set-Location $env:TEMP }
-            Remove-Item -Path $df -Recurse -Force -ErrorAction SilentlyContinue
-            if (-not (Test-Path $df)) {
-                $panelRemoved = $true
-            }
-        }
-    }
-    if ($panelRemoved) {
-        Write-Host "  [OK] Pasta 'SkyOptimizer - Painel de Controlo' removida do Ambiente de Trabalho." -ForegroundColor Green
-    }
-
-    Write-Host "Recomenda-se reiniciar o Windows Explorer para repor de imediato as definições visuais." -ForegroundColor Gray
-    $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
-
-    if ($restartExplorer -match '^(s|sim|y|yes)$') {
-        Write-Host "A reiniciar o Windows Explorer..." -ForegroundColor Cyan
-        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
-        Write-Host "[OK] Windows Explorer reiniciado." -ForegroundColor Green
-    }
-
-    Write-Host @"
-
-================================================================================
-                         REVERSÃO CONCLUÍDA
-================================================================================
-  Ficheiros de registo restaurados: $restoredRegCount
-  Falhas de importação conhecidas:  $failedRegCount
-  Reversão integral legada:         Não verificada; consultar o log e preservar os backups
-$(if ($panelRemoved) { "  Painel do Ambiente de Trabalho:   Removido com Sucesso`n" })================================================================================
-O processamento terminou. Este resumo não certifica a reversão integral do sistema.
-"@ -ForegroundColor Green
-
-    Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 
 # ==============================================================================
