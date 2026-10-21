@@ -91,6 +91,8 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     elseif ($Clean) { $paramString = " -Clean" }
     elseif ($Undo) { $paramString = " -Undo" }
     elseif ($DeployPanel) { $paramString = " -DeployPanel" }
+    elseif ($Repair) { $paramString = " -Repair" }
+    elseif ($Audit) { $paramString = " -Audit" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
     Start-Process powershell.exe -ArgumentList $argsList -Verb RunAs
     exit
@@ -155,6 +157,13 @@ function Write-SkyLog {
         [switch]$NoConsole
     )
 
+    if ($script:SkyActionContext) {
+        if ($Level -eq 'Error') { $script:SkyActionContext.ErrorLogged = $true }
+        if ($Level -eq 'Success') {
+            $Level = 'Info'
+            $Message = "Resultado comunicado pela ação, ainda sem validação: $Message"
+        }
+    }
     $timeStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $fileLogEntry = "[$timeStr] [$($Level.ToUpper())] $Message"
 
@@ -194,6 +203,86 @@ function Write-SkyLog {
     }
 }
 
+function Invoke-SkyNativeProcess {
+    [CmdletBinding()]
+    param(
+        [ValidateSet('powercfg.exe', 'reg.exe')][string]$FileName,
+        [string[]]$Arguments
+    )
+    # Keep native stderr as diagnostic output; the process exit code decides success.
+    $ErrorActionPreference = 'Continue'
+    $executable = Join-Path ([Environment]::SystemDirectory) $FileName
+    $output = @(& $executable @Arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+    [pscustomobject]@{ ExitCode = $exitCode; Output = ($output | Out-String).Trim() }
+}
+
+function Invoke-SkyNativeCommand {
+    [CmdletBinding()]
+    param(
+        [ValidateSet('powercfg.exe', 'reg.exe')][string]$FileName,
+        [string[]]$Arguments
+    )
+    $result = Invoke-SkyNativeProcess -FileName $FileName -Arguments $Arguments
+    if ($null -eq $result.ExitCode -or $result.ExitCode -ne 0) {
+        throw "$FileName falhou (exit code $($result.ExitCode)): $($result.Output)"
+    }
+    return $result.Output
+}
+
+function Write-SkyAtomicFile {
+    [CmdletBinding()]
+    param([string]$Path, [AllowEmptyString()][string]$Content)
+    $temporary = "$Path.$([guid]::NewGuid().ToString('N')).tmp"
+    try {
+        $encoding = New-Object System.Text.UTF8Encoding($true)
+        $bytes = $encoding.GetPreamble() + $encoding.GetBytes($Content)
+        $stream = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try { $stream.Write($bytes, 0, $bytes.Length); $stream.Flush($true) }
+        finally { $stream.Dispose() }
+        if ([IO.File]::Exists($Path)) { [IO.File]::Replace($temporary, $Path, [NullString]::Value) }
+        else { [IO.File]::Move($temporary, $Path) }
+    } finally {
+        if ([IO.File]::Exists($temporary)) { [IO.File]::Delete($temporary) }
+    }
+}
+
+function New-SkyActionResult {
+    [CmdletBinding()]
+    param(
+        [ValidateSet('Applied', 'AlreadyCompliant', 'Incompatible', 'Failed', 'Unverified')]
+        [string]$Status,
+        [string]$Reason,
+        [ValidateSet('Yes', 'No', 'Unknown')][string]$RestartRequired = 'Unknown'
+    )
+    [pscustomobject]@{
+        PSTypeName = 'SkyOptimizer.ActionResult'
+        Status = $Status
+        Reason = $Reason
+        RestartRequired = $RestartRequired
+    }
+}
+
+function Invoke-SkyAction {
+    [CmdletBinding()]
+    param([scriptblock]$Action)
+    # Legacy booleans cannot prove effective state or distinguish a skip from a failure.
+    $previousContext = $script:SkyActionContext
+    $script:SkyActionContext = @{ ErrorLogged = $false }
+    try {
+        $ErrorActionPreference = 'Stop'
+        $output = @(& $Action)
+        if ($script:SkyActionContext.ErrorLogged) { throw 'A ação registou um erro; consultar o log.' }
+        $verified = @($output | Where-Object { $_ -and $_.PSTypeNames -contains 'SkyOptimizer.ActionResult' })
+        if ($verified.Count -eq 1) { return $verified[0] }
+        return New-SkyActionResult -Status Unverified -Reason 'Implementação legada sem verificação completa do estado; não contabilizada como sucesso.'
+    } catch {
+        return New-SkyActionResult -Status Failed -Reason $_.Exception.Message
+    } finally {
+        $script:SkyActionContext = $previousContext
+    }
+}
+
 function Convert-ToStandardRegPath {
     param([string]$Path)
 
@@ -223,6 +312,7 @@ function Backup-RegistryKey {
         [string]$KeyPath,
 
         [Parameter(Mandatory = $true)]
+        [ValidatePattern('^[a-zA-Z0-9_. -]+$')]
         [string]$BackupName
     )
 
@@ -231,30 +321,40 @@ function Backup-RegistryKey {
     $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "$BackupName.reg"
     $createdKeysFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "created_keys.txt"
 
-    if (Test-Path $psPath) {
-        if (-not (Test-Path $backupFile)) {
+    if (Test-Path -LiteralPath $psPath -ErrorAction Stop) {
+        if (-not (Test-Path -LiteralPath $backupFile -ErrorAction Stop)) {
             Write-SkyLog -Message "A criar backup de registo para '$stdPath' -> '$BackupName.reg'" -Level "Info" -NoConsole
-            & reg.exe export "$stdPath" "$backupFile" /y *> $null
-            if ($LASTEXITCODE -ne 0) {
-                Write-SkyLog -Message "Falha ao exportar registo de '$stdPath' (ExitCode: $LASTEXITCODE)" -Level "Warning" -NoConsole
-            } else {
-                # Sincronização em tempo real para o cofre permanente de backups
-                if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
-                    Copy-Item -Path $backupFile -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
+            $temporary = "$backupFile.$([guid]::NewGuid().ToString('N')).tmp"
+            try {
+                $null = Invoke-SkyNativeCommand -FileName reg.exe -Arguments @('export', $stdPath, $temporary, '/y')
+                if (-not [IO.File]::Exists($temporary) -or (Get-Item -LiteralPath $temporary -ErrorAction Stop).Length -eq 0) {
+                    throw "Exportação sem conteúdo: $stdPath"
                 }
+                # Move refuses to overwrite an existing baseline, including a concurrent export.
+                [IO.File]::Move($temporary, $backupFile)
+                # Sincronização em tempo real para o cofre permanente de backups
+                if ($Global:SkyPermBackupDir -and
+                    [IO.Path]::GetFullPath($Global:SkyPermBackupDir) -ne [IO.Path]::GetFullPath($Global:SkyBackupDir)) {
+                    Copy-Item -LiteralPath $backupFile -Destination $Global:SkyPermBackupDir -ErrorAction Stop
+                }
+            } finally {
+                if ([IO.File]::Exists($temporary)) { [IO.File]::Delete($temporary) }
             }
+        } elseif ((Get-Item -LiteralPath $backupFile -ErrorAction Stop).Length -eq 0) {
+            throw "Backup vazio existente: $backupFile. A baseline não será substituída."
         }
     } else {
         Write-SkyLog -Message "Chave '$stdPath' não existia previamente. Registada em created_keys.txt." -Level "Info" -NoConsole
         if (-not (Test-Path $createdKeysFile)) {
-            New-Item -ItemType File -Path $createdKeysFile -Force | Out-Null
+            New-Item -ItemType File -Path $createdKeysFile -ErrorAction Stop | Out-Null
         }
-        $existing = Get-Content -Path $createdKeysFile -ErrorAction SilentlyContinue
+        $existing = Get-Content -LiteralPath $createdKeysFile -ErrorAction Stop
         if ($existing -notcontains $stdPath) {
-            Add-Content -Path $createdKeysFile -Value $stdPath -ErrorAction SilentlyContinue
+            Add-Content -LiteralPath $createdKeysFile -Value $stdPath -ErrorAction Stop
         }
-        if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
-            Copy-Item -Path $createdKeysFile -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
+        if ($Global:SkyPermBackupDir -and
+            [IO.Path]::GetFullPath($Global:SkyPermBackupDir) -ne [IO.Path]::GetFullPath($Global:SkyBackupDir)) {
+            Copy-Item -LiteralPath $createdKeysFile -Destination $Global:SkyPermBackupDir -Force -ErrorAction Stop
         }
     }
 }
@@ -263,16 +363,17 @@ function Ensure-RegistryPath {
     param([string]$KeyPath)
     $psPath = Convert-ToPSRegPath -Path $KeyPath
     if (-not (Test-Path $psPath)) {
-        New-Item -Path $psPath -Force -ErrorAction SilentlyContinue | Out-Null
+        New-Item -Path $psPath -Force -ErrorAction Stop | Out-Null
     }
 }
 
 function Save-SkyManifest {
     $manifestPath = Join-Path -Path $Global:SkyBackupDir -ChildPath "state_backup.json"
     $json = $Global:SkyManifest | ConvertTo-Json -Depth 5
-    [System.IO.File]::WriteAllText($manifestPath, $json, [System.Text.Encoding]::UTF8)
-    if ($Global:SkyPermBackupDir -and (Test-Path $Global:SkyPermBackupDir)) {
-        Copy-Item -Path $manifestPath -Destination $Global:SkyPermBackupDir -Force -ErrorAction SilentlyContinue
+    Write-SkyAtomicFile -Path $manifestPath -Content $json
+    if ($Global:SkyPermBackupDir -and
+        [IO.Path]::GetFullPath($Global:SkyPermBackupDir) -ne [IO.Path]::GetFullPath($Global:SkyBackupDir)) {
+        Copy-Item -LiteralPath $manifestPath -Destination $Global:SkyPermBackupDir -Force -ErrorAction Stop
     }
 }
 
@@ -3510,6 +3611,10 @@ function Invoke-SkyOptimize {
     $currentCategory = ""
     $totalSuccess = 0
     $totalFailed = 0
+    $totalAlreadyCompliant = 0
+    $totalIncompatible = 0
+    $totalUnverified = 0
+    $actionResults = @()
     $failureDetails = @()
 
     foreach ($item in $tweaks) {
@@ -3521,20 +3626,29 @@ function Invoke-SkyOptimize {
         Write-Host ("[*] [{0,2}/{1}] {2}" -f $item.Id, $tweaks.Count, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
-        try {
-            $null = & $item.Action
-            $totalSuccess++
-            $Global:SkyManifest.AppliedTweaks += $item.Name
-        } catch {
-            $errorMsg = $_.Exception.Message
-            Write-SkyLog -Message "Falha em $($item.Name): $errorMsg" -Level "Error"
-            $totalFailed++
-            $failureDetails += [PSCustomObject]@{
-                Id     = $item.Id
-                Name   = $item.Name
-                Reason = $errorMsg
+        $result = Invoke-SkyAction -Action $item.Action
+        $actionResults += [pscustomobject]@{
+            Id = $item.Id; Name = $item.Name; Status = $result.Status
+            Reason = $result.Reason; RestartRequired = $result.RestartRequired
+        }
+        switch ($result.Status) {
+            'Applied' {
+                $totalSuccess++
+                if ($Global:SkyManifest.AppliedTweaks -notcontains $item.Name) {
+                    $Global:SkyManifest.AppliedTweaks += $item.Name
+                }
+                Write-SkyLog -Message $result.Reason -Level Success
+            }
+            'AlreadyCompliant' { $totalAlreadyCompliant++; Write-SkyLog -Message $result.Reason -Level Info }
+            'Incompatible' { $totalIncompatible++; Write-SkyLog -Message $result.Reason -Level Warning }
+            'Unverified' { $totalUnverified++; Write-SkyLog -Message $result.Reason -Level Warning }
+            'Failed' {
+                $totalFailed++
+                Write-SkyLog -Message "Falha em $($item.Name): $($result.Reason)" -Level Error
+                $failureDetails += [pscustomobject]@{ Id = $item.Id; Name = $item.Name; Reason = $result.Reason }
             }
         }
+        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'execution_results.json') -Content (ConvertTo-Json -InputObject @($actionResults) -Depth 5)
     }
 
     # Salvaguarda de Estado
@@ -3578,8 +3692,15 @@ function Invoke-SkyOptimize {
   Processos Ativos:            $($baselineMetrics.ProcessCount)               $($postMetrics.ProcessCount)               $(if ($deltaProcess -ge 0) { "-$deltaProcess processos" } else { "+$([math]::Abs($deltaProcess)) processos" })
   Memória RAM em Uso:          $([math]::Round($baselineMetrics.RamUsedMB / 1024, 2)) GB          $([math]::Round($postMetrics.RamUsedMB / 1024, 2)) GB          $(if ($deltaRamMB -gt 0) { "-$([math]::Round($deltaRamMB / 1024, 2)) GB libertados" } else { "Estável" })
   Espaço Livre Disco C:        $($baselineMetrics.FreeDiskCGB) GB         $($postMetrics.FreeDiskCGB) GB         $(if ($deltaDiskGB -gt 0) { "+$deltaDiskGB GB recuperados" } else { "Otimizado" })
-  Resolução de Temporizador:   15.6 ms (Padrão)  0.5-1.0 ms        Estabilizado (DynamicTick Off)
-  Modo de Interrupção GPU:     Partilhado        Modo MSI          Prioridade Exclusiva Ativa
+  Resolução de Temporizador:   Não medida nesta execução.
+  Modo de Interrupção GPU:     Não verificado nesta execução.
+  FPS, frametimes/input lag:   Não medidos. Estes snapshots não demonstram ganhos em jogos.
+  Ações aplicadas/verificadas: $totalSuccess
+  Já conformes:               $totalAlreadyCompliant
+  Incompatíveis:               $totalIncompatible
+  Sem validação completa:     $totalUnverified
+  Falhas:                     $totalFailed
+  Detalhe/reinício por ação:   $Global:SkyBackupDir\execution_results.json
 ================================================================================
   Comunidade & Suporte SkyOptimizer:
   Dúvidas ou novos setups? Dá um salto no nosso Discord:
@@ -3587,7 +3708,7 @@ function Invoke-SkyOptimize {
 ================================================================================
 "@
 
-    Deploy-ClientPanel -ReportContent $reportText | Out-Null
+    $panelCreated = Deploy-ClientPanel -ReportContent $reportText
     Write-Host $reportText -ForegroundColor Cyan
 
     # Relatório Final de Execução
@@ -3596,11 +3717,14 @@ function Invoke-SkyOptimize {
                          RELATÓRIO DE EXECUÇÃO
 ================================================================================
   Total de Tweaks Executados:  $($tweaks.Count)
-  Sucessos:                    $totalSuccess
+  Aplicadas e verificadas:     $totalSuccess
+  Já conformes:                $totalAlreadyCompliant
+  Incompatíveis:               $totalIncompatible
+  Sem validação completa:      $totalUnverified
   Falhas:                      $totalFailed
   Ponto de Restauro:           $(if ($restorePointCreated) { "Criado com Sucesso" } else { "Ignorado / Restrito" })
 
-  Painel do Cliente:           Criado no Ambiente de Trabalho ('SkyOptimizer - Painel de Controlo')
+  Painel do Cliente:           $(if ($panelCreated -eq $true) { 'Criado' } else { 'Falhou; consultar o log' })
   Relatório Gravado em:        Área de Trabalho\SkyOptimizer - Painel de Controlo\Relatorio_Otimizacao.txt
   Pasta de Backups:            $Global:SkyBackupDir
   Comando de Reversão:         .\SkyOptimizer.ps1 -Undo
@@ -3628,7 +3752,7 @@ function Invoke-SkyOptimize {
         Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
     }
 
-    Write-Host "`n[+] SkyOptimizer v2.7 concluído com êxito! Para reverter qualquer alteração, utilize a Opção [4] ou execute: .\SkyOptimizer.ps1 -Undo" -ForegroundColor Cyan
+    Write-Host "`nSessão terminada: $totalFailed falhas e $totalUnverified ações sem validação completa. Consulte o relatório antes de considerar o sistema validado." -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 

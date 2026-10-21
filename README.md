@@ -1,6 +1,10 @@
 # SkyOptimizer 🚀
 
-> **Toolkit Autónomo, Não-Destrutivo e 100% Reversível de Otimização Windows 10 e 11.**  
+> **Branch de desenvolvimento — Fase 2 em curso.** A reversão integral ainda não está validada. Não distribuir esta versão a clientes como uma release concluída.
+>
+> Resultados legados sem pós-verificação aparecem como `Unverified`, não como sucesso. Falhas de exportação de registo interrompem a ação correspondente. Os restantes limites e a migração de Undo estão documentados em `docs/FASE2-IMPLEMENTACAO.md`.
+
+> **Toolkit de otimização Windows 10 e 11 com funcionalidades de backup e reversão em revisão.**  
 > Focado em máxima performance, menor latência de input e estabilidade de frametimes no FiveM e jogos competitivos.
 
 O **SkyOptimizer** é um utilitário consolidado num **único ficheiro PowerShell autocontido** (`SkyOptimizer.ps1`), sem qualquer dependência externa ou pastas adicionais de módulos. Foi concebido especificamente para suporte e otimização remota via **AnyDesk** (máquinas de clientes com jogos, aplicações de trabalho e dados instalados), sem quebrar funcionalidades essenciais nem deixar ficheiros bloqueados no computador.
