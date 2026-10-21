@@ -212,6 +212,8 @@ function Invoke-SkyNativeProcess {
     # Keep native stderr as diagnostic output; the process exit code decides success.
     $ErrorActionPreference = 'Continue'
     $executable = Join-Path ([Environment]::SystemDirectory) $FileName
+    if (-not [IO.File]::Exists($executable)) { throw "Executável indisponível: $executable" }
+    $LASTEXITCODE = $null
     $output = @(& $executable @Arguments 2>&1)
     $exitCode = $LASTEXITCODE
     [pscustomobject]@{ ExitCode = $exitCode; Output = ($output | Out-String).Trim() }
@@ -261,6 +263,196 @@ function New-SkyActionResult {
         Reason = $Reason
         RestartRequired = $RestartRequired
     }
+}
+
+function Get-SkyMachineId {
+    (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid -ErrorAction Stop).MachineGuid
+}
+
+function Enter-SkyPowerLock {
+    param([string]$BackupDirectory)
+    # FileShare.None serializes plan changes in the application and the generated panel.
+    [IO.File]::Open((Join-Path $BackupDirectory 'power_state.lock'),
+        [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+}
+
+function Read-SkyPowerState {
+    param([string]$BackupDirectory)
+    $path = Join-Path $BackupDirectory 'power_state.json'
+    if (-not [IO.File]::Exists($path)) { return $null }
+    $state = [IO.File]::ReadAllText($path) | ConvertFrom-Json -ErrorAction Stop
+    if ($state.SchemaVersion -ne 1 -or [string]::IsNullOrWhiteSpace($state.MachineId) -or $state.MachineId -ne (Get-SkyMachineId) -or
+        $state.Status -notin @('Prepared', 'Active', 'Restored')) {
+        throw 'Baseline de energia inválida, de outra máquina ou de versão não suportada.'
+    }
+    $original = [guid]::Empty
+    $owned = [guid]::Empty
+    if (-not [guid]::TryParseExact($state.OriginalGuid, 'D', [ref]$original) -or
+        -not [guid]::TryParseExact($state.OwnedGuid, 'D', [ref]$owned) -or
+        $original -eq $owned -or $original -eq [guid]::Empty -or $owned -eq [guid]::Empty) {
+        throw 'GUIDs inválidos na baseline de energia.'
+    }
+    return $state
+}
+
+function Save-SkyPowerState {
+    param([string]$BackupDirectory, $State)
+    Write-SkyAtomicFile -Path (Join-Path $BackupDirectory 'power_state.json') -Content ($State | ConvertTo-Json -Depth 4)
+}
+
+function Get-SkyPowerGuid {
+    param([string]$Text)
+    $guidMatches = [regex]::Matches($Text, '(?i)\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b')
+    if ($guidMatches.Count -ne 1) { throw 'Não foi possível identificar um único GUID do plano ativo.' }
+    return $guidMatches[0].Value.ToLowerInvariant()
+}
+
+function Get-SkyActivePowerGuid {
+    Get-SkyPowerGuid -Text (Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/getactivescheme'))
+}
+
+function Get-SkyPowerGuids {
+    $text = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/list')
+    $guidMatches = [regex]::Matches($text, '(?i)\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b')
+    if ($guidMatches.Count -eq 0) { throw 'Não foi possível enumerar os planos de energia.' }
+    @($guidMatches | ForEach-Object { $_.Value.ToLowerInvariant() })
+}
+
+function Restore-SkyPowerPlan {
+    [CmdletBinding()]
+    param([string]$BackupDirectory)
+    $lock = Enter-SkyPowerLock -BackupDirectory $BackupDirectory
+    try {
+        $state = Read-SkyPowerState -BackupDirectory $BackupDirectory
+        if (-not $state) {
+            $legacyPath = Join-Path $BackupDirectory 'previous_power_plan.txt'
+            if (-not [IO.File]::Exists($legacyPath)) {
+                return New-SkyActionResult -Status AlreadyCompliant -Reason 'Sem baseline de energia: nenhuma alteração efetuada.' -RestartRequired No
+            }
+            # Legacy data can identify a plan, but cannot reconstruct its original setting indices.
+            $legacyGuid = [guid]::Empty
+            if (-not [guid]::TryParseExact([IO.File]::ReadAllText($legacyPath).Trim(), 'D', [ref]$legacyGuid)) {
+                throw 'GUID inválido no backup legado de energia; nenhum default será aplicado.'
+            }
+            if (@(Get-SkyPowerGuids) -notcontains $legacyGuid.ToString()) { throw 'O plano legado já não existe.' }
+            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setactive', $legacyGuid.ToString())
+            if ((Get-SkyActivePowerGuid) -ne $legacyGuid.ToString()) { throw 'A ativação do plano legado não foi confirmada.' }
+            return New-SkyActionResult -Status Unverified -Reason 'Plano legado reativado; índices originais AC/DC não disponíveis. Nenhum default foi imposto.' -RestartRequired No
+        }
+        if ($state.Status -eq 'Restored') {
+            return New-SkyActionResult -Status AlreadyCompliant -Reason 'Este ciclo de energia já foi revertido; nenhuma alteração efetuada.' -RestartRequired No
+        }
+        $plans = @(Get-SkyPowerGuids)
+        $active = Get-SkyActivePowerGuid
+        if ($plans -notcontains $state.OriginalGuid) { throw 'Plano original ausente; recuperação automática interrompida.' }
+        if ($active -notin @($state.OriginalGuid, $state.OwnedGuid)) {
+            throw 'Outro plano foi selecionado entretanto. A reversão não substituirá essa escolha.'
+        }
+        if ($active -ne $state.OriginalGuid) {
+            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setactive', $state.OriginalGuid)
+        }
+        if ((Get-SkyActivePowerGuid) -ne $state.OriginalGuid) { throw 'O plano original não ficou ativo.' }
+        if ($plans -contains $state.OwnedGuid) {
+            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/delete', $state.OwnedGuid)
+            if (@(Get-SkyPowerGuids) -contains $state.OwnedGuid) { throw 'O plano temporário não foi removido.' }
+        }
+        $state.Status = 'Restored'
+        Save-SkyPowerState -BackupDirectory $BackupDirectory -State $state
+        return New-SkyActionResult -Status Applied -Reason 'Plano original reativado sem modificar os seus valores AC/DC; cópia Sky removida.' -RestartRequired No
+    } finally { $lock.Dispose() }
+}
+
+function Get-SkyPowerSetting {
+    param([guid]$PlanGuid, [guid]$SubgroupGuid, [guid]$SettingGuid)
+    # Query the documented API instead of parsing localized powercfg setting labels.
+    if (-not ('SkyOptimizer.PowerRead' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace SkyOptimizer {
+    public static class PowerRead {
+        [DllImport("powrprof.dll")]
+        public static extern uint PowerReadACValueIndex(IntPtr root, ref Guid plan, ref Guid subgroup, ref Guid setting, out uint value);
+        [DllImport("powrprof.dll")]
+        public static extern uint PowerReadDCValueIndex(IntPtr root, ref Guid plan, ref Guid subgroup, ref Guid setting, out uint value);
+    }
+}
+'@ -ErrorAction Stop
+    }
+    $ac = [uint32]0
+    $dc = [uint32]0
+    $acError = [SkyOptimizer.PowerRead]::PowerReadACValueIndex([IntPtr]::Zero, [ref]$PlanGuid, [ref]$SubgroupGuid, [ref]$SettingGuid, [ref]$ac)
+    $dcError = [SkyOptimizer.PowerRead]::PowerReadDCValueIndex([IntPtr]::Zero, [ref]$PlanGuid, [ref]$SubgroupGuid, [ref]$SettingGuid, [ref]$dc)
+    if ($acError -ne 0 -or $dcError -ne 0) {
+        $code = if ($acError -ne 0) { $acError } else { $dcError }
+        throw (New-Object ComponentModel.Win32Exception([int]$code))
+    }
+    [pscustomobject]@{ AC = $ac; DC = $dc }
+}
+
+function Set-SkyAcPowerSettings {
+    [CmdletBinding()]
+    param([object[]]$Settings)
+    $lock = Enter-SkyPowerLock -BackupDirectory $Global:SkyBackupDir
+    try {
+        $state = Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir
+        if (-not $state -or $state.Status -ne 'Active' -or (Get-SkyActivePowerGuid) -ne $state.OwnedGuid) {
+            throw 'É necessário um plano Sky ativo e com baseline antes de alterar AC/DC.'
+        }
+        $before = @()
+        # Read all settings first. An unsupported setting must not cause a partially configured group.
+        foreach ($setting in $Settings) {
+            try {
+                $before += Get-SkyPowerSetting -PlanGuid $state.OwnedGuid -SubgroupGuid $setting.Subgroup -SettingGuid $setting.Setting
+            } catch {
+                if ($_.Exception -is [ComponentModel.Win32Exception] -and $_.Exception.NativeErrorCode -in @(2, 50, 1168)) {
+                    return New-SkyActionResult -Status Incompatible -Reason "Definição de energia não disponível nesta plataforma: $($setting.Setting). Nenhum índice alterado." -RestartRequired No
+                }
+                throw
+            }
+        }
+        $changed = $false
+        for ($i = 0; $i -lt $Settings.Count; $i++) {
+            $setting = $Settings[$i]
+            if ($before[$i].AC -ne $setting.Value) {
+                $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setacvalueindex', $state.OwnedGuid, $setting.Subgroup, $setting.Setting, [string]$setting.Value)
+                $changed = $true
+            }
+        }
+        if ($changed) {
+            # Refuse to replace a plan selected by a user or another tool during this operation.
+            if ((Get-SkyActivePowerGuid) -ne $state.OwnedGuid) { throw 'O plano ativo mudou durante a operação.' }
+            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setactive', $state.OwnedGuid)
+        }
+        for ($i = 0; $i -lt $Settings.Count; $i++) {
+            $setting = $Settings[$i]
+            $after = Get-SkyPowerSetting -PlanGuid $state.OwnedGuid -SubgroupGuid $setting.Subgroup -SettingGuid $setting.Setting
+            if ($after.AC -ne $setting.Value -or $after.DC -ne $before[$i].DC) {
+                throw 'Pós-verificação AC/DC falhou; a baseline original continua disponível para Undo.'
+            }
+        }
+        if ((Get-SkyActivePowerGuid) -ne $state.OwnedGuid) { throw 'A ativação do plano Sky não foi confirmada.' }
+        $status = if ($changed) { 'Applied' } else { 'AlreadyCompliant' }
+        New-SkyActionResult -Status $status -Reason 'Índices AC verificados no plano Sky; índices DC preservados. Desempenho não medido.' -RestartRequired No
+    } finally { $lock.Dispose() }
+}
+
+function Get-SkyPowerRestoreSource {
+    # Embed the same implementation in the existing standalone Undo; no runtime module dependency.
+    $names = @('Invoke-SkyNativeProcess', 'Invoke-SkyNativeCommand', 'Write-SkyAtomicFile',
+        'New-SkyActionResult', 'Get-SkyMachineId', 'Enter-SkyPowerLock', 'Read-SkyPowerState',
+        'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope')
+    ($names | ForEach-Object { "function $_ {`r`n$((Get-Command $_ -CommandType Function).Definition)`r`n}" }) -join "`r`n"
+}
+
+function Get-SkyUndoScope {
+    param([string]$BackupDirectory)
+    if (-not [IO.Directory]::Exists($BackupDirectory)) { return 'None' }
+    $files = @(Get-ChildItem -LiteralPath $BackupDirectory -File -ErrorAction Stop |
+        Where-Object { $_.Length -gt 0 -and ($_.Extension -eq '.reg' -or $_.Name -match '^(previous_|created_keys\.txt$|power_state\.json$)') })
+    if ($files.Count -eq 0) { return 'None' }
+    if (@($files | Where-Object { $_.Name -notin @('power_state.json', 'previous_power_plan.txt') }).Count -eq 0) { return 'PowerOnly' }
+    return 'LegacyMixed'
 }
 
 function Invoke-SkyAction {
@@ -519,49 +711,48 @@ function Set-UltimatePowerPlan {
     [CmdletBinding()]
     param()
 
-    $activeSchemeOutput = powercfg -getactivescheme 2>&1
-    $currentGuid = $null
-    if ($activeSchemeOutput -match '([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})') {
-        $currentGuid = $matches[1]
-    }
-
-    if ($currentGuid -and -not $Global:SkyManifest.PowerPlan) {
-        $Global:SkyManifest.PowerPlan = $currentGuid
-        $powerPlanBackupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_power_plan.txt"
-        $currentGuid | Out-File -FilePath $powerPlanBackupFile -Encoding UTF8 -Force
-        Write-SkyLog -Message "Plano de energia original guardado: $currentGuid" -Level "Info" -NoConsole
-    }
-
-    $allSchemes = powercfg -list 2>&1
-    $ultimateGuid = $null
-
-    foreach ($line in ($allSchemes -split "`r?`n")) {
-        if ($line -match '([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})' -and 
-            ($line -match 'Ultimate Performance' -or $line -match 'Desempenho Máximo')) {
-            $ultimateGuid = $matches[1]
-            break
-        }
-    }
-
-    if (-not $ultimateGuid) {
-        $dupOutput = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>&1
-        if ($dupOutput -match '([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})') {
-            $ultimateGuid = $matches[1]
-        } else {
-            $dupHigh = powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2>&1
-            if ($dupHigh -match '([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})') {
-                $ultimateGuid = $matches[1]
+    $lock = Enter-SkyPowerLock -BackupDirectory $Global:SkyBackupDir
+    try {
+        $state = Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir
+        $currentGuid = Get-SkyActivePowerGuid
+        $plans = @(Get-SkyPowerGuids)
+        if (-not $state -or $state.Status -eq 'Restored') {
+            if (-not $state -and [IO.File]::Exists((Join-Path $Global:SkyBackupDir 'previous_power_plan.txt'))) {
+                throw 'Existe uma baseline legada de energia. Rever/restaurar esse ciclo antes de criar uma nova baseline.'
             }
+            $state = [pscustomobject]@{
+                SchemaVersion = 1
+                MachineId = Get-SkyMachineId
+                OriginalGuid = $currentGuid
+                OwnedGuid = [guid]::NewGuid().ToString()
+                Status = 'Prepared'
+            }
+            if ([string]::IsNullOrWhiteSpace($state.MachineId)) { throw 'Identidade da máquina indisponível.' }
+            # Persist original state and destination GUID before the first Windows mutation.
+            Save-SkyPowerState -BackupDirectory $Global:SkyBackupDir -State $state
         }
-    }
-
-    if ($ultimateGuid) {
-        powercfg -setactive $ultimateGuid 2>$null
-        Write-SkyLog -Message "Plano 'Desempenho Máximo' ($ultimateGuid) ativado com sucesso." -Level "Success"
-        return $true
-    } else {
-        throw "Não foi possível criar ou encontrar o perfil de Desempenho Máximo."
-    }
+        if ($plans -notcontains $state.OriginalGuid) { throw 'O plano original já não existe.' }
+        if ($currentGuid -notin @($state.OriginalGuid, $state.OwnedGuid)) {
+            throw 'O plano ativo foi alterado fora do SkyOptimizer; a baseline não será substituída.'
+        }
+        if ($state.Status -eq 'Active' -and $currentGuid -eq $state.OwnedGuid) {
+            return New-SkyActionResult -Status AlreadyCompliant -Reason 'Plano Sky já ativo; baseline original preservada.' -RestartRequired No
+        }
+        if ($plans -notcontains $state.OwnedGuid) {
+            if ($state.Status -ne 'Prepared') { throw 'O plano Sky foi removido fora do programa; executar Undo antes de reaplicar.' }
+            # Clone the customer's plan, preserving OEM/CPU settings and battery policy.
+            # Performance changes are explicit actions on this copy, not promises attached to a plan name.
+            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/duplicatescheme', $state.OriginalGuid, $state.OwnedGuid)
+            if (@(Get-SkyPowerGuids) -notcontains $state.OwnedGuid) { throw 'A duplicação do plano não foi confirmada.' }
+        }
+        $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/changename', $state.OwnedGuid, 'SkyOptimizer')
+        $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setactive', $state.OwnedGuid)
+        if ((Get-SkyActivePowerGuid) -ne $state.OwnedGuid) { throw 'A ativação do plano Sky não foi confirmada.' }
+        $state.Status = 'Active'
+        Save-SkyPowerState -BackupDirectory $Global:SkyBackupDir -State $state
+        $Global:SkyManifest.PowerPlan = $state.OriginalGuid
+        return New-SkyActionResult -Status Applied -Reason 'Cópia isolada do plano original criada e ativada; baseline persistida antes da alteração.' -RestartRequired No
+    } finally { $lock.Dispose() }
 }
 
 function Set-TimerResolution {
@@ -598,17 +789,10 @@ function Disable-CoreParking {
     $settingMin = "0cc5b647-c1df-4637-891a-dec75c318583" # Processor performance core parking min cores
     $settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028" # Processor performance core parking max cores
 
-    $null = powercfg -attributes $subGroup $settingMin -ATTRIB_HIDE 2>&1
-    $null = powercfg -attributes $subGroup $settingMax -ATTRIB_HIDE 2>&1
-
-    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 100 2>&1
-    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 100 2>&1
-    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
-    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
-    $null = powercfg -setactive SCHEME_CURRENT 2>&1
-
-    Write-SkyLog -Message "Core Parking desativado (100% núcleos ativos no perfil de energia)." -Level "Success"
-    return $true
+    Set-SkyAcPowerSettings -Settings @(
+        [pscustomobject]@{ Subgroup = $subGroup; Setting = $settingMin; Value = 100 },
+        [pscustomobject]@{ Subgroup = $subGroup; Setting = $settingMax; Value = 100 }
+    )
 }
 
 function Disable-Hibernation {
@@ -740,10 +924,10 @@ function Disable-USBSelectiveSuspend {
     $usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
     $usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
 
-    $null = powercfg -attributes $usbSubGroup $usbSetting -ATTRIB_HIDE 2>&1
-    $null = powercfg -setacvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 0 2>&1
-    $null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 0 2>&1
-    $null = powercfg -setactive SCHEME_CURRENT 2>&1
+    $powerResult = Set-SkyAcPowerSettings -Settings @(
+        [pscustomobject]@{ Subgroup = $usbSubGroup; Setting = $usbSetting; Value = 0 }
+    )
+    if ($powerResult.Status -eq 'Incompatible') { return $powerResult }
 
     # Desativação de poupança de energia nos controladores e Hubs USB
     $usbHubs = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Enum\USB\*\Device Parameters" -ErrorAction SilentlyContinue
@@ -757,7 +941,7 @@ function Disable-USBSelectiveSuspend {
         $hubCount++
     }
 
-    Write-SkyLog -Message "Suspensão Seletiva USB desativada no perfil de energia e em $hubCount controladores USB (estabilidade 1000Hz-8000Hz)." -Level "Success"
+    Write-SkyLog -Message "Índice AC de suspensão USB verificado; DC preservado. Rotina legada de hubs ($hubCount encontrados) ainda sem validação completa." -Level "Warning"
     return $true
 }
 
@@ -2802,9 +2986,28 @@ if (-not (Test-Path $backupDir)) {
     if (Test-Path $altBackup) { $backupDir = $altBackup }
 }
 
+# SKY_POWER_RESTORE_FUNCTIONS
+$undoScope = Get-SkyUndoScope -BackupDirectory $backupDir
+if ($undoScope -eq 'None') {
+    Write-Host 'Sem backups de alterações: nenhuma configuração será modificada.' -ForegroundColor Yellow
+    exit 0
+}
+if ($undoScope -eq 'PowerOnly') {
+    try {
+        $result = Restore-SkyPowerPlan -BackupDirectory $backupDir
+        Write-Host "[$($result.Status)] $($result.Reason)" -ForegroundColor Cyan
+        exit 0
+    } catch {
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        exit 1
+    }
+}
+Write-Host 'Aviso: reversão legada de registo/serviços ainda não garante o estado original exato.' -ForegroundColor Yellow
+
 # 1. Restaurar Backups de Registo (.reg)
 Write-Host "`n>>> [Passo 1/4] A restaurar ficheiros de Registo (.reg)..." -ForegroundColor Magenta
 $restoredRegCount = 0
+$failedRegCount = 0
 if (Test-Path $backupDir) {
     $regFiles = Get-ChildItem -Path $backupDir -Filter "*.reg" -ErrorAction SilentlyContinue
     if ($regFiles -and $regFiles.Count -gt 0) {
@@ -2871,8 +3074,8 @@ if (Test-Path $backupDir) {
                 Write-Host " [OK]" -ForegroundColor Green
                 $restoredRegCount++
             } else {
-                Write-Host " [OK]" -ForegroundColor Green
-                $restoredRegCount++
+                Write-Host " [FALHOU: $LASTEXITCODE] Backup preservado." -ForegroundColor Red
+                $failedRegCount++
             }
         }
     }
@@ -2896,36 +3099,14 @@ if (Test-Path $createdKeysFile) {
 Write-Host "`n>>> [Passo 3/4] A restaurar Definicoes de Energia, BCD, Servicos e Armazenamento..." -ForegroundColor Magenta
 
 # Plano de Energia
-$powerPlanFile = Join-Path -Path $backupDir -ChildPath "previous_power_plan.txt"
-if (Test-Path $powerPlanFile) {
-    $origPlanGuid = (Get-Content -Path $powerPlanFile -ErrorAction SilentlyContinue).Trim()
-    if ($origPlanGuid -and ($origPlanGuid -match '^[a-fA-F0-9-]+$')) {
-        powercfg -setactive $origPlanGuid 2>$null
-        Write-Host "  [OK] Plano de Energia original reativado ($origPlanGuid)." -ForegroundColor Green
-    } else {
-        powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
-        Write-Host "  [INFO] Plano de Energia reposto para Equilibrado (Balanced)." -ForegroundColor Gray
-    }
-} else {
-    powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
-    Write-Host "  [INFO] Plano de Energia reposto para Equilibrado (Balanced)." -ForegroundColor Gray
+# Core Parking e USB são revertidos trocando a cópia pelo original, sem impor defaults.
+try {
+    $powerResult = Restore-SkyPowerPlan -BackupDirectory $backupDir
+    Write-Host "  [$($powerResult.Status)] $($powerResult.Reason)" -ForegroundColor Cyan
+} catch {
+    Write-Host "Falha na reversão de energia: $($_.Exception.Message). Backups preservados." -ForegroundColor Red
+    exit 1
 }
-
-# Core Parking e USB
-$subGroup   = "54533251-82be-4824-96c1-47b60b740d00"
-$settingMin = "0cc5b647-c1df-4637-891a-dec75c318583"
-$settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028"
-$null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
-$null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
-$null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
-$null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
-$usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
-$usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
-$null = powercfg -setacvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
-$null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
-$null = powercfg -setactive SCHEME_CURRENT 2>&1
-Write-Host "  [OK] Gestao de energia de CPU e USB reposta." -ForegroundColor Green
-
 # Dynamic Tick
 $null = bcdedit /deletevalue disabledynamictick 2>&1
 if ($LASTEXITCODE -ne 0) { $null = bcdedit /set disabledynamictick no 2>&1 }
@@ -3148,17 +3329,18 @@ if ($restartExplorer -match '^(s|sim|y|yes)$') {
 Write-Host @"
 
 ================================================================================
-                         REVERSAO CONCLUIDA COM SUCESSO
+                         PROCESSAMENTO DE REVERSAO CONCLUIDO
 ================================================================================
   Ficheiros de registo restaurados: $restoredRegCount
-  Definicoes de hardware e energia: Repostas
-  Estado dos Servicos:              Restaurado
+  Falhas de importacao conhecidas: $failedRegCount
+  Reversao integral legada:         Nao verificada; consultar os erros e preservar backups
   Painel do Ambiente de Trabalho:   Removido
 ================================================================================
-O seu sistema foi revertido com seguranca para o estado anterior.
+Este resumo nao certifica a reversao integral do sistema.
 "@ -ForegroundColor Green
 Read-Host "`nPressione ENTER para concluir..."
 '@
+        $revertScriptCode = $revertScriptCode.Replace('# SKY_POWER_RESTORE_FUNCTIONS', (Get-SkyPowerRestoreSource))
         [System.IO.File]::WriteAllText($revertScriptPath, $revertScriptCode, [System.Text.Encoding]::UTF8)
 
         # Limpar atalhos antigos ou duplicados se existirem
@@ -3474,9 +3656,9 @@ function Invoke-SkyOptimize {
 
     $tweaks = @(
         # Categoria 1: Sistema e Desempenho
-        [ordered]@{ Id = 1;  Category = "Sistema & Desempenho"; Name = "Plano de Energia 'Desempenho Máximo'"; Action = { Set-UltimatePowerPlan } },
+        [ordered]@{ Id = 1;  Category = "Sistema & Desempenho"; Name = "Plano de Energia Sky (cópia isolada do original)"; Action = { Set-UltimatePowerPlan } },
         [ordered]@{ Id = 2;  Category = "Sistema & Desempenho"; Name = "Resolução de Temporizador Global & Dynamic Tick"; Action = { Set-TimerResolution } },
-        [ordered]@{ Id = 3;  Category = "Sistema & Desempenho"; Name = "Desativação de Core Parking de CPU"; Action = { Disable-CoreParking } },
+        [ordered]@{ Id = 3;  Category = "Sistema & Desempenho"; Name = "Core Parking: configuração experimental em AC (DC preservado)"; Action = { Disable-CoreParking } },
         [ordered]@{ Id = 4;  Category = "Sistema & Desempenho"; Name = "Desativação de Hibernação (Libertar hiberfil.sys)"; Action = { Disable-Hibernation } },
         [ordered]@{ Id = 5;  Category = "Sistema & Desempenho"; Name = "Desativação de Fault Tolerant Heap (FTH)"; Action = { Disable-FaultTolerantHeap } },
         [ordered]@{ Id = 6;  Category = "Sistema & Desempenho"; Name = "SysMain / Superfetch (Inteligente para SSD)"; Action = { Disable-Superfetch } },
@@ -3764,6 +3946,12 @@ function Invoke-SkyUndo {
     [CmdletBinding()]
     param()
 
+    $undoScope = Get-SkyUndoScope -BackupDirectory $Global:SkyBackupDir
+    if ($undoScope -eq 'None') {
+        Write-SkyLog -Message 'Sem backups de alterações: nenhuma configuração será modificada.' -Level Warning
+        return
+    }
+
     Clear-Host
     $banner = @"
 ================================================================================
@@ -3780,7 +3968,7 @@ function Invoke-SkyUndo {
     Write-Host $banner -ForegroundColor Cyan
 
     Write-Host "`n[!] ATENÇÃO: Este procedimento irá reverter todas as configurações alteradas" -ForegroundColor Yellow
-    Write-Host "    pelo SkyOptimizer de volta para o estado original da máquina." -ForegroundColor Gray
+    Write-Host "    pelo SkyOptimizer. A reversão legada ainda não garante o estado original exato." -ForegroundColor Yellow
     Write-Host "    Os ficheiros em '$($Global:SkyBackupDir)' serão utilizados como fonte da verdade.`n" -ForegroundColor Gray
 
     $confirm = Read-Host "Deseja realmente reverter todas as otimizações? (S/N)"
@@ -3791,6 +3979,14 @@ function Invoke-SkyUndo {
     }
 
     Write-SkyLog -Message "Início do processo de REVERSÃO (UNDO) no sistema $env:COMPUTERNAME" -Level "Info" -NoConsole
+
+    if ($undoScope -eq 'PowerOnly') {
+        try {
+            $result = Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir
+            Write-SkyLog -Message $result.Reason -Level Info
+        } catch { Write-SkyLog -Message $_.Exception.Message -Level Error }
+        return
+    }
 
     # 1. Restauração de Backups de Registo (.reg)
     Write-Host "`n>>> [Passo 1/4] A restaurar ficheiros de Registo (.reg)..." -ForegroundColor Magenta
@@ -3809,6 +4005,7 @@ function Invoke-SkyUndo {
     }
 
     $restoredRegCount = 0
+    $failedRegCount = 0
     if (Test-Path $Global:SkyBackupDir) {
         $regFiles = Get-ChildItem -Path $Global:SkyBackupDir -Filter "*.reg" -ErrorAction SilentlyContinue
 
@@ -3900,9 +4097,9 @@ function Invoke-SkyUndo {
                     Write-SkyLog -Message "Registo restaurado com sucesso: $($file.Name)" -Level "Success" -NoConsole
                     $restoredRegCount++
                 } else {
-                    Write-Host " [OK]" -ForegroundColor Green
-                    Write-SkyLog -Message "Registo restaurado com tolerância a permissões: $($file.Name)" -Level "Success" -NoConsole
-                    $restoredRegCount++
+                    Write-Host " [FALHOU: $LASTEXITCODE]" -ForegroundColor Red
+                    Write-SkyLog -Message "Falha ao importar $($file.Name) (exit code $LASTEXITCODE). Backup preservado." -Level Error -NoConsole
+                    $failedRegCount++
                 }
             }
         }
@@ -3935,45 +4132,14 @@ function Invoke-SkyUndo {
     Write-Host "`n>>> [Passo 3/4] A restaurar Definições de Energia, BCD, Serviços e Armazenamento..." -ForegroundColor Magenta
 
     # Plano de Energia Original
-    $powerPlanFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_power_plan.txt"
-    $origPlanGuid = $null
-    if (Test-Path $powerPlanFile) {
-        $origPlanGuid = (Get-Content -Path $powerPlanFile -ErrorAction SilentlyContinue).Trim()
-    } elseif ($Global:SkyManifest.PowerPlan) {
-        $origPlanGuid = $Global:SkyManifest.PowerPlan
+    # Core Parking e Suspensão Seletiva USB: nunca escrever defaults no plano original.
+    try {
+        $powerResult = Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir
+        Write-SkyLog -Message $powerResult.Reason -Level Info
+    } catch {
+        Write-SkyLog -Message "Falha na reversão de energia: $($_.Exception.Message). Backups preservados." -Level Error
+        return
     }
-
-    if ($origPlanGuid -and ($origPlanGuid -match '^[a-fA-F0-9-]+$')) {
-        powercfg -setactive $origPlanGuid 2>$null
-        Write-Host "  [OK] Plano de Energia original reativado ($origPlanGuid)." -ForegroundColor Green
-        Write-SkyLog -Message "Plano de energia original reativado: $origPlanGuid" -Level "Success" -NoConsole
-    } else {
-        powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
-        Write-Host "  [INFO] Plano de Energia reposto para Equilibrado (Balanced)." -ForegroundColor Gray
-    }
-
-    # Core Parking (Repor para 0% e desocultar)
-    $subGroup   = "54533251-82be-4824-96c1-47b60b740d00"
-    $settingMin = "0cc5b647-c1df-4637-891a-dec75c318583"
-    $settingMax = "ea062031-0e34-4ff1-9b6d-eb1059324028"
-    $null = powercfg -attributes $subGroup $settingMin -ATTRIB_HIDE 2>&1
-    $null = powercfg -attributes $subGroup $settingMax -ATTRIB_HIDE 2>&1
-    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
-    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMin 0 2>&1
-    $null = powercfg -setacvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
-    $null = powercfg -setdcvalueindex SCHEME_CURRENT $subGroup $settingMax 100 2>&1
-    $null = powercfg -setactive SCHEME_CURRENT 2>&1
-    Write-Host "  [OK] Core Parking reposto para predefinição de gestão de energia." -ForegroundColor Green
-
-    # Suspensão Seletiva USB (Repor para 1 - Ativado por defeito)
-    $usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
-    $usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
-    $null = powercfg -attributes $usbSubGroup $usbSetting -ATTRIB_HIDE 2>&1
-    $null = powercfg -setacvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
-    $null = powercfg -setdcvalueindex SCHEME_CURRENT $usbSubGroup $usbSetting 1 2>&1
-    $null = powercfg -setactive SCHEME_CURRENT 2>&1
-    Write-Host "  [OK] Suspensão Seletiva USB reposta para padrão de conservação de energia." -ForegroundColor Green
-
     # Dynamic Tick (BCD)
     $null = bcdedit /deletevalue disabledynamictick 2>&1
     if ($LASTEXITCODE -eq 0) {
@@ -4232,11 +4398,10 @@ function Invoke-SkyUndo {
                          REVERSÃO CONCLUÍDA
 ================================================================================
   Ficheiros de registo restaurados: $restoredRegCount
-  Definições de hardware e energia: Repostas com Sucesso
-  Estado dos Serviços:              Restaurado
-  Parâmetros de I/O e Sistema:      Repostos
+  Falhas de importação conhecidas:  $failedRegCount
+  Reversão integral legada:         Não verificada; consultar o log e preservar os backups
 $(if ($panelRemoved) { "  Painel do Ambiente de Trabalho:   Removido com Sucesso`n" })================================================================================
-O seu sistema foi revertido com segurança para o estado anterior.
+O processamento terminou. Este resumo não certifica a reversão integral do sistema.
 "@ -ForegroundColor Green
 
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
