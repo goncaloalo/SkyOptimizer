@@ -259,4 +259,39 @@ Describe 'Standalone panel parity' {
         $source.Contains((Get-Command Restore-SkyPowerPlan).Definition) | Should Be $true
         $source.Contains((Get-Command Read-SkyPowerState).Definition) | Should Be $true
     }
+    It 'parses the complete generated Undo after shared functions are inserted' {
+        $tokens = $null; $errors = $null
+        $path = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\SkyOptimizer.ps1')).Path
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+        $template = $ast.FindAll({ param($node)
+            $node -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
+            $node.Value.Contains('# SKY_POWER_RESTORE_FUNCTIONS')
+        }, $true) | Where-Object { $_.Value.Contains('$backupDir = Join-Path $PSScriptRoot') } | Select-Object -First 1
+        ($null -ne $template) | Should Be $true
+        $generated = $template.Value.Replace('# SKY_POWER_RESTORE_FUNCTIONS', (Get-SkyPowerRestoreSource))
+        $null = [System.Management.Automation.Language.Parser]::ParseInput($generated, [ref]$tokens, [ref]$errors)
+        $errors.Count | Should Be 0
+        $generated.Contains('# SKY_POWER_RESTORE_FUNCTIONS') | Should Be $false
+    }
+}
+
+Describe 'Undo entry guard' {
+    BeforeEach {
+        $Global:SkyBackupDir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $null = [IO.Directory]::CreateDirectory($Global:SkyBackupDir)
+    }
+    Mock Write-SkyLog { }
+    Mock Read-Host { throw 'The legacy path must not be reached without backup evidence.' }
+    Mock Invoke-SkyNativeProcess { throw 'No Windows process is allowed in this test.' }
+    It 'returns before confirmation or system operations when no backups exist' {
+        { Invoke-SkyUndo } | Should Not Throw
+        Assert-MockCalled Read-Host -Times 0 -Exactly -Scope It
+        Assert-MockCalled Invoke-SkyNativeProcess -Times 0 -Exactly -Scope It
+    }
+    It 'does not mistake execution reports and lock files for an original baseline' {
+        [IO.File]::WriteAllText((Join-Path $Global:SkyBackupDir 'execution_results.json'), '[]')
+        [IO.File]::WriteAllText((Join-Path $Global:SkyBackupDir 'power_state.lock'), '')
+        { Invoke-SkyUndo } | Should Not Throw
+        Assert-MockCalled Read-Host -Times 0 -Exactly -Scope It
+    }
 }
