@@ -533,6 +533,17 @@ function Open-SkyRegistryBase {
 
 function Get-SkyResourceState {
     param($Resource)
+    if ($Resource.Type -eq 'ServiceStartup') {
+        $svc = Get-SkyService -Name $Resource.Name
+        return [pscustomobject]@{ Value = $svc.StartType.ToString(); Delayed = Get-SkyResourceState $Resource.DelayedResource }
+    }
+    if ($Resource.Type -eq 'ServiceRuntime') {
+        return [pscustomobject]@{ Value = (Get-SkyService -Name $Resource.Name).Status.ToString() }
+    }
+    if ($Resource.Type -eq 'NicRegistry') {
+        $null = Get-SkyNicBinding $Resource
+        return Get-SkyResourceState $Resource.Registry
+    }
     if ($Resource.Type -ne 'Registry') { throw 'Tipo de recurso não suportado.' }
     $base = Open-SkyRegistryBase $Resource
     $key = $null
@@ -548,6 +559,29 @@ function Get-SkyResourceState {
 
 function Set-SkyResourceState {
     param($Resource, $State)
+    if ($Resource.Type -eq 'ServiceStartup') {
+        Set-SkyServiceStartTypeNative -Name $Resource.Name -StartupType $State.Value
+        return
+    }
+    if ($Resource.Type -eq 'ServiceRuntime') {
+        $svc = Get-SkyService -Name $Resource.Name
+        if ($State.Value -eq 'Running') {
+            # Starting dependencies would change resources for which this entry owns no baseline.
+            if (@($svc.ServicesDependedOn | Where-Object Status -ne 'Running').Count) { throw 'Dependências paradas: arranque automático recusado.' }
+            Start-Service -InputObject $svc -ErrorAction Stop
+        } else {
+            if (@($svc.DependentServices | Where-Object Status -ne 'Stopped').Count) { throw 'Dependentes ativos: paragem em cascata recusada.' }
+            Stop-Service -InputObject $svc -ErrorAction Stop
+        }
+        $svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]$State.Value, [TimeSpan]::FromSeconds(15))
+        return
+    }
+    if ($Resource.Type -eq 'NicRegistry') {
+        $null = Get-SkyNicBinding $Resource
+        # Change only this documented driver property. No adapter restart/disconnection here.
+        Set-SkyResourceState -Resource $Resource.Registry -State $State
+        return
+    }
     if ($Resource.Type -ne 'Registry') { throw 'Tipo de recurso não suportado.' }
     $base = Open-SkyRegistryBase $Resource
     $key = $null
@@ -566,6 +600,20 @@ function Set-SkyResourceState {
 
 function Assert-SkyResourceState {
     param($Resource, $State)
+    if ($Resource.Type -in @('ServiceStartup', 'ServiceRuntime')) {
+        if ($Resource.Name -notmatch '^[a-zA-Z0-9_.-]+$') { throw 'Identidade de serviço inválida.' }
+        $allowed = if ($Resource.Type -eq 'ServiceStartup') { @('Automatic', 'Manual', 'Disabled') } else { @('Running', 'Stopped') }
+        if ($State.Value -notin $allowed) { throw 'Estado de serviço não suportado; sem alteração.' }
+        if ($Resource.Type -eq 'ServiceStartup') { Assert-SkyResourceState $Resource.DelayedResource $State.Delayed }
+        return
+    }
+    if ($Resource.Type -eq 'NicRegistry') {
+        $parsed = [guid]::Empty
+        if (-not [guid]::TryParse($Resource.InterfaceGuid, [ref]$parsed) -or -not $Resource.PnpDeviceId -or
+            -not $Resource.DriverVersion -or -not $Resource.Keyword) { throw 'Identidade do adaptador inválida.' }
+        Assert-SkyResourceState $Resource.Registry $State
+        return
+    }
     if ($Resource.Type -ne 'Registry' -or $Resource.Hive -notin @('HKEY_LOCAL_MACHINE', 'HKEY_CURRENT_USER') -or
         $Resource.View -notin @('Registry64', 'Registry32') -or -not $Resource.Key -or $null -eq $Resource.Name -or
         $null -eq $State -or $State.Exists -isnot [bool]) { throw 'Recurso/estado de registo inválido.' }
@@ -625,7 +673,7 @@ function Invoke-SkyTrackedChange {
 }
 
 function Restore-SkyTrackedChanges {
-    param([string]$BackupDirectory)
+    param([string]$BackupDirectory, [string]$ServiceName)
     if (-not [IO.File]::Exists((Join-Path $BackupDirectory 'mutation_state.json'))) { return }
     $lock = Enter-SkyMutationLock $BackupDirectory
     try {
@@ -633,6 +681,7 @@ function Restore-SkyTrackedChanges {
         $entries = @($journal.Entries); [array]::Reverse($entries)
         foreach ($entry in $entries) {
             if ($entry.Status -eq 'Restored') { continue }
+            if ($ServiceName -and ($entry.Resource.Type -notin @('ServiceRuntime', 'ServiceStartup') -or $entry.Resource.Name -ne $ServiceName)) { continue }
             try {
                 $current = Get-SkyResourceState $entry.Resource
                 if (-not (Test-SkyStateEqual $current $entry.Original)) {
@@ -645,7 +694,8 @@ function Restore-SkyTrackedChanges {
                     if (-not (Test-SkyStateEqual (Get-SkyResourceState $entry.Resource) $entry.Original)) { throw 'Reversão não confirmada.' }
                 }
                 $entry.Status = 'Restored'; Save-SkyMutationState $journal $BackupDirectory
-                New-SkyActionResult -Status Applied -Reason "Baseline restaurada: $($entry.Id)."
+                $restart = if ($entry.Resource.Type -eq 'NicRegistry') { 'Yes' } else { 'Unknown' }
+                New-SkyActionResult -Status Applied -Reason "Baseline restaurada: $($entry.Id)." -RestartRequired $restart
             } catch { New-SkyActionResult -Status Failed -Reason "$($entry.Id): $($_.Exception.Message)" }
         }
     } finally { $lock.Dispose() }
@@ -666,6 +716,146 @@ function Remove-SkyRegistryValue {
     Invoke-SkyTrackedChange -Resource (ConvertTo-SkyRegistryResource $Path $Name) -Desired (ConvertTo-SkyRegistryState -Exists $false)
 }
 
+function Get-SkyService {
+    param([ValidatePattern('^[a-zA-Z0-9_.-]+$')][string]$Name)
+    Get-Service -Name $Name -ErrorAction Stop
+}
+
+function Set-SkyServiceStartTypeNative {
+    param([string]$Name, [ValidateSet('Automatic', 'Manual', 'Disabled')][string]$StartupType)
+    # ChangeServiceConfig modifies start type only; delayed start, triggers, account,
+    # recovery actions and dependencies are not passed to the API and remain intact.
+    if (-not ('SkyServiceConfig' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+public static class SkyServiceConfig {
+    [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    static extern IntPtr OpenSCManager(string machine, string database, uint access);
+    [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    static extern IntPtr OpenService(IntPtr manager, string name, uint access);
+    [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+    static extern bool ChangeServiceConfig(IntPtr service, uint type, uint start, uint error,
+        string path, string group, IntPtr tag, string dependencies, string account, string password, string display);
+    [DllImport("advapi32.dll")] static extern bool CloseServiceHandle(IntPtr handle);
+    public static void SetStart(string name, uint start) {
+        IntPtr manager = OpenSCManager(null, null, 1);
+        if (manager == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+        try {
+            IntPtr service = OpenService(manager, name, 2);
+            if (service == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            try {
+                if (!ChangeServiceConfig(service, UInt32.MaxValue, start, UInt32.MaxValue,
+                    null, null, IntPtr.Zero, null, null, null, null))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+            } finally { CloseServiceHandle(service); }
+        } finally { CloseServiceHandle(manager); }
+    }
+}
+'@ -ErrorAction Stop
+    }
+    $start = @{ Automatic = 2; Manual = 3; Disabled = 4 }[$StartupType]
+    [SkyServiceConfig]::SetStart($Name, $start)
+}
+
+function Disable-SkyService {
+    [CmdletBinding()]
+    param([ValidatePattern('^[a-zA-Z0-9_.-]+$')][string]$Name)
+    $matches = @(Get-Service -ErrorAction Stop | Where-Object Name -eq $Name)
+    if ($matches.Count -eq 0) { return New-SkyActionResult -Status Incompatible -Reason "Serviço ausente: $Name." -RestartRequired No }
+    $svc = $matches[0]
+    if ($svc.Status -notin @('Running', 'Stopped') -or $svc.StartType -notin @('Automatic', 'Manual', 'Disabled') -or
+        ($svc.StartType -eq 'Disabled' -and $svc.Status -eq 'Running') -or
+        @($svc.DependentServices | Where-Object Status -ne 'Stopped').Count) {
+        return New-SkyActionResult -Status Incompatible -Reason "Estado transitório ou dependentes ativos: $Name. Nenhuma paragem em cascata." -RestartRequired No
+    }
+    # Stop first, disable second. Undo restores startup first, then runtime.
+    $runtime = [pscustomobject]@{ Type = 'ServiceRuntime'; Name = $svc.Name }
+    Invoke-SkyTrackedChange -Resource $runtime -Desired ([pscustomobject]@{ Value = 'Stopped' })
+    $startup = [pscustomobject]@{ Type = 'ServiceStartup'; Name = $svc.Name
+        DelayedResource = ConvertTo-SkyRegistryResource "HKLM:\SYSTEM\CurrentControlSet\Services\$($svc.Name)" 'DelayedAutoStart' }
+    $current = Get-SkyResourceState $startup
+    Invoke-SkyTrackedChange -Resource $startup -Desired ([pscustomobject]@{ Value = 'Disabled'; Delayed = $current.Delayed })
+}
+
+function Get-SkyNicBinding {
+    param($Resource)
+    $adapters = @(Get-NetAdapter -Physical -IncludeHidden -ErrorAction Stop | Where-Object {
+        ([guid]$_.InterfaceGuid).ToString() -eq ([guid]$Resource.InterfaceGuid).ToString()
+    })
+    if ($adapters.Count -ne 1 -or $adapters[0].PnPDeviceID -ne $Resource.PnpDeviceId -or
+        $adapters[0].DriverVersionString -ne $Resource.DriverVersion) { throw 'Adaptador removido/substituído ou driver alterado; configuração preservada.' }
+    $properties = @(Get-NetAdapterAdvancedProperty -Name ([WildcardPattern]::Escape($adapters[0].Name)) -AllProperties -ErrorAction Stop |
+        Where-Object RegistryKeyword -eq $Resource.Keyword)
+    if ($properties.Count -ne 1) { throw 'Propriedade do adaptador indisponível ou ambígua.' }
+    # Recheck the class-key binding: indices can be reused by Windows after driver changes.
+    $binding = ConvertTo-SkyRegistryResource ("HKLM:\" + $Resource.Registry.Key) 'NetCfgInstanceId'
+    $guidState = Get-SkyResourceState $binding
+    if (-not $guidState.Exists -or ([guid]$guidState.Data) -ne ([guid]$Resource.InterfaceGuid)) { throw 'Chave de driver já não pertence ao adaptador.' }
+    return $properties[0]
+}
+
+function Switch-SkyPanelService {
+    param([ValidateSet('Spooler', 'bthserv')][string]$Name)
+    $journal = Read-SkyMutationState $Global:SkyBackupDir
+    $owned = @($journal.Entries | Where-Object {
+        $_.Status -ne 'Restored' -and $_.Resource.Type -in @('ServiceRuntime', 'ServiceStartup') -and $_.Resource.Name -eq $Name
+    })
+    if ($owned.Count) { Restore-SkyTrackedChanges -BackupDirectory $Global:SkyBackupDir -ServiceName $Name }
+    else { Disable-SkyService -Name $Name }
+}
+
+function Get-SkyPanelServiceSource {
+    $header = @'
+param([ValidateSet('Spooler', 'bthserv')][string]$Name)
+$principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Name $Name" -Verb RunAs
+    exit
+}
+$Global:SkyBackupDir = Join-Path $env:SystemDrive 'ProgramData\SkyOptimizer\Backups'
+'@
+    $footer = @'
+try {
+    $results = @(Switch-SkyPanelService -Name $Name)
+    $results | Format-Table Status, Reason -Wrap
+    if (@($results | Where-Object Status -eq 'Failed').Count) { exit 1 }
+} catch { Write-Error $_; exit 1 }
+'@
+    $header + "`r`n" + (Get-SkyPowerRestoreSource) + "`r`n" + $footer
+}
+
+function Set-SkyNicProperties {
+    [CmdletBinding()]
+    param([string[]]$Keywords, [switch]$EthernetOnly)
+    $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object Status -eq 'Up')
+    $found = $false
+    foreach ($nic in $adapters) {
+        if ($EthernetOnly -and [int]$nic.NdisPhysicalMedium -ne 14) { continue }
+        if (-not $nic.PnPDeviceID -or -not $nic.DriverVersionString) { continue }
+        $keys = @(Get-ChildItem -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' -ErrorAction Stop |
+            Where-Object { $_.PSChildName -match '^\d{4}$' -and
+                (([string](Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction Stop).NetCfgInstanceId).Trim('{}') -eq ([guid]$nic.InterfaceGuid).ToString()) })
+        if ($keys.Count -ne 1) { continue }
+        $properties = @(Get-NetAdapterAdvancedProperty -Name ([WildcardPattern]::Escape($nic.Name)) -AllProperties -ErrorAction Stop)
+        foreach ($keyword in $Keywords) {
+            $prop = @($properties | Where-Object RegistryKeyword -eq $keyword)
+            if ($prop.Count -ne 1 -or $prop[0].ValidRegistryValues -notcontains '0') { continue }
+            $registry = ConvertTo-SkyRegistryResource $keys[0].PSPath $keyword
+            $before = Get-SkyResourceState $registry
+            if (-not $before.Exists -or $before.Kind -notin @('String', 'DWord')) { continue }
+            $resource = [pscustomobject]@{ Type = 'NicRegistry'; InterfaceGuid = ([guid]$nic.InterfaceGuid).ToString()
+                PnpDeviceId = $nic.PnPDeviceID; DriverVersion = $nic.DriverVersionString; Keyword = $keyword; Registry = $registry }
+            $result = Invoke-SkyTrackedChange -Resource $resource -Desired (ConvertTo-SkyRegistryState -Exists $true -Kind $before.Kind -Value 0)
+            $result.RestartRequired = 'Yes'
+            $result.Reason = "Propriedade persistida e verificada: $keyword em $($nic.Name). Reinício necessário; efeito no driver e latência ainda por medir."
+            $result; $found = $true
+        }
+    }
+    if (-not $found) { New-SkyActionResult -Status Incompatible -Reason 'Nenhuma propriedade suportada num adaptador físico ativo; nada alterado.' -RestartRequired No }
+}
+
 
 function Get-SkyPowerRestoreSource {
     # Embed the same implementation in the existing standalone Undo; no runtime module dependency.
@@ -674,7 +864,9 @@ function Get-SkyPowerRestoreSource {
         'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope', 'Invoke-SkyVerifiedUndo',
         'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
         'ConvertTo-SkyRegistryState', 'ConvertFrom-SkyRegistryState', 'Open-SkyRegistryBase',
-        'Get-SkyResourceState', 'Set-SkyResourceState', 'Assert-SkyResourceState', 'Test-SkyStateEqual', 'Restore-SkyTrackedChanges')
+        'ConvertTo-SkyRegistryResource', 'Get-SkyService', 'Set-SkyServiceStartTypeNative', 'Get-SkyNicBinding',
+        'Get-SkyResourceState', 'Set-SkyResourceState', 'Assert-SkyResourceState', 'Test-SkyStateEqual', 'Restore-SkyTrackedChanges',
+        'Invoke-SkyTrackedChange', 'Disable-SkyService', 'Switch-SkyPanelService')
     ($names | ForEach-Object { "function $_ {`r`n$((Get-Command $_ -CommandType Function).Definition)`r`n}" }) -join "`r`n"
 }
 
@@ -1094,25 +1286,7 @@ function Disable-Superfetch {
         return $true
     }
 
-    $svc = Get-Service -Name SysMain -ErrorAction SilentlyContinue
-    if ($svc) {
-        $cimSvc = Get-CimInstance Win32_Service -Filter "Name='SysMain'" -ErrorAction SilentlyContinue
-        $prevMode = if ($cimSvc) { $cimSvc.StartMode } else { "Auto" }
-        
-        if ($null -eq $Global:SkyManifest.SysMain) {
-            $Global:SkyManifest.SysMain = $prevMode
-            $sysmainBackupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_sysmain.txt"
-            $prevMode | Out-File -FilePath $sysmainBackupFile -Encoding UTF8 -Force
-        }
-
-        Stop-Service -Name SysMain -Force -ErrorAction SilentlyContinue
-        Set-Service -Name SysMain -StartupType Disabled -ErrorAction Stop
-        Write-SkyLog -Message "SysMain (Superfetch) desativado com segurança (disco SSD/NVMe confirmado)." -Level "Success"
-    } else {
-        Write-SkyLog -Message "Serviço SysMain não encontrado no sistema." -Level "Info"
-    }
-
-    return $true
+    Disable-SkyService -Name 'SysMain'
 }
 
 # --- CATEGORIA 2: INPUT E GAMING ---
@@ -1800,40 +1974,10 @@ function Enable-HAGSConditional {
 function Optimize-NetworkAdapterPower {
     [CmdletBinding()]
     param()
-
-    # Salvaguarda para não drenar bateria se o utilizador estiver num portátil fora da tomada
     if (-not (Test-IsDesktopOrAcPower)) {
-        Write-SkyLog -Message "Portátil em bateria detetado. Poupança de energia na rede mantida para preservar autonomia." -Level "Info"
-        return $false
+        return New-SkyActionResult -Status Incompatible -Reason 'Em bateria: configura??o de energia de rede preservada.' -RestartRequired No
     }
-
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq "Up" }
-    if (-not $adapters) {
-        $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    }
-
-    if (-not $adapters) {
-        Write-SkyLog -Message "Nenhum adaptador de rede físico detetado para otimização de energia." -Level "Info"
-        return $false
-    }
-
-    $propsToDisable = @("*EEE", "*GreenEthernet", "*GigaLite", "PowerSavingMode", "EnergyEfficientEthernet")
-    $count = 0
-
-    foreach ($nic in $adapters) {
-        foreach ($prop in $propsToDisable) {
-            try {
-                $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -ErrorAction SilentlyContinue
-                if ($exists) {
-                    Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword $prop -RegistryValue 0 -ErrorAction SilentlyContinue
-                    $count++
-                }
-            } catch {}
-        }
-    }
-
-    Write-SkyLog -Message "Poupança de energia e Energy Efficient Ethernet (EEE) desativados nos adaptadores de rede (prevenção de packet drops)." -Level "Success"
-    return $true
+    Set-SkyNicProperties -Keywords @('*EEE') -EthernetOnly
 }
 
 function Disable-UsbPowerManagement {
@@ -2102,34 +2246,7 @@ function Set-SvcHostProcessGrouping {
 function Disable-TelemetryServicesDeep {
     [CmdletBinding()]
     param()
-
-    $servicesToDisable = @(
-        @{ Name = "DiagTrack"; Desc = "Connected User Experiences and Telemetry" },
-        @{ Name = "PcaSvc";    Desc = "Program Compatibility Assistant Service" },
-        @{ Name = "TrkWks";    Desc = "Distributed Link Tracking Client" }
-    )
-
-    $backupState = @{}
-    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_telemetry_services.json"
-
-    foreach ($s in $servicesToDisable) {
-        $svc = Get-Service -Name $s.Name -ErrorAction SilentlyContinue
-        if ($svc) {
-            $cim = Get-CimInstance Win32_Service -Filter "Name='$($s.Name)'" -ErrorAction SilentlyContinue
-            $prevMode = if ($cim) { $cim.StartMode } else { "Manual" }
-            $backupState[$s.Name] = $prevMode
-
-            Stop-Service -Name $s.Name -Force -ErrorAction SilentlyContinue
-            Set-Service -Name $s.Name -StartupType Disabled -ErrorAction SilentlyContinue
-        }
-    }
-
-    if ($backupState.Count -gt 0) {
-        $backupState | ConvertTo-Json | Out-File -FilePath $backupFile -Encoding UTF8 -Force
-    }
-
-    Write-SkyLog -Message "Serviços de telemetria e overhead (DiagTrack, PcaSvc, TrkWks) desativados com sucesso." -Level "Success"
-    return $true
+    foreach ($name in @('DiagTrack', 'PcaSvc', 'TrkWks')) { Disable-SkyService -Name $name }
 }
 
 function Remove-BloatwareAppX {
@@ -2388,33 +2505,7 @@ function Enable-LongFilePaths {
 function Disable-NetworkDmaCoalescing {
     [CmdletBinding()]
     param()
-
-    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
-    if (-not (Test-Path $netClassKey)) {
-        Write-SkyLog -Message "Chave de adaptadores de rede não encontrada. Ignorado." -Level "Info"
-        return $true
-    }
-
-    Backup-RegistryKey -KeyPath $netClassKey -BackupName "60_NetworkAdapters_DMACoalescing"
-
-    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
-    $coalesceDisabled = 0
-
-    foreach ($k in $subKeys) {
-        $keyPath = $k.PSPath
-        $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
-        if ($props) {
-            foreach ($propName in @("*DMACoalescing", "DMACoalescing")) {
-                if ($null -ne $props.$propName) {
-                    Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
-                    $coalesceDisabled++
-                }
-            }
-        }
-    }
-
-    Write-SkyLog -Message "DMA Coalescing desativado nos adaptadores de rede ($coalesceDisabled propriedades ajustadas; menor atraso de pacotes/jitter)." -Level "Success"
-    return $true
+    Set-SkyNicProperties -Keywords @('*DMACoalescing') -EthernetOnly
 }
 
 # ==============================================================================
@@ -2606,43 +2697,11 @@ function Disable-SettingsOnlineTips {
 function Disable-SilentDiagnosticServices {
     [CmdletBinding()]
     param()
-
-    $targetServices = @(
-        "diagnosticshub.standardcollector.service",
-        "wercplsupport"
-    )
-
-    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_diagnostic_services.json"
-    $backupState = @{}
-
-    foreach ($sName in $targetServices) {
-        $svc = Get-Service -Name $sName -ErrorAction SilentlyContinue
-        if ($svc) {
-            $cim = Get-CimInstance Win32_Service -Filter "Name='$sName'" -ErrorAction SilentlyContinue
-            $prevMode = if ($cim) { $cim.StartMode } else { "Manual" }
-            $backupState[$sName] = $prevMode
-
-            Stop-Service -Name $sName -Force -ErrorAction SilentlyContinue
-            Set-Service -Name $sName -StartupType Disabled -ErrorAction SilentlyContinue
-        }
+    foreach ($name in @('diagnosticshub.standardcollector.service', 'wercplsupport')) { Disable-SkyService -Name $name }
+    # The per-user service template is a registry value, not a running service instance.
+    if (Test-Path -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc') {
+        Set-SkyRegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc' -Name Start -Value 4 -Type DWord
     }
-
-    # Desativação do template de sincronização em segundo plano OneSyncSvc
-    $oneSyncKey = "HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc"
-    if (Test-Path $oneSyncKey) {
-        $curStart = (Get-ItemProperty -Path $oneSyncKey -Name "Start" -ErrorAction SilentlyContinue).Start
-        if ($null -ne $curStart) {
-            $backupState["OneSyncSvc_RegStart"] = $curStart
-            Set-ItemProperty -Path $oneSyncKey -Name "Start" -Value 4 -Type DWord -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    if ($backupState.Count -gt 0) {
-        $backupState | ConvertTo-Json | Out-File -FilePath $backupFile -Encoding UTF8 -Force
-    }
-
-    Write-SkyLog -Message "Serviços adicionais de diagnóstico silencioso e tracing suspensos com sucesso." -Level "Success"
-    return $true
 }
 
 function Disable-GameBarPresenceWriter {
@@ -2687,145 +2746,19 @@ function Optimize-KeyboardRepeatResponse {
 function Disable-NetworkInterruptModeration {
     [CmdletBinding()]
     param()
-
-    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
-    if (-not (Test-Path $netClassKey)) {
-        Write-SkyLog -Message "Chave de adaptadores de rede não encontrada. Ignorado com segurança." -Level "Info"
-        return $true
-    }
-
-    Backup-RegistryKey -KeyPath $netClassKey -BackupName "74_Network_InterruptModeration"
-
-    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
-    $itrAdjusted = 0
-
-    foreach ($k in $subKeys) {
-        $keyPath = $k.PSPath
-        $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
-        if ($props) {
-            foreach ($propName in @("*InterruptModeration", "InterruptModeration", "ITR")) {
-                if ($null -ne $props.$propName) {
-                    Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
-                    $itrAdjusted++
-                }
-            }
-        }
-    }
-
-    # Tentativa de ajuste via cmdlet de adaptador de rede avançado
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    foreach ($nic in $adapters) {
-        try {
-            $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -ErrorAction SilentlyContinue
-            if ($exists) {
-                Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 0 -ErrorAction SilentlyContinue
-            }
-        } catch {}
-    }
-
-    Write-SkyLog -Message "Moderação de interrupções (ITR) desativada nos adaptadores de rede ($itrAdjusted propriedades ajustadas; processamento imediato de pacotes de tiros/hitreg)." -Level "Success"
-    return $true
+    Set-SkyNicProperties -Keywords @('*InterruptModeration')
 }
 
 function Disable-NetworkRscAndLso {
     [CmdletBinding()]
     param()
-
-    # Desativação de RSC (Receive Segment Coalescing) nos adaptadores físicos
-    try {
-        Disable-NetAdapterRsc -Name * -ErrorAction SilentlyContinue
-    } catch {}
-
-    # Desativação de LSO (Large Send Offload) nos adaptadores físicos
-    try {
-        Disable-NetAdapterLso -Name * -IPv4 -IPv6 -ErrorAction SilentlyContinue
-    } catch {}
-
-    # Ajuste direto no registo da classe de rede para compatibilidade universal
-    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
-    if (Test-Path $netClassKey) {
-        Backup-RegistryKey -KeyPath $netClassKey -BackupName "75_Network_RscAndLso"
-        $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
-        foreach ($k in $subKeys) {
-            $keyPath = $k.PSPath
-            $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
-            if ($props) {
-                foreach ($propName in @("*RSC", "*RscIPv4", "*RscIPv6", "*LsoV2IPv4", "*LsoV2IPv6")) {
-                    if ($null -ne $props.$propName) {
-                        Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
-                    }
-                }
-            }
-        }
-    }
-
-    Write-SkyLog -Message "RSC e LSO desativados nos adaptadores de rede (elimina agregação artificial de pacotes; ticks de dados puros e sem micro-desync)." -Level "Success"
-    return $true
+    Set-SkyNicProperties -Keywords @('*RscIPv4', '*RscIPv6', '*LsoV2IPv4', '*LsoV2IPv6')
 }
 
 function Disable-NetworkFlowControl {
     [CmdletBinding()]
     param()
-
-    $netClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
-    if (-not (Test-Path $netClassKey)) {
-        Write-SkyLog -Message "Chave de adaptadores de rede não encontrada. Ignorado com segurança." -Level "Info"
-        return $true
-    }
-
-    Backup-RegistryKey -KeyPath $netClassKey -BackupName "76_Network_FlowControl"
-
-    # Verificar adaptadores físicos com distinção Ethernet (cabo) vs Wi-Fi
-    $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue
-    $fcAdjusted = 0
-    $ethernetCount = 0
-
-    if ($adapters) {
-        foreach ($nic in $adapters) {
-            $isWireless = ($nic.PhysicalMediaType -match '802\.11' -or $nic.MediaType -match '802\.11' -or $nic.InterfaceDescription -match 'Wireless|Wi-Fi|WLAN')
-            if ($isWireless) {
-                Write-SkyLog -Message "Adaptador '$($nic.Name)' ($($nic.InterfaceDescription)) é Wi-Fi (802.11). Flow Control 802.3x ignorado com segurança (norma exclusiva de cabos Ethernet)." -Level "Info"
-                continue
-            }
-
-            # Adaptador Ethernet por cabo (802.3)
-            $ethernetCount++
-            try {
-                $exists = Get-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -ErrorAction SilentlyContinue
-                if ($exists) {
-                    Set-NetAdapterAdvancedProperty -Name $nic.Name -RegistryKeyword "*FlowControl" -RegistryValue 0 -ErrorAction SilentlyContinue
-                    $fcAdjusted++
-                    Write-SkyLog -Message "Controlo de Fluxo (Flow Control Off) aplicado no adaptador Ethernet: '$($nic.Name)'." -Level "Info"
-                }
-            } catch {}
-        }
-    }
-
-    # Ajuste complementar em controladores Ethernet na classe de hardware (ignora drivers Wi-Fi)
-    $subKeys = Get-ChildItem -Path $netClassKey -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
-    foreach ($k in $subKeys) {
-        $keyPath = $k.PSPath
-        $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
-        if ($props) {
-            $driverDesc = $props.DriverDesc
-            $isWifiDriver = ($driverDesc -match 'Wireless|Wi-Fi|WLAN|802\.11')
-            if (-not $isWifiDriver) {
-                foreach ($propName in @("*FlowControl", "FlowControl")) {
-                    if ($null -ne $props.$propName) {
-                        Set-ItemProperty -Path $keyPath -Name $propName -Value "0" -Type String -Force -ErrorAction SilentlyContinue
-                        $fcAdjusted++
-                    }
-                }
-            }
-        }
-    }
-
-    if ($ethernetCount -gt 0) {
-        Write-SkyLog -Message "Controlo de Fluxo (Flow Control) desativado em adaptadores Ethernet por cabo ($fcAdjusted propriedades ajustadas; previne tramas PAUSE e bufferbloat sem afetar Wi-Fi)." -Level "Success"
-    } else {
-        Write-SkyLog -Message "Nenhum adaptador Ethernet físico por cabo detetado. Flow Control 802.3x ignorado com segurança (sistema operando em Wi-Fi)." -Level "Info"
-    }
-    return $true
+    Set-SkyNicProperties -Keywords @('*FlowControl') -EthernetOnly
 }
 
 function Optimize-TcpSocketsAndPorts {
@@ -2852,36 +2785,7 @@ function Optimize-TcpSocketsAndPorts {
 function Optimize-NetshTcpGlobal {
     [CmdletBinding()]
     param()
-
-    # Guardar configuração original do TCP global para eventual diagnóstico
-    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "previous_netsh_tcp.txt"
-    if (-not (Test-Path $backupFile)) {
-        try {
-            $currentTcp = netsh int tcp show global 2>&1
-            $currentTcp | Out-File -FilePath $backupFile -Encoding UTF8 -Force
-        } catch {}
-    }
-
-    # Desativar cabeçalhos redundantes e timestamps
-    $null = netsh int tcp set global timestamps=disabled 2>&1
-
-    # Desativar ECN (Explicit Congestion Notification - evita pacotes descartados por routers com suporte deficiente)
-    $null = netsh int tcp set global ecncapability=disabled 2>&1
-
-    # Desativar RSC a nível de stack TCP global
-    $null = netsh int tcp set global rsc=disabled 2>&1
-
-    # Desativar heurística TCP (evita restrições dinâmicas da janela TCP e lag em gaming)
-    $null = netsh int tcp set heuristics disabled 2>&1
-
-    # Ativar RSS (Receive Side Scaling - distribui processamento de rede por múltiplos núcleos de CPU)
-    $null = netsh int tcp set global rss=enabled 2>&1
-
-    # PROTEÇÃO CRÍTICA: Manter SEMPRE autotuninglevel=normal para garantir velocidade máxima em fibra 500M/1Gbps
-    $null = netsh int tcp set global autotuninglevel=normal 2>&1
-
-    Write-SkyLog -Message "Pilha TCP global otimizada via netsh (Timestamps=Off, ECN=Off, RSC=Off, Heuristics=Off, RSS=On, AutoTuning=Normal)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Unverified -Reason 'Experi?ncia isolada: altera??es TCP globais n?o executadas sem diagn?stico e baseline estruturada. UDP e FPS n?o beneficiam automaticamente destes par?metros.' -RestartRequired No
 }
 
 # ==============================================================================
@@ -3025,25 +2929,17 @@ function Disable-LocationAndSensors {
 
     # 1. Políticas de Localização e Sensores
     $locPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors"
-    Ensure-RegistryPath -KeyPath $locPolKey
-    Backup-RegistryKey -KeyPath $locPolKey -BackupName "86_LocationAndSensors_Policy"
 
-    Set-ItemProperty -Path $locPolKey -Name "DisableLocation" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $locPolKey -Name "DisableLocationScripting" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $locPolKey -Name "DisableSensors" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+    Set-SkyRegistryValue -Path $locPolKey -Name "DisableLocation" -Value 1 -Type DWord -Force -ErrorAction Stop
+    Set-SkyRegistryValue -Path $locPolKey -Name "DisableLocationScripting" -Value 1 -Type DWord -Force -ErrorAction Stop
+    Set-SkyRegistryValue -Path $locPolKey -Name "DisableSensors" -Value 1 -Type DWord -Force -ErrorAction Stop
 
     # 2. Consentimento de Aplicações para Localização (Deny)
     $consentKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location"
-    Ensure-RegistryPath -KeyPath $consentKey
-    Backup-RegistryKey -KeyPath $consentKey -BackupName "86_Location_Consent"
-    Set-ItemProperty -Path $consentKey -Name "Value" -Value "Deny" -Type String -Force -ErrorAction SilentlyContinue
+    Set-SkyRegistryValue -Path $consentKey -Name "Value" -Value "Deny" -Type String -Force -ErrorAction Stop
 
     # 3. Serviço de Geolocalização (lfsvc)
-    $svc = Get-Service -Name "lfsvc" -ErrorAction SilentlyContinue
-    if ($svc) {
-        Stop-Service -Name "lfsvc" -Force -ErrorAction SilentlyContinue
-        Set-Service -Name "lfsvc" -StartupType Disabled -ErrorAction SilentlyContinue
-    }
+    Disable-SkyService -Name 'lfsvc'
 
     Write-SkyLog -Message "Telemetria de localização e sensores desativada (serviço lfsvc parado; zero varreduras Wi-Fi em background)." -Level "Success"
     return $true
@@ -3249,65 +3145,18 @@ exit 0
         $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncd /d `"%TEMP%`"`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyRevert.ps1`"`r`nexit /b"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd"), $undoCmd, [System.Text.Encoding]::ASCII)
 
+        Write-SkyAtomicFile -Path (Join-Path $Global:SkyPermDir 'SkyService.ps1') -Content (Get-SkyPanelServiceSource)
+
         # 2. Atalho Impressora
-        $printerCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Impressora`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'Spooler' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico de impressao nao encontrado neste sistema.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'Spooler' -StartupType Automatic; Start-Service -Name 'Spooler' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  SERVICO DE IMPRESSORA ATIVADO COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'O Windows ja pode comunicar com impressoras e faturas.' -ForegroundColor White } else { Stop-Service -Name 'Spooler' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'Spooler' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  SERVICO DE IMPRESSORA DESATIVADO COM SUCESSO' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Processos em segundo plano suspensos para poupar RAM e CPU.' -ForegroundColor White } }`"`r`necho.`r`npause"
+        $printerCmd = "@echo off`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyService.ps1`" -Name Spooler`r`npause"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[2] Alternar Impressora (Ligar-Desligar).cmd"), $printerCmd, [System.Text.Encoding]::ASCII)
 
         # 3. Atalho Bluetooth
-        $btCmd = "@echo off`r`ntitle SkyOptimizer - Controlo de Bluetooth`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { `$svc = Get-Service -Name 'bthserv' -ErrorAction SilentlyContinue; if (-not `$svc) { Write-Host '[AVISO] Servico Bluetooth nao encontrado neste sistema.' -ForegroundColor Yellow; pause; exit }; if (`$svc.StartType -eq 'Disabled' -or `$svc.Status -ne 'Running') { Set-Service -Name 'bthserv' -StartupType Manual; Start-Service -Name 'bthserv' -ErrorAction SilentlyContinue; Write-Host '===================================================' -ForegroundColor Green; Write-Host '  BLUETOOTH ATIVADO COM SUCESSO' -ForegroundColor Green; Write-Host '===================================================' -ForegroundColor Green; Write-Host 'Ja pode ligar comandos (Xbox/PS5), auscultadores e outros.' -ForegroundColor White } else { Stop-Service -Name 'bthserv' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'bthserv' -StartupType Disabled; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host '  BLUETOOTH DESATIVADO COM SUCESSO' -ForegroundColor Yellow; Write-Host '===================================================' -ForegroundColor Yellow; Write-Host 'Processos de pesquisa sem fios desativados.' -ForegroundColor White } }`"`r`necho.`r`npause"
+        $btCmd = "@echo off`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyService.ps1`" -Name bthserv`r`npause"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd"), $btCmd, [System.Text.Encoding]::ASCII)
 
         # 4. Atalho Isolamento do Núcleo (VBS e Jogos)
-        $vbsCmd = @'
-@echo off
-title SkyOptimizer - Controlo de Isolamento do Nucleo (VBS e Jogos)
-:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    powershell -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
-    exit /b
-)
-chcp 65001 >nul
-cls
-echo ================================================================================
-echo           SkyOptimizer - Controlo de Isolamento do Nucleo (VBS / HVCI)
-echo           Discord Oficial: https://discord.gg/cE8ZaDRGV5
-echo ================================================================================
-echo.
-echo  O Isolamento do Nucleo (VBS/HVCI) e uma camada de seguranca do Windows.
-echo  Desativa-lo liberta a CPU, garantindo mais 5%% a 15%% de FPS e eliminando
-echo  micro-stutters e latencia em praticamente todos os jogos.
-echo.
-echo  ------------------------------------------------------------------------------
-echo  GUIA DE COMPATIBILIDADE DE JOGOS:
-echo  ------------------------------------------------------------------------------
-echo.
-echo  [!] EXIGEM ESTE RECURSO ATIVADO (Se desligar, o jogo nao arranca no Win11):
-echo      * VALORANT (Anti-cheat Riot Vanguard)
-echo      * CS2 no FACEIT (Anti-cheat Faceit Client no Win11)
-echo      * League of Legends (Anti-cheat Riot Vanguard)
-echo.
-echo  [+] GANHAM +5%% A +15%% FPS E MENOS LATENCIA COM ISTO DESATIVADO:
-echo      * Counter-Strike 2 (Premier, Valve Matchmaking, Servidores Comunidade)
-echo      * FiveM, RedM e GTA V
-echo      * ARC Raiders
-echo      * Call of Duty: Warzone, Modern Warfare e Black Ops
-echo      * Fortnite (Modo Desempenho, DX11 e DX12)
-echo      * Apex Legends, PUBG: Battlegrounds e The Finals
-echo      * Rust, Escape from Tarkov e DayZ
-echo      * Tom Clancy's Rainbow Six Siege e Overwatch 2
-echo      * EA SPORTS FC 24 / 25 e Rocket League
-echo      * Assetto Corsa, Forza Horizon e F1
-echo      * Todos os titulos competitivos e AAA DirectX 11, DirectX 12 e Vulkan
-echo.
-echo ================================================================================
-echo.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "& { $hvciKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity'; $dgKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard'; $curVal = 0; if (Test-Path $hvciKey) { $curVal = (Get-ItemProperty $hvciKey -ErrorAction SilentlyContinue).Enabled }; if ($curVal -eq 1) { Write-Host 'Estado Atual: ATIVADO (Seguranca Ligada / Menos FPS)' -ForegroundColor Yellow; Write-Host 'Compatibilidade: VALORANT e jogos no FACEIT funcionam a 100%.' -ForegroundColor Gray; Write-Host ''; $resp = Read-Host 'Pretende DESATIVAR para ganhar mais FPS em FiveM, CS2, COD, Fortnite, etc.? (S/N)'; if ($resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }; Set-ItemProperty -Path $hvciKey -Name 'Enabled' -Value 0 -Type DWord -Force; Set-ItemProperty -Path $dgKey -Name 'EnableVirtualizationBasedSecurity' -Value 0 -Type DWord -Force; Write-Host '`n[OK] Isolamento do Nucleo DESATIVADO com sucesso!' -ForegroundColor Green; Write-Host 'E necessario reiniciar o computador para aplicar.' -ForegroundColor Yellow } } else { Write-Host 'Estado Atual: DESATIVADO (Maxima Performance / Sem VBS)' -ForegroundColor Green; Write-Host 'Compatibilidade: FiveM, CS2, ARC Raiders, COD com maxima fluidez.' -ForegroundColor Gray; Write-Host ''; $resp = Read-Host 'Pretende ATIVAR para poder jogar VALORANT ou no FACEIT? (S/N)'; if ($resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path $hvciKey)) { New-Item -Path $hvciKey -Force | Out-Null }; Set-ItemProperty -Path $hvciKey -Name 'Enabled' -Value 1 -Type DWord -Force; Set-ItemProperty -Path $dgKey -Name 'EnableVirtualizationBasedSecurity' -Value 1 -Type DWord -Force; Write-Host '`n[OK] Isolamento do Nucleo ATIVADO com sucesso!' -ForegroundColor Green; Write-Host 'E necessario reiniciar o computador para aplicar.' -ForegroundColor Yellow } } }"
-echo.
-echo Discord da Comunidade: https://discord.gg/cE8ZaDRGV5
-echo.
-pause
-'@
+        $vbsCmd = "@echo off`r`necho VBS: controlo suspenso nesta branch ate validar baseline, arranque e requisitos de anti-cheat.`r`necho Nenhuma configuracao foi alterada. Utilize as Definicoes do Windows.`r`npause"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd"), $vbsCmd, [System.Text.Encoding]::ASCII)
 
         # 5. Atalho Limpeza de Shaders e Caches de Jogos
@@ -3315,7 +3164,7 @@ pause
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[5] Limpar Shaders e Caches de Jogos.cmd"), $cleanCmd, [System.Text.Encoding]::ASCII)
 
         # 6. Atalho Alternar Localização e GPS
-        $locCmd = "@echo off`r`ntitle SkyOptimizer - Alternar Localizacao e Sensores`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { Write-Host '===================================================' -ForegroundColor Cyan; Write-Host '   SkyOptimizer - Alternar Localizacao e GPS' -ForegroundColor Cyan; Write-Host '===================================================' -ForegroundColor Cyan; `$locPolKey = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors'; `$consentKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location'; `$curDis = 0; if (Test-Path `$locPolKey) { `$curDis = (Get-ItemProperty `$locPolKey -ErrorAction SilentlyContinue).DisableLocation }; if (`$curDis -eq 1) { Write-Host 'Estado Atual: DESATIVADO (Modo Gaming / Sem Varreduras)' -ForegroundColor Green; Write-Host 'Zero telemetria de localizacao e zero sondagens Wi-Fi em jogos.' -ForegroundColor Gray; Write-Host ''; `$resp = Read-Host 'Pretende ATIVAR para usar Mapas, Meteorologia ou GPS em apps? (S/N)'; if (`$resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path `$locPolKey)) { New-Item -Path `$locPolKey -Force | Out-Null }; Set-ItemProperty -Path `$locPolKey -Name 'DisableLocation' -Value 0 -Type DWord -Force; Set-ItemProperty -Path `$locPolKey -Name 'DisableLocationScripting' -Value 0 -Type DWord -Force; Set-ItemProperty -Path `$locPolKey -Name 'DisableSensors' -Value 0 -Type DWord -Force; if (-not (Test-Path `$consentKey)) { New-Item -Path `$consentKey -Force | Out-Null }; Set-ItemProperty -Path `$consentKey -Name 'Value' -Value 'Allow' -Type String -Force; Set-Service -Name 'lfsvc' -StartupType Manual -ErrorAction SilentlyContinue; Start-Service -Name 'lfsvc' -ErrorAction SilentlyContinue; Write-Host '`n[OK] Localizacao e sensores ATIVADOS com sucesso!' -ForegroundColor Green } } else { Write-Host 'Estado Atual: ATIVADO (Servico lfsvc e Sensores Ligados)' -ForegroundColor Yellow; Write-Host ''; `$resp = Read-Host 'Pretende DESATIVAR para poupar CPU e evitar varreduras Wi-Fi? (S/N)'; if (`$resp -match '^(s|sim|y|yes)$') { if (-not (Test-Path `$locPolKey)) { New-Item -Path `$locPolKey -Force | Out-Null }; Set-ItemProperty -Path `$locPolKey -Name 'DisableLocation' -Value 1 -Type DWord -Force; Set-ItemProperty -Path `$locPolKey -Name 'DisableLocationScripting' -Value 1 -Type DWord -Force; Set-ItemProperty -Path `$locPolKey -Name 'DisableSensors' -Value 1 -Type DWord -Force; if (-not (Test-Path `$consentKey)) { New-Item -Path `$consentKey -Force | Out-Null }; Set-ItemProperty -Path `$consentKey -Name 'Value' -Value 'Deny' -Type String -Force; Stop-Service -Name 'lfsvc' -Force -ErrorAction SilentlyContinue; Set-Service -Name 'lfsvc' -StartupType Disabled -ErrorAction SilentlyContinue; Write-Host '`n[OK] Localizacao e sensores DESATIVADOS com sucesso!' -ForegroundColor Green } } pause }`"`r`npause"
+        $locCmd = "@echo off`r`necho Localizacao: use Undo para restaurar apenas a baseline gerida pelo SkyOptimizer.`r`necho Alternancia independente pendente de validacao. Nenhuma alteracao aplicada.`r`npause"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[6] Alternar Localizacao e GPS (Ligar-Desligar).cmd"), $locCmd, [System.Text.Encoding]::ASCII)
 
         # Relatório Antes vs. Depois
@@ -3509,15 +3358,8 @@ function Invoke-SkyOptimize {
     $prevProgress = $ProgressPreference
     $ProgressPreference = 'SilentlyContinue'
     try {
-        Enable-ComputerRestore -Drive "$env:SystemDrive" -ErrorAction SilentlyContinue
 
-        # Permitir criação de pontos de restauro sem restrição do limite de 24h do Windows
-        $srKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore"
-        if (Test-Path $srKey) {
-            Set-ItemProperty -Path $srKey -Name "SystemRestorePointCreationFrequency" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        }
-
-        Checkpoint-Computer -Description "SkyOptimizer Pre-Tweak" -RestorePointType "MODIFY_SETTINGS" -WarningAction SilentlyContinue -ErrorAction Stop
+        Checkpoint-Computer -Description "SkyOptimizer Pre-Tweak" -RestorePointType "MODIFY_SETTINGS" -WarningAction Stop -ErrorAction Stop
         Write-SkyLog -Message "Ponto de Restauro criado: 'SkyOptimizer Pre-Tweak'" -Level "Success"
         $restorePointCreated = $true
     } catch {
@@ -3833,7 +3675,7 @@ function Invoke-SkyOptimize {
 
 function Invoke-SkyEligibleAction {
     param([int]$Id, [scriptblock]$Action)
-    if ($Id -notin @(1, 3, 9, 13, 17, 79)) {
+    if ($Id -notin @(1, 3, 6, 9, 13, 17, 38, 48, 60, 71, 74, 75, 76, 79, 86)) {
         return New-SkyActionResult -Status Unverified -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.'
     }
     Invoke-SkyAction -Action $Action
