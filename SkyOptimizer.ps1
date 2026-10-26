@@ -206,7 +206,7 @@ function Write-SkyLog {
 function Invoke-SkyNativeProcess {
     [CmdletBinding()]
     param(
-        [ValidateSet('powercfg.exe', 'reg.exe')][string]$FileName,
+        [ValidateSet('powercfg.exe', 'reg.exe', 'dism.exe', 'sfc.exe')][string]$FileName,
         [string[]]$Arguments
     )
     # Keep native stderr as diagnostic output; the process exit code decides success.
@@ -1057,19 +1057,16 @@ function Get-AccurateVramBytes {
 
 function Get-VbsStatus {
     try {
-        $dg = Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard -ErrorAction SilentlyContinue
-        if ($dg -and $dg.VirtualizationBasedSecurityStatus -eq 2) {
-            return "Ativado"
+        $dg = @(Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard -ErrorAction Stop)
+        if ($dg.Count -eq 1 -and $null -ne $dg[0].VirtualizationBasedSecurityStatus) {
+            switch ($dg[0].VirtualizationBasedSecurityStatus) {
+                0 { return 'Desativado' }
+                1 { return 'Configurado, sem execucao' }
+                2 { return 'Ativado' }
+            }
         }
-        $hvciKey = "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"
-        if (Test-Path $hvciKey) {
-            $val = (Get-ItemProperty -Path $hvciKey -Name "Enabled" -ErrorAction SilentlyContinue).Enabled
-            if ($val -eq 1) { return "Ativado" }
-        }
-        return "Desativado"
-    } catch {
-        return "Desativado"
-    }
+    } catch { return 'Desconhecido' }
+    return 'Desconhecido'
 }
 
 function Show-SystemHardwareInfo {
@@ -3136,24 +3133,31 @@ function Repair-WindowsSystemIntegrity {
     if ($conf -notmatch '^(s|sim|y|yes)$') {
         Write-Host "`n[*] Operação cancelada. A regressar ao menu..." -ForegroundColor Gray
         Start-Sleep -Seconds 1
-        return $false
+        return New-SkyActionResult -Status NotSelected -Reason 'Reparacao cancelada; nenhum comando executado.' -RestartRequired No
     }
 
     Write-SkyLog -Message "Início da reparação de integridade do Windows (DISM / SFC)." -Level "Info"
 
     Write-Host "`n[Passo 1/2] A reparar a base de componentes do Windows via DISM..." -ForegroundColor Magenta
     Write-Host "Comando: dism.exe /Online /Cleanup-Image /RestoreHealth`n" -ForegroundColor Gray
-    & dism.exe /Online /Cleanup-Image /RestoreHealth
+    Write-Host 'Aguarde; o resultado do comando sera mostrado quando terminar.' -ForegroundColor Gray
+    try {
+        $dism = Invoke-SkyNativeProcess -FileName dism.exe -Arguments @('/Online', '/Cleanup-Image', '/RestoreHealth', '/NoRestart')
+        Write-Host $dism.Output
+        if ($dism.ExitCode -eq 3010) {
+            return New-SkyActionResult -Status Unverified -Reason 'DISM terminou com reinicio necessario (3010). SFC nao executado; reiniciar e repetir a verificacao.' -RestartRequired Yes
+        }
+        if ($null -eq $dism.ExitCode -or $dism.ExitCode -ne 0) { throw "DISM falhou ou nao devolveu exit code: $($dism.ExitCode). SFC nao executado." }
 
-    Write-Host "`n[Passo 2/2] A analisar e reparar ficheiros de sistema protegidos via SFC..." -ForegroundColor Magenta
-    Write-Host "Comando: sfc.exe /scannow`n" -ForegroundColor Gray
-    & sfc.exe /scannow
-
-    Write-Host "`n================================================================================" -ForegroundColor Green
-    Write-Host "  VERIFICAÇÃO DE INTEGRIDADE CONCLUÍDA" -ForegroundColor Green
-    Write-Host "================================================================================" -ForegroundColor Green
-    Write-SkyLog -Message "Reparação de integridade do Windows concluída." -Level "Success"
-    return $true
+        Write-Host "`n[Passo 2/2] A analisar ficheiros protegidos via SFC. Aguarde pelo resultado..." -ForegroundColor Magenta
+        $sfc = Invoke-SkyNativeProcess -FileName sfc.exe -Arguments @('/scannow')
+        Write-Host $sfc.Output
+        if ($null -eq $sfc.ExitCode -or $sfc.ExitCode -ne 0) { throw "SFC terminou com exit code nao confirmado como sucesso: $($sfc.ExitCode). Consultar output e CBS.log." }
+        # SFC's localized summary/CBS evidence must be reviewed; exit 0 alone does not prove health.
+        New-SkyActionResult -Status Unverified -Reason 'DISM e SFC terminaram com exit code 0. Integridade nao certificada: rever output, %windir%\Logs\CBS\CBS.log e %windir%\Logs\DISM\dism.log.' -RestartRequired Unknown
+    } catch {
+        New-SkyActionResult -Status Failed -Reason $_.Exception.Message -RestartRequired Unknown
+    }
 }
 
 # ==============================================================================
@@ -3771,7 +3775,7 @@ function Invoke-SkyHardwareAudit {
         if ($detectedHeavy.Count -gt 0) {
             Write-Host "`n  [DIAGNÓSTICO TÉCNICO] Detetadas $($detectedHeavy.Count) aplicações pesadas no arranque do cliente." -ForegroundColor Yellow
             Write-Host "    -> Recomenda-se abrir Gestor de Tarefas > Arranque e desativar com o consentimento do cliente." -ForegroundColor Cyan
-            Write-Host "    -> Libertará entre 1.0 GB e 2.5 GB de RAM antes de abrir qualquer jogo!" -ForegroundColor Green
+            Write-Host "    -> Medir consumo real durante o jogo antes de alterar o arranque; nomes de aplicações não quantificam impacto." -ForegroundColor Gray
         } else {
             Write-Host "  [OK] Arranque limpo! Nenhuma aplicação pesada detetada na inicialização." -ForegroundColor Green
         }
@@ -3782,16 +3786,9 @@ function Invoke-SkyHardwareAudit {
     # 4. Estado do Isolamento do Núcleo (VBS / HVCI)
     Write-Host "`n--- [4/4] Camada de Segurança e Jogos (Isolamento do Núcleo) ---" -ForegroundColor Yellow
     $vbsState = Get-VbsStatus
-    if ($vbsState -eq "Ativado") {
-        Write-Host "  Estado do VBS:             ATIVADO (Segurança de Virtualização Ligada)" -ForegroundColor Yellow
-        Write-Host "  Compatibilidade:           VALORANT e jogos no FACEIT funcionam a 100%." -ForegroundColor White
-        Write-Host "  Diagnóstico Técnico:       Se o cliente não joga VALORANT nem no FACEIT, desativar no Painel" -ForegroundColor Cyan
-        Write-Host "                             do Cliente garante +5% a +15% de FPS e elimina micro-stutters." -ForegroundColor Cyan
-    } else {
-        Write-Host "  Estado do VBS:             DESATIVADO (Modo Máxima Performance / Menor Latência)" -ForegroundColor Green
-        Write-Host "  Compatibilidade:           FiveM, CS2 (Premier/VAC), ARC Raiders, COD com fluidez máxima." -ForegroundColor White
-        Write-Host "  Aviso:                     Se o cliente precisar de jogar VALORANT ou CS2 no FACEIT, deve ativar no Painel do Cliente." -ForegroundColor Gray
-    }
+    Write-Host "  Estado observado do VBS:   $vbsState" -ForegroundColor White
+    Write-Host '  Este estado não certifica HVCI, compatibilidade com anti-cheat nem ganhos de FPS.' -ForegroundColor Gray
+    Write-Host '  Não são alteradas definições de segurança. O controlo VBS do painel está suspenso.' -ForegroundColor Gray
 
     Write-Host "`n================================================================================" -ForegroundColor Cyan
     Write-Host "Inspeção Técnica de Hardware e Arranque concluída." -ForegroundColor Green
@@ -3832,7 +3829,10 @@ if ($DeployPanel) {
 }
 
 if ($Repair) {
-    Repair-WindowsSystemIntegrity
+    $result = Repair-WindowsSystemIntegrity
+    Write-Host "[$($result.Status)] $($result.Reason)"
+    if ($result.Status -eq 'Failed') { exit 1 }
+    if ($result.Status -eq 'Unverified') { exit 2 }
     exit 0
 }
 

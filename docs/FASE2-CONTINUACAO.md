@@ -2,6 +2,8 @@
 
 Preservados os quatro commits anteriores na branch `dev/phase2-execution-power-safety`. Apenas SkyOptimizer foi modificado. Sem push e sem aplicar otimizações ao Windows de desenvolvimento.
 
+**Estado final desta continuação:** 19/90 ações elegíveis para Apply, manutenção de shaders separada, perfis limitados e analisador offline implementados. **109 testes Pester e 11 testes Python aprovados.** Os números menores ao longo do documento registam os blocos anteriores. Não existe validação física de desempenho ou release pronta para clientes.
+
 ## Bloco 2: baseline por valor e Undo sem defaults
 
 O diário `mutation_state.json` guarda máquina, utilizador, vista do registo, existência, tipo e conteúdo original. Guarda intenção antes da escrita; verifica estado após escrita e reversão. Um lock exclusivo protege operações simultâneas. Valores já conformes não passam a pertencer ao programa. Apply repetido conserva a baseline. Valores com alterações externas são preservados e comunicados como conflito. As chaves vazias ficam no registo: não existe remoção recursiva de árvores potencialmente partilhadas.
@@ -70,9 +72,17 @@ Validação do bloco 6: **30 testes focados aprovados** (`Journal.Tests.ps1` e `
 
 ## Testes e ficheiros
 
-Validação deste conjunto: **93 testes Pester aprovados**, sem falhas; parsing do programa e dos scripts gerados incluído. **11 testes Python aprovados** para o analisador offline, usando dados sintéticos. `git diff --check` sem erros de whitespace; os avisos LF/CRLF referem-se à configuração do Git. Não foram aplicadas otimizações reais ao Windows, executados serviços nativos ou realizados benchmarks de jogos.
+Validação final: **109 testes Pester aprovados**, sem falhas, ignorados ou pendentes; parsing do programa e dos scripts gerados incluído. Os perfis/painel tinham sido validados com 93 testes; os blocos seguintes acrescentaram seis casos de políticas e dez de reparação/VBS. **11 testes Python aprovados** para o analisador offline, usando dados sintéticos. `git diff --check` sem erros de whitespace; os avisos LF/CRLF referem-se à configuração do Git. Não foram aplicadas otimizações reais ao Windows, executados serviços nativos ou realizados benchmarks de jogos.
 
-Ficheiros funcionais/testes desta continuação: `SkyOptimizer.ps1`, `tests/Journal.Tests.ps1`, `tests/ServiceNetwork.Tests.ps1` e `tests/ProfileMaintenance.Tests.ps1`. Documentação: `README.md`, `docs/FASE2-CONTINUACAO.md`, `docs/FASE2-IMPLEMENTACAO.md`, `docs/ACOES-ESTADO.json`, `docs/PERFIS.md`, `docs/OPORTUNIDADES.md` e `docs/TESTES-RESULTADO.json`. A ferramenta de benchmarks e o respetivo protocolo são registados num commit separado.
+Ficheiros funcionais/testes desta continuação: `SkyOptimizer.ps1`, `tests/Journal.Tests.ps1`, `tests/ServiceNetwork.Tests.ps1`, `tests/ProfileMaintenance.Tests.ps1`, `tests/UpdatePolicies.Tests.ps1` e `tests/MaintenanceReporting.Tests.ps1`. Benchmarks: `benchmarks/analyze.py`, `benchmarks/manifest.example.json` e `benchmarks/tests/test_analyze.py`. Documentação: `README.md`, `docs/FASE2-CONTINUACAO.md`, `docs/FASE2-IMPLEMENTACAO.md`, `docs/ACOES-ESTADO.json`, `docs/PERFIS.md`, `docs/OPORTUNIDADES.md`, `docs/BENCHMARKS.md` e `docs/TESTES-RESULTADO.json`.
+
+## Bloco 7: reparação e diagnóstico sem falso sucesso
+
+DISM/SFC passam pelo invocador de processos com exit code observado. DISM falhado ou sem código impede SFC. Código 3010 comunica reinício necessário e adia a segunda etapa; `/NoRestart` impede reinício automático pelo DISM. Falhas de lançamento e códigos SFC não confirmados devolvem `Failed`. Mesmo dois códigos zero produzem `Unverified`: a saída localizada e os logs ainda precisam de interpretação para certificar a integridade. CLI devolve 1 em falha, 2 em verificação incompleta; cancelamento não lança comandos. Não existe Undo de reparações DISM/SFC.
+
+A observação VBS usa o estado efetivo publicado por Win32_DeviceGuard: distingue desativado, configurado sem execução e em execução. Falha, ausência ou valor desconhecido devolvem `Desconhecido`, sem inferir desativação ou usar uma preferência HVCI como prova de execução. A inspeção deixa de anunciar +5–15% de FPS, RAM libertada ou compatibilidade universal com anti-cheat. Não altera VBS/HVCI.
+
+Fontes: [procedimento DISM/SFC](https://support.microsoft.com/en-us/windows/experience/backup-recovery/use-the-system-file-checker-tool-to-repair-missing-or-corrupted-system-files), [código 3010](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1700-3999-), [estados Win32_DeviceGuard](https://learn.microsoft.com/en-us/windows/security/threat-protection/device-guard/enable-virtualization-based-protection-of-code-integrity). Testes usam processos e CIM simulados; nenhum comando de reparação real foi executado.
 
 ## Limitações e próxima etapa
 
@@ -84,6 +94,6 @@ Ficheiros funcionais/testes desta continuação: `SkyOptimizer.ps1`, `tests/Jour
 - USB por dispositivo, HAGS, MSI, AppX, tarefas, BCD e TCP global continuam pendentes. A revisão deve avançar em grupos pequenos, com identidade/capacidade e Undo antes da elegibilidade.
 - Todos os potenciais ganhos exigem benchmarks físicos. Menos processos/RAM, persistência de registo e testes automatizados não demonstram FPS, 1% lows ou input lag.
 
-Prioridade seguinte: concluir um grupo de políticas documentadas ainda bloqueadas; depois rever os controlos por dispositivo e testar recuperação/reinício numa instalação descartável. As oportunidades de desempenho, mecanismos, riscos e métodos de medição estão em [OPORTUNIDADES.md](OPORTUNIDADES.md). Não foram acrescentadas receitas de afinidade, temporizadores ou segurança sem fundamentação.
+Prioridades seguintes: (1) ensaiar Apply repetido, falha intermédia, Undo e reinício numa instalação descartável; (2) rever 8/39 para enumeração e identidade USB por dispositivo, mantendo AC/DC separados; (3) determinar capacidade real de HAGS/MSI nas ações 37/40, sem heurísticas de VRAM/fabricante; (4) migrar os restantes grupos e comparar alterações individuais em hardware físico. As oportunidades de desempenho, mecanismos, riscos e métodos de medição estão em [OPORTUNIDADES.md](OPORTUNIDADES.md). Não foram acrescentadas receitas de afinidade, temporizadores ou segurança sem fundamentação.
 
 Não foram medidos FPS nem latência. Ainda não é uma versão validada para clientes. Branch preservada, sem push; SkyOS e SkyOptimizer-Packs não foram modificados.
