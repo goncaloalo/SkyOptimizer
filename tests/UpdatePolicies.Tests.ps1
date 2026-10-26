@@ -21,6 +21,7 @@ Describe 'Update policy compatibility without Windows mutations' {
             $script:os.OperatingSystemSKU = $sku
             (Block-AutomaticDriverUpdates).Status | Should Be Incompatible
             (Disable-DeliveryOptimizationP2P).Status | Should Be Incompatible
+            (Disable-BackgroundUWPApps).Status | Should Be Incompatible
         }
         $script:os.OperatingSystemSKU = 48; $script:os.ProductType = 3
         (Block-AutomaticDriverUpdates).Status | Should Be Incompatible

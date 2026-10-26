@@ -191,6 +191,19 @@ Describe 'Tracked registry lifecycle without Windows writes' {
         (Test-SkyStateEqual $script:values[$identity] $original) | Should Be $true
         $script:writes | Should Be 2
     }
+    It 'journals the background default without overwriting per-app or user exceptions' {
+        $exceptions = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy' 'LetAppsRunInBackground_ForceAllowTheseApps'
+        $identity = $exceptions | ConvertTo-Json -Compress
+        $original = ConvertTo-SkyRegistryState -Exists $true -Kind MultiString -Value @('Example.Package_123')
+        $script:values[$identity] = $original
+        (Invoke-SkyAction { Disable-BackgroundUWPApps }).Status | Should Be Applied
+        (Invoke-SkyAction { Disable-BackgroundUWPApps }).Status | Should Be AlreadyCompliant
+        @((Read-SkyMutationState $Global:SkyBackupDir).Entries).Count | Should Be 1
+        $null = Restore-SkyTrackedChanges $Global:SkyBackupDir
+        (Test-SkyStateEqual $script:values[$identity] $original) | Should Be $true
+        @($script:values.Values | Where-Object Exists).Count | Should Be 1
+        $script:writes | Should Be 2
+    }
     It 'restores update policies after repeated Apply without touching other driver and peer settings' {
         $peer = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' 'DOMinDiskSizeAllowedToPeer'
         $driver = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching' 'SearchOrderConfig'

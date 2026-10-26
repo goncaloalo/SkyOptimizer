@@ -1327,35 +1327,15 @@ function Disable-MouseAcceleration {
 function Disable-USBSelectiveSuspend {
     [CmdletBinding()]
     param()
-
-    # Deteção de Alimentação CA / Portátil
-    if (Test-IsOnBattery) {
-        Write-SkyLog -Message "Dispositivo a funcionar a bateria. Otimização de Suspensão Seletiva USB ignorada para poupança." -Level "Warning"
-        return $false
+    if (-not (Test-IsDesktopOrAcPower)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'AC nao confirmado: experiencia USB ignorada; nenhuma configuracao por dispositivo alterada.' -RestartRequired No
     }
-
-    $usbSubGroup = "2a737441-1930-4402-8d77-b2bebba308a3"
-    $usbSetting  = "48e6b7a6-50f5-4782-a5d4-53bb8f07e226"
-
-    $powerResult = Set-SkyAcPowerSettings -Settings @(
-        [pscustomobject]@{ Subgroup = $usbSubGroup; Setting = $usbSetting; Value = 0 }
+    # Limit this diagnostic experiment to AC in the owned plan. Do not edit Enum\USB.
+    $result = Set-SkyAcPowerSettings -Settings @(
+        [pscustomobject]@{ Subgroup = '2a737441-1930-4402-8d77-b2bebba308a3'; Setting = '48e6b7a6-50f5-4782-a5d4-53bb8f07e226'; Value = 0 }
     )
-    if ($powerResult.Status -eq 'Incompatible') { return $powerResult }
-
-    # Desativação de poupança de energia nos controladores e Hubs USB
-    $usbHubs = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Enum\USB\*\Device Parameters" -ErrorAction SilentlyContinue
-    $hubCount = 0
-    foreach ($h in $usbHubs) {
-        $p = $h.PSPath
-        Set-ItemProperty -Path $p -Name "DeviceSelectiveSuspended" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "SelectiveSuspendEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "EnhancedPowerManagementEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path $p -Name "AllowIdleIrpInD3" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-        $hubCount++
-    }
-
-    Write-SkyLog -Message "Índice AC de suspensão USB verificado; DC preservado. Rotina legada de hubs ($hubCount encontrados) ainda sem validação completa." -Level "Warning"
-    return $true
+    $result.Reason += ' Experiencia de diagnostico: suspensao seletiva AC no plano, DC preservado. Pode aumentar consumo/temperatura. Nao prova polling, estado de portas ou input lag.'
+    $result
 }
 
 function Disable-GameDVR {
@@ -1693,19 +1673,13 @@ function Clear-ShaderCache {
 function Disable-BackgroundUWPApps {
     [CmdletBinding()]
     param()
-
-    $bgKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"
-    Ensure-RegistryPath -KeyPath $bgKey
-    Backup-RegistryKey -KeyPath $bgKey -BackupName "25_BackgroundAccessApplications"
-    Set-ItemProperty -Path $bgKey -Name "GlobalUserDisabled" -Value 1 -Type DWord -Force
-
-    $searchKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
-    Ensure-RegistryPath -KeyPath $searchKey
-    Backup-RegistryKey -KeyPath $searchKey -BackupName "25_Search_BackgroundApps"
-    Set-ItemProperty -Path $searchKey -Name "BackgroundAppGlobalToggle" -Value 0 -Type DWord -Force
-
-    Write-SkyLog -Message "Ciclos de CPU e RAM poupados: aplicações UWP em segundo plano desativadas." -Level "Success"
-    return $true
+    if (-not (Test-SkyUpdatePolicySupport)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Politica de background fora da matriz cliente/build/edicao conhecida; nenhuma alteracao.' -RestartRequired No
+    }
+    # A per-app policy overrides this default. Preserve all package-specific exceptions.
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy' -Name LetAppsRunInBackground -Type DWord -Value 2
+    $result.Reason += ' Default de background das Windows apps configurado; excecoes por app preservadas. Pode impedir notificacoes/sincronizacao. Nao controla todos os processos Win32 nem prova FPS. Reiniciar apps para validar consumo.'
+    $result
 }
 
 function Disable-SleepStudyLogging {
@@ -1910,40 +1884,7 @@ function Set-MMCSSTasksGames {
 function Enable-HAGSConditional {
     [CmdletBinding()]
     param()
-
-    $osBuild = [Environment]::OSVersion.Version.Build
-    if ($osBuild -lt 19041) {
-        Write-SkyLog -Message "HAGS não suportado nesta versão do Windows (Build $osBuild < 19041)." -Level "Info"
-        return $false
-    }
-
-    # Deteção precisa de VRAM real de 64-bit
-    $vramInfo = Get-AccurateVramBytes
-    $vramGB = [math]::Round($vramInfo.Bytes / 1GB, 1)
-
-    # Identificar se existe GPU dedicada (NVIDIA VEN_10DE ou AMD VEN_1002)
-    $dedicatedGpu = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object {
-        $_.PNPDeviceID -match "^PCI\\VEN_10DE" -or $_.PNPDeviceID -match "^PCI\\VEN_1002"
-    } | Select-Object -First 1
-
-    if (-not $dedicatedGpu) {
-        Write-SkyLog -Message "Nenhuma GPU dedicada NVIDIA/AMD detetada. HAGS mantido inalterado por segurança." -Level "Info"
-        return $false
-    }
-
-    # Salvaguarda: Mínimo de 6 GB de VRAM real para evitar micro-stutters e crashes no FiveM
-    if ($vramInfo.Bytes -lt 6GB) {
-        Write-SkyLog -Message "GPU com $vramGB GB VRAM (< 6 GB). HAGS mantido desativado para prevenir micro-stutters e overflow de VRAM." -Level "Info"
-        return $false
-    }
-
-    $gfxKey = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
-    Ensure-RegistryPath -KeyPath $gfxKey
-    Backup-RegistryKey -KeyPath $gfxKey -BackupName "37_GraphicsDrivers_HAGS"
-
-    Set-ItemProperty -Path $gfxKey -Name "HwSchMode" -Value 2 -Type DWord -Force
-    Write-SkyLog -Message "HAGS ativado com sucesso para $($dedicatedGpu.Name) ($vramGB GB VRAM dedicados)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'HAGS bloqueado: faltam detecao por adaptador/driver, contrato de configuracao e verificacao apos reinicio. VRAM e fabricante nao demonstram capacidade. HwSchMode nao foi alterado.' -RestartRequired No
 }
 
 # ==============================================================================
@@ -1962,71 +1903,13 @@ function Optimize-NetworkAdapterPower {
 function Disable-UsbPowerManagement {
     [CmdletBinding()]
     param()
-
-    if (-not (Test-IsDesktopOrAcPower)) {
-        Write-SkyLog -Message "Portátil em bateria detetado. Gestão de energia USB mantida para preservar autonomia." -Level "Info"
-        return $false
-    }
-
-    $hubs = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object {
-        $_.Service -in @("usbhub", "usbhub3", "USBHUB", "USBHUB3") -or $_.Name -like "*Root Hub*"
-    }
-
-    $hubIndex = 0
-    foreach ($hub in $hubs) {
-        $devId = $hub.PNPDeviceID
-        if ($devId) {
-            $wdfKey = "HKLM:\SYSTEM\CurrentControlSet\Enum\$devId\Device Parameters\Wdf"
-            if (Test-Path $wdfKey) {
-                Backup-RegistryKey -KeyPath $wdfKey -BackupName "39_USB_Hub_$hubIndex"
-                Set-ItemProperty -Path $wdfKey -Name "IdleInWorkingState" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-                $hubIndex++
-            }
-        }
-    }
-
-    Write-SkyLog -Message "Suspensão de energia em Hubs USB raiz desativada (menor latência e estabilidade no polling rate do rato)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'Acao 39 retirada: escrita indiscriminada de IdleInWorkingState em hubs removida. Controlo depende do power-policy owner e do contrato do driver; nao substituido por outra flag privada.' -RestartRequired No
 }
 
 function Enable-GpuMsiMode {
     [CmdletBinding()]
     param()
-
-    # REGRA DE SEGURANÇA CRÍTICA:
-    # Aplicar MSI Mode EXCLUSIVAMENTE à GPU dedicada (NVIDIA VEN_10DE ou AMD VEN_1002).
-    # NUNCA aplicar a áudio, rede ou USB para prevenir BSODs ou perda de som.
-    # Manter prioridade padrão (Undefined - não forçar High).
-    $gpus = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object {
-        $_.PNPDeviceID -match "^PCI\\VEN_10DE" -or $_.PNPDeviceID -match "^PCI\\VEN_1002"
-    }
-
-    if (-not $gpus) {
-        Write-SkyLog -Message "Nenhuma GPU dedicada (NVIDIA/AMD) elegível para MSI Mode encontrada." -Level "Info"
-        return $false
-    }
-
-    $configured = 0
-    foreach ($gpu in $gpus) {
-        $pnpId = $gpu.PNPDeviceID
-        $msiKey = "HKLM:\SYSTEM\CurrentControlSet\Enum\$pnpId\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
-
-        Ensure-RegistryPath -KeyPath $msiKey
-        $cleanName = ($gpu.Name -replace '[^a-zA-Z0-9]', '_').Trim('_')
-        Backup-RegistryKey -KeyPath $msiKey -BackupName "40_MSI_GPU_$cleanName"
-
-        Set-ItemProperty -Path $msiKey -Name "MSISupported" -Value 1 -Type DWord -Force
-
-        # Garantir que a prioridade NÃO é forçada a High (manter Undefined / omitido)
-        if (Get-ItemProperty -Path $msiKey -Name "DevicePriority" -ErrorAction SilentlyContinue) {
-            Remove-ItemProperty -Path $msiKey -Name "DevicePriority" -Force -ErrorAction SilentlyContinue
-        }
-
-        Write-SkyLog -Message "Modo MSI ativado na GPU dedicada: $($gpu.Name) (Prioridade: Padrão/Undefined, sem partilha de IRQ)." -Level "Success"
-        $configured++
-    }
-
-    return ($configured -gt 0)
+    New-SkyActionResult -Status Deferred -Reason 'MSI bloqueado: fabricante nao demonstra suporte do driver nem recursos de interrupcao ativos. Sem escrita em MSISupported, DevicePriority ou MessageNumberLimit; faltam identidade, prova e recuperacao por dispositivo.' -RestartRequired No
 }
 
 # ==============================================================================
@@ -3279,7 +3162,7 @@ function Invoke-SkyOptimize {
 
         # Categoria 2: Input e Gaming
         [ordered]@{ Id = 7;  Category = "Input & Gaming"; Name = "Desativação de Aceleração de Rato (1:1 Raw Input)"; Action = { Disable-MouseAcceleration } },
-        [ordered]@{ Id = 8;  Category = "Input & Gaming"; Name = "Desativação de Suspensão Seletiva USB"; Action = { Disable-USBSelectiveSuspend } },
+        [ordered]@{ Id = 8;  Category = "Input & Gaming"; Name = "USB: experiência AC no plano Sky (sem escritas por dispositivo)"; Action = { Disable-USBSelectiveSuspend } },
         [ordered]@{ Id = 9;  Category = "Input & Gaming"; Name = "Desativação de Gravação Xbox Game DVR / Game Bar"; Action = { Disable-GameDVR } },
 
         # Categoria 3: Otimizações de Rede
@@ -3308,7 +3191,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 24; Category = "Armazenamento & Limpeza"; Name = "Limpeza Segura de Caches de Shaders (NVIDIA/DirectX) e Temp"; Action = { Clear-ShaderCache } },
 
         # Categoria 8: Processos em Segundo Plano (Debloat)
-        [ordered]@{ Id = 25; Category = "Processos em Segundo Plano"; Name = "Desativação de Aplicações UWP em Segundo Plano (Poupança CPU/RAM)"; Action = { Disable-BackgroundUWPApps } },
+        [ordered]@{ Id = 25; Category = "Processos em Segundo Plano"; Name = "Windows apps: política de background com exceções preservadas"; Action = { Disable-BackgroundUWPApps } },
         [ordered]@{ Id = 26; Category = "Processos em Segundo Plano"; Name = "Desativação de Registo Diagnóstico SleepStudy / Modern Standby"; Action = { Disable-SleepStudyLogging } },
         [ordered]@{ Id = 27; Category = "Processos em Segundo Plano"; Name = "Desativação de Windows Error Reporting (WER)"; Action = { Disable-WindowsErrorReporting } },
 
@@ -3324,12 +3207,12 @@ function Invoke-SkyOptimize {
         # Categoria 10: Escalonamento de CPU & Latência Gráfica (Fase 2)
         [ordered]@{ Id = 35; Category = "Escalonamento & Gráficos"; Name = "Escalonamento de CPU para Jogos (Win32PrioritySeparation 0x26)"; Action = { Set-CpuScheduling } },
         [ordered]@{ Id = 36; Category = "Escalonamento & Gráficos"; Name = "Prioridade Multimédia MMCSS para Jogos (Games Profile High)"; Action = { Set-MMCSSTasksGames } },
-        [ordered]@{ Id = 37; Category = "Escalonamento & Gráficos"; Name = "HAGS Condicional (WDDM 2.7+ e VRAM Dedicada >= 6GB)"; Action = { Enable-HAGSConditional } },
+        [ordered]@{ Id = 37; Category = "Escalonamento & Gráficos"; Name = "HAGS: bloqueado até validar capacidade e estado por adaptador"; Action = { Enable-HAGSConditional } },
 
         # Categoria 11: Hardware, Rede & Periféricos (Baixa Latência)
         [ordered]@{ Id = 38; Category = "Hardware & Periféricos"; Name = "Adaptadores de Rede: Desativação de EEE / Green Ethernet (Desktop/AC)"; Action = { Optimize-NetworkAdapterPower } },
-        [ordered]@{ Id = 39; Category = "Hardware & Periféricos"; Name = "Hubs USB Raiz: Desativação de Suspensão de Energia (Desktop/AC)"; Action = { Disable-UsbPowerManagement } },
-        [ordered]@{ Id = 40; Category = "Hardware & Periféricos"; Name = "Modo MSI (Message Signaled Interrupts) na GPU Dedicada"; Action = { Enable-GpuMsiMode } },
+        [ordered]@{ Id = 39; Category = "Hardware & Periféricos"; Name = "Retirada: alteração indiscriminada de energia dos hubs USB"; Action = { Disable-UsbPowerManagement } },
+        [ordered]@{ Id = 40; Category = "Hardware & Periféricos"; Name = "MSI: bloqueado até validar driver e interrupções por dispositivo"; Action = { Enable-GpuMsiMode } },
 
         # Categoria 12: Navegadores, Jogos em Janela & Armazenamento Avançado
         [ordered]@{ Id = 41; Category = "Navegadores & Janelas"; Name = "Desativação de Tarefas em Segundo Plano de Navegadores (Edge/Chrome)"; Action = { Disable-BrowserBackgroundTasks } },
@@ -3634,18 +3517,26 @@ function Get-SkyProfileActionIds {
     $ids = @(79)
     if ($Profile -in @('Performance', 'Extreme')) { $ids += @(9, 41) }
     if ($Profile -eq 'Extreme') { $ids += $Experiments }
-    if ($ids -contains 3) { $ids += 1 }
+    if ($ids -contains 3 -or $ids -contains 8) { $ids += 1 }
     $ids | Sort-Object -Unique
 }
 
 function Get-SkyMigratedActionIds {
-    @(1, 3, 6, 9, 13, 17, 19, 20, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86)
+    @(1, 3, 6, 8, 9, 13, 17, 19, 20, 25, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86)
+}
+
+function Get-SkyRetiredActionIds {
+    # Historical IDs remain traceable; this implementation is no longer a tuning option.
+    @(39)
 }
 
 function Invoke-SkyEligibleAction {
     param([int]$Id, [scriptblock]$Action, [int[]]$SelectedIds = @(79))
     if ($Id -notin $SelectedIds) {
         return New-SkyActionResult -Status NotSelected -Reason 'Fora do perfil/experiência selecionado; não executada.' -RestartRequired No
+    }
+    if ($Id -in (Get-SkyRetiredActionIds)) {
+        return New-SkyActionResult -Status Deferred -Reason 'Acao retirada: escritas privadas e indiscriminadas em hubs USB nao constituem um contrato suportado. ID conservado apenas para rastreabilidade.' -RestartRequired No
     }
     if ($Id -notin (Get-SkyMigratedActionIds)) {
         return New-SkyActionResult -Status Deferred -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.' -RestartRequired No

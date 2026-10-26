@@ -65,6 +65,7 @@ Describe 'Owned power plan lifecycle' {
     Mock Invoke-SkyNativeProcess { Invoke-FakePowerProcess -FileName $FileName -Arguments $Arguments }
     Mock Get-SkyMachineId { $script:fake.MachineId }
     Mock Test-IsOnBattery { $false }
+    Mock Test-IsDesktopOrAcPower { $true }
     Mock Get-ItemProperty { throw 'Unexpected registry access in power tests.' }
     Mock Save-SkyPowerState {
         if ($script:fake.FailSave -eq $State.Status) { throw 'Disk full' }
@@ -168,10 +169,25 @@ Describe 'Owned power plan lifecycle' {
         (Disable-CoreParking).Status | Should Be 'Incompatible'
         @($script:fake.Calls | Where-Object { $_ -like '/setacvalueindex *' }).Count | Should Be 0
     }
-    It 'does not enter legacy USB writes when selective suspend is unsupported' {
+    It 'does not enter device writes when selective suspend is unsupported' {
         $null = Set-UltimatePowerPlan
         $script:fake.UnsupportedSetting = '48e6b7a6-50f5-4782-a5d4-53bb8f07e226'
         (Disable-USBSelectiveSuspend).Status | Should Be 'Incompatible'
+        Assert-MockCalled Get-ItemProperty -Times 0 -Exactly -Scope It
+    }
+    It 'changes only USB AC on the owned copy and restores the original after repetition' {
+        $null = Set-UltimatePowerPlan
+        $state = Read-SkyPowerState $Global:SkyBackupDir
+        $usb = '48e6b7a6-50f5-4782-a5d4-53bb8f07e226'
+        (Disable-USBSelectiveSuspend).Status | Should Be Applied
+        (Disable-USBSelectiveSuspend).Status | Should Be AlreadyCompliant
+        $script:fake.Plans[$state.OwnedGuid][$usb].AC | Should Be 0
+        $script:fake.Plans[$state.OwnedGuid][$usb].DC | Should Be 1
+        $script:fake.Plans[$script:original][$usb].AC | Should Be 1
+        $null = Restore-SkyPowerPlan $Global:SkyBackupDir
+        $script:fake.Active | Should Be $script:original
+        $script:fake.Plans[$script:original][$usb].AC | Should Be 1
+        $script:fake.Plans[$script:original][$usb].DC | Should Be 1
         Assert-MockCalled Get-ItemProperty -Times 0 -Exactly -Scope It
     }
     It 'does not mutate Windows if persisting the baseline fails' {

@@ -21,3 +21,12 @@ Fontes: [GetSystemPowerStatus](https://learn.microsoft.com/en-us/windows/win32/a
 ## 2. Validação pendente
 
 Os resultados desta fase são testes de código, não integração executada nem benchmarks. Os procedimentos de VM e a investigação por dispositivo acompanham os próximos blocos. Não se promove qualquer ação por aumentar a contagem do catálogo.
+
+## 3. Migração e retirada por mecanismo
+
+- Migradas **8 e 25**, exclusivamente por seleção explícita em Extreme. Total atual: **21 elegíveis**. USB 8 limita-se ao índice AC do plano próprio; 25 usa uma política documentada, mantendo exceções por app. Balanced e Performance conservam a seleção anterior.
+- **37/40 bloqueadas**, incluindo chamada direta das funções. Retiradas as heurísticas de VRAM/fabricante e as escritas não demonstradas. Falta deteção e pós-verificação por adaptador/driver.
+- **39 retirada**: o código indiscriminado de WDF foi eliminado. O ID histórico comunica a retirada; não é uma opção de tuning ativa. O catálogo conserva rastreabilidade dos 90 IDs históricos, sem exigir 90 ações executáveis.
+- Não foram apagadas configurações antigas do Windows. A retirada de código não permite inferir os valores anteriores de clientes que executaram versões legadas.
+
+Justificação, versões, hardware, riscos, fontes e critérios de desbloqueio em [HARDWARE-3A.md](HARDWARE-3A.md). Validação focada do bloco: **69 testes aprovados**, incluindo os ciclos USB e a política de background. Nenhuma integração real ou benchmark.

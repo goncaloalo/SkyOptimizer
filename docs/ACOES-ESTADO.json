@@ -12,7 +12,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 2,
@@ -25,7 +26,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 3,
@@ -40,7 +42,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 4,
@@ -53,7 +56,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 5,
@@ -66,7 +70,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 6,
@@ -81,7 +86,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 7,
@@ -94,20 +100,24 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 8,
-    "Nome": "Desativação de Suspensão Seletiva USB",
+    "Nome": "USB: experiência AC no plano Sky (sem escritas por dispositivo)",
     "Funcao": "Disable-USBSelectiveSuspend",
-    "FinalidadeProposta": "Otimização condicional",
+    "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Corrigir enumeração, backup e AC/DC; usar por problema/dispositivo ou resultado medido.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "AC confirmado, plano Sky ativo, definicao legivel por API; sem USB Enum. Testar retoma apos idle, docks, consumo e temperatura. Nao prova polling nem input lag.",
+    "EstadoImplementacao": "Migrada: apenas USB AC no plano Sky, DC preservado; sem escritas por dispositivo",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": []
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
+    "Retirada": false
   },
   {
     "Id": 9,
@@ -123,7 +133,8 @@
     "PerfisAtuais": [
       "Performance",
       "Extreme"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 10,
@@ -136,7 +147,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 11,
@@ -149,7 +161,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 12,
@@ -162,7 +175,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 13,
@@ -177,7 +191,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 14,
@@ -190,7 +205,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 15,
@@ -203,7 +219,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 16,
@@ -216,7 +233,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 17,
@@ -231,7 +249,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 18,
@@ -244,7 +263,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 19,
@@ -259,7 +279,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 20,
@@ -274,7 +295,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 21,
@@ -287,7 +309,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 22,
@@ -300,7 +323,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 23,
@@ -313,7 +337,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 24,
@@ -326,20 +351,24 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 25,
-    "Nome": "Desativação de Aplicações UWP em Segundo Plano (Poupança CPU/RAM)",
+    "Nome": "Windows apps: política de background com exceções preservadas",
     "Funcao": "Disable-BackgroundUWPApps",
     "FinalidadeProposta": "Debloat",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "Selecionar apps e preservar notificações/dependências; demonstrar redução de carga durante o jogo.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "EstadoImplementacao": "Migrada: default AppPrivacy com baseline tipada, excecoes preservadas e matriz de edicoes",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": []
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
+    "Retirada": false
   },
   {
     "Id": 26,
@@ -352,7 +381,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 27,
@@ -365,7 +395,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 28,
@@ -378,7 +409,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 29,
@@ -391,7 +423,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 30,
@@ -404,7 +437,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 31,
@@ -417,7 +451,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 32,
@@ -430,7 +465,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 33,
@@ -443,7 +479,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 34,
@@ -456,7 +493,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 35,
@@ -469,7 +507,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 36,
@@ -482,20 +521,22 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 37,
-    "Nome": "HAGS Condicional (WDDM 2.7+ e VRAM Dedicada >= 6GB)",
+    "Nome": "HAGS: bloqueado até validar capacidade e estado por adaptador",
     "Funcao": "Enable-HAGSConditional",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Detetar GPU correta, driver/capacidade e estado; abandonar regra universal dos 6 GB; comparar por jogo.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "RequisitosRiscosValidacao": "Sem heuristica de 6 GB ou fabricante. WDDM 2.7/hardware e estado por adaptador; estrutura de caps reservada ao sistema. Exige controlo/rollback e confirmacao apos reinicio.",
+    "EstadoImplementacao": "Bloqueada: funcao direta sem escritas; falta prova de capacidade/estado efetivo por adaptador e driver",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 38,
@@ -510,33 +551,36 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 39,
-    "Nome": "Hubs USB Raiz: Desativação de Suspensão de Energia (Desktop/AC)",
+    "Nome": "Retirada: alteração indiscriminada de energia dos hubs USB",
     "Funcao": "Disable-UsbPowerManagement",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Usar PnP/capacidades e baseline por instância; testar retoma, docks e dispositivos.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "RequisitosRiscosValidacao": "IdleInWorkingState pertence ao controlo do framework/driver; existencia da chave nao demonstra contrato. Futuro controlo exige identidade/capacidade e verificacao por dispositivo.",
+    "EstadoImplementacao": "Retirada: implementacao WDF indiscriminada eliminada; ID apenas historico",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": true
   },
   {
     "Id": 40,
-    "Nome": "Modo MSI (Message Signaled Interrupts) na GPU Dedicada",
+    "Nome": "MSI: bloqueado até validar driver e interrupções por dispositivo",
     "Funcao": "Enable-GpuMsiMode",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Confirmar suporte/estado ativo e identificar GPU por InstanceId; evitar alterações redundantes; rollback.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "RequisitosRiscosValidacao": "MSISupported nao prova recursos ativos. Driver/INF e InstanceId exatos, MSI/MSI-X/fallback confirmado; sem remover DevicePriority. Falta metodo seguro de detecao/verificacao.",
+    "EstadoImplementacao": "Bloqueada: funcao direta sem escritas; falta prova de capacidade/estado efetivo por adaptador e driver",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 41,
@@ -552,7 +596,8 @@
     "PerfisAtuais": [
       "Performance",
       "Extreme"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 42,
@@ -567,7 +612,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 43,
@@ -580,7 +626,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 44,
@@ -593,7 +640,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 45,
@@ -606,7 +654,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 46,
@@ -619,7 +668,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 47,
@@ -632,7 +682,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 48,
@@ -647,7 +698,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 49,
@@ -660,7 +712,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 50,
@@ -673,7 +726,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 51,
@@ -686,7 +740,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 52,
@@ -699,7 +754,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 53,
@@ -712,7 +768,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 54,
@@ -725,7 +782,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 55,
@@ -738,7 +796,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 56,
@@ -751,7 +810,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 57,
@@ -764,7 +824,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 58,
@@ -777,7 +838,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 59,
@@ -790,7 +852,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 60,
@@ -805,7 +868,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 61,
@@ -818,7 +882,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 62,
@@ -831,7 +896,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 63,
@@ -844,7 +910,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 64,
@@ -857,7 +924,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 65,
@@ -870,7 +938,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 66,
@@ -883,7 +952,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 67,
@@ -896,7 +966,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 68,
@@ -909,7 +980,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 69,
@@ -922,7 +994,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 70,
@@ -935,7 +1008,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 71,
@@ -950,7 +1024,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 72,
@@ -963,7 +1038,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 73,
@@ -976,7 +1052,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 74,
@@ -991,7 +1068,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 75,
@@ -1006,7 +1084,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 76,
@@ -1021,7 +1100,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 77,
@@ -1034,7 +1114,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 78,
@@ -1047,7 +1128,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 79,
@@ -1064,7 +1146,8 @@
       "Balanced",
       "Performance",
       "Extreme"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 80,
@@ -1077,7 +1160,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 81,
@@ -1090,7 +1174,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 82,
@@ -1103,7 +1188,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 83,
@@ -1116,7 +1202,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 84,
@@ -1129,7 +1216,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 85,
@@ -1142,7 +1230,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 86,
@@ -1157,7 +1246,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Extreme: selecao explicita"
-    ]
+    ],
+    "Retirada": false
   },
   {
     "Id": 87,
@@ -1170,7 +1260,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 88,
@@ -1183,7 +1274,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 89,
@@ -1196,7 +1288,8 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   },
   {
     "Id": 90,
@@ -1209,6 +1302,7 @@
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
-    "PerfisAtuais": []
+    "PerfisAtuais": [],
+    "Retirada": false
   }
 ]
