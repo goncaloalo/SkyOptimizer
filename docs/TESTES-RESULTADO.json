@@ -3,8 +3,8 @@
     "PowerShell":  "5.1.26100.9711",
     "Pester":  "3.4.0",
     "Command":  "Invoke-Pester -Script .\\tests -PassThru",
-    "Total":  109,
-    "Passed":  109,
+    "Total":  135,
+    "Passed":  135,
     "Failed":  0,
     "Skipped":  0,
     "Pending":  0,
@@ -13,5 +13,12 @@
     "PythonPassed":  11,
     "PythonFailed":  0,
     "WindowsChangesApplied":  false,
-    "PhysicalBenchmarksPerformed":  false
+    "PhysicalBenchmarksPerformed":  false,
+    "IntegrationVmExecuted":  false,
+    "EligibleApplyActions":  21,
+    "RetiredActionIds":  [
+                             39
+                         ],
+    "ProductSourceSha256":  "6E239A2C57622F12A52D5ADEF9015BC6FF5073C07BEFFFB9EB415501EFCDAF07",
+    "VmHarnessSourceSha256":  "B2E5CD88C4F1889D6BD90A7F2921BB7D6D7E1442D0CBEA07D3449AB53709E993"
 }

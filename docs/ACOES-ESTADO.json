@@ -268,7 +268,7 @@
   },
   {
     "Id": 19,
-    "Nome": "Bloqueio de Substituição Automática de Drivers GPU/Hardware",
+    "Nome": "Exclusão de drivers das atualizações de qualidade",
     "Funcao": "Block-AutomaticDriverUpdates",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
@@ -284,7 +284,7 @@
   },
   {
     "Id": 20,
-    "Nome": "Desativação de P2P da Otimização de Entrega (Proteção de Ping)",
+    "Nome": "Delivery Optimization: HTTP-only sem peering",
     "Funcao": "Disable-DeliveryOptimizationP2P",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
@@ -342,7 +342,7 @@
   },
   {
     "Id": 24,
-    "Nome": "Limpeza Segura de Caches de Shaders (NVIDIA/DirectX) e Temp",
+    "Nome": "Manutenção de diagnóstico de shaders (confirmação explícita)",
     "Funcao": "Clear-ShaderCache",
     "FinalidadeProposta": "Manutenção",
     "DecisaoAuditoria": "Manutenção",

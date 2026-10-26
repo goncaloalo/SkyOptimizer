@@ -1354,7 +1354,7 @@ function Disable-GameDVR {
     $policyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
     Set-SkyRegistryValue -Path $policyKey -Name "AllowGameDVR" -Value 0 -Type DWord -Force
 
-    Write-SkyLog -Message "Gravação em segundo plano do Game DVR / Xbox Game Bar desativada (captura contínua e GPU encoder libertados)." -Level "Success"
+    Write-SkyLog -Message "Configuracoes Game DVR processadas; estado por valor no resultado. Consumo de CPU/GPU e efeito nas capturas por validar." -Level "Info"
     return $true
 }
 
@@ -2616,7 +2616,7 @@ function Enable-WindowsGameMode {
     Set-SkyRegistryValue -Path $gameBarKey -Name "AutoGameModeEnabled" -Value 1 -Type DWord -Force
     Set-SkyRegistryValue -Path $gameBarKey -Name "AllowAutoGameMode" -Value 1 -Type DWord -Force
 
-    Write-SkyLog -Message "Modo de Jogo nativo do Windows ativado (AutoGameModeEnabled=1; prioridade de hardware para o processo do jogo)." -Level "Success"
+    Write-SkyLog -Message "Configuracoes de Game Mode processadas; consumo efetivo e desempenho precisam de verificacao no jogo." -Level "Info"
     return $true
 }
 
@@ -2755,7 +2755,7 @@ function Disable-LocationAndSensors {
     # 3. Serviço de Geolocalização (lfsvc)
     Disable-SkyService -Name 'lfsvc'
 
-    Write-SkyLog -Message "Telemetria de localização e sensores desativada (serviço lfsvc parado; zero varreduras Wi-Fi em background)." -Level "Success"
+    Write-SkyLog -Message "Politicas de localizacao/sensores e lfsvc processados; consultar os resultados por recurso. Nao foi medida atividade Wi-Fi ou desempenho." -Level "Info"
     return $true
 }
 
@@ -3181,14 +3181,14 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 18; Category = "Explorador & QoL"; Name = "Desativação de Arquivamento Automático de Apps"; Action = { Disable-AppArchival } },
 
         # Categoria 6: Controlo Inteligente de Windows Update
-        [ordered]@{ Id = 19; Category = "Controlo Windows Update"; Name = "Bloqueio de Substituição Automática de Drivers GPU/Hardware"; Action = { Block-AutomaticDriverUpdates } },
-        [ordered]@{ Id = 20; Category = "Controlo Windows Update"; Name = "Desativação de P2P da Otimização de Entrega (Proteção de Ping)"; Action = { Disable-DeliveryOptimizationP2P } },
+        [ordered]@{ Id = 19; Category = "Controlo Windows Update"; Name = "Exclusão de drivers das atualizações de qualidade"; Action = { Block-AutomaticDriverUpdates } },
+        [ordered]@{ Id = 20; Category = "Controlo Windows Update"; Name = "Delivery Optimization: HTTP-only sem peering"; Action = { Disable-DeliveryOptimizationP2P } },
         [ordered]@{ Id = 21; Category = "Controlo Windows Update"; Name = "Modo de Atualização Manual e Notificação (Sem Reinícios Forçados)"; Action = { Set-ManualWindowsUpdate } },
 
         # Categoria 7: Armazenamento, I/O & Limpeza de Disco
         [ordered]@{ Id = 22; Category = "Armazenamento & Limpeza"; Name = "Desativação de Armazenamento Reservado (Libertar 7GB-10GB)"; Action = { Disable-ReservedStorage } },
         [ordered]@{ Id = 23; Category = "Armazenamento & Limpeza"; Name = "Otimização de Sistema de Ficheiros NTFS (I/O Boost)"; Action = { Optimize-NTFS } },
-        [ordered]@{ Id = 24; Category = "Armazenamento & Limpeza"; Name = "Limpeza Segura de Caches de Shaders (NVIDIA/DirectX) e Temp"; Action = { Clear-ShaderCache } },
+        [ordered]@{ Id = 24; Category = "Armazenamento & Limpeza"; Name = "Manutenção de diagnóstico de shaders (confirmação explícita)"; Action = { Clear-ShaderCache } },
 
         # Categoria 8: Processos em Segundo Plano (Debloat)
         [ordered]@{ Id = 25; Category = "Processos em Segundo Plano"; Name = "Windows apps: política de background com exceções preservadas"; Action = { Disable-BackgroundUWPApps } },

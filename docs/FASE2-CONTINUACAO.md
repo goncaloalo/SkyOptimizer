@@ -1,5 +1,7 @@
 # Fase 2 — continuação de 21 a 26 de outubro de 2026
 
+> Entrega histórica. A revisão seguinte, incluindo USB/HAGS/MSI, retirada de 39 e preparação de VM, está em [FASE3A.md](FASE3A.md).
+
 Preservados os quatro commits anteriores na branch `dev/phase2-execution-power-safety`. Apenas SkyOptimizer foi modificado. Sem push e sem aplicar otimizações ao Windows de desenvolvimento.
 
 **Estado final desta continuação:** 19/90 ações elegíveis para Apply, manutenção de shaders separada, perfis limitados e analisador offline implementados. **109 testes Pester e 11 testes Python aprovados.** Os números menores ao longo do documento registam os blocos anteriores. Não existe validação física de desempenho ou release pronta para clientes.
