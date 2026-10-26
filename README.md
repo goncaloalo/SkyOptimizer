@@ -9,7 +9,7 @@ O SkyOptimizer mantém o programa PowerShell existente, destinado a instalaçõe
 - O catálogo conserva **90 ações**. **19 estão migradas para Apply**: 1, 3, 6, 9, 13, 17, 19, 20, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79 e 86.
 - As restantes ações ficam bloqueadas no dispatcher enquanto faltam baseline, reversão ou compatibilidade. O código é conservado para revisão.
 - A ação 24 é manutenção de diagnóstico separada, com confirmação explícita. Não existe limpeza automática de shaders nos perfis.
-- [Estado das 90 ações](docs/ACOES-ESTADO.json), [entrega e limitações](docs/FASE2-CONTINUACAO.md), [perfis](docs/PERFIS.md), [benchmarks](docs/BENCHMARKS.md) e [oportunidades](docs/OPORTUNIDADES.md).
+- [Estado das 90 ações](docs/ACOES-ESTADO.json), [Fase 3A](docs/FASE3A.md), [entrega anterior](docs/FASE2-CONTINUACAO.md), [perfis](docs/PERFIS.md), [benchmarks](docs/BENCHMARKS.md) e [oportunidades](docs/OPORTUNIDADES.md).
 
 ## Perfis de desenvolvimento
 

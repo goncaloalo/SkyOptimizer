@@ -5,7 +5,7 @@ Describe 'Tracked registry lifecycle without Windows writes' {
         $Global:SkyBackupDir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $null = [IO.Directory]::CreateDirectory($Global:SkyBackupDir)
         $Global:SkyLogFile = $null
-        $script:saveFailure = $false; $script:saveCount = 0; $script:failSaveAt = 0
+        $script:saveFailure = $false; $script:saveCount = 0; $script:failSaveAt = 0; $script:missingIdentity = $false
         $script:values = @{}; $script:writes = 0; $script:writeMode = 'Normal'
         $script:resource = ConvertTo-SkyRegistryResource 'HKCU:\Software\SkyFake' 'Value'
         $script:key = $script:resource | ConvertTo-Json -Compress
@@ -17,7 +17,7 @@ Describe 'Tracked registry lifecycle without Windows writes' {
         if ($script:saveFailure -or $script:saveCount -eq $script:failSaveAt) { throw 'disk full' }
         Write-SkyAtomicFile -Path (Join-Path $BackupDirectory 'mutation_state.json') -Content ($State | ConvertTo-Json -Depth 15)
     }
-    Mock Get-SkyMachineId { 'fake-machine' }
+    Mock Get-SkyMachineId { if (-not $script:missingIdentity) { 'fake-machine' } }
     Mock Get-SkyUserSid { 'fake-user' }
     Mock Get-SkyWindowsBuild { 22631 }
     Mock Get-SkyBrowserMajorVersion { 130 }
@@ -138,6 +138,23 @@ Describe 'Tracked registry lifecycle without Windows writes' {
         try { { Invoke-SkyTrackedChange $script:resource $script:desired } | Should Throw }
         finally { $held.Dispose() }
         $script:writes | Should Be 0
+    }
+    It 'rejects duplicate active resources before Undo writes any value' {
+        $null = Invoke-SkyTrackedChange $script:resource $script:desired
+        $journal = Read-SkyMutationState $Global:SkyBackupDir
+        $duplicate = $journal.Entries[0] | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+        $duplicate.Id = [guid]::NewGuid().ToString()
+        $journal.Entries = @($journal.Entries) + $duplicate
+        Save-SkyMutationState $journal $Global:SkyBackupDir
+        $script:writes = 0
+        { Restore-SkyTrackedChanges $Global:SkyBackupDir } | Should Throw
+        $script:writes | Should Be 0
+    }
+    It 'rejects missing identity before a new baseline or a system write' {
+        $script:missingIdentity = $true
+        { Invoke-SkyTrackedChange $script:resource $script:desired } | Should Throw
+        $script:writes | Should Be 0
+        [IO.File]::Exists((Join-Path $Global:SkyBackupDir 'mutation_state.json')) | Should Be $false
     }
     It 'restores a deleted value with the exact binary bytes' {
         $script:original = ConvertTo-SkyRegistryState -Exists $true -Kind Binary -Value ([byte[]]@(0,255,0,31))

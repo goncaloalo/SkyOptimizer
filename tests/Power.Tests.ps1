@@ -227,13 +227,15 @@ Describe 'Owned power plan lifecycle' {
         $script:fake.Calls.Count | Should Be 0
         (Get-SkyUndoScope -BackupDirectory $Global:SkyBackupDir) | Should Be 'None'
     }
-    It 'blocks legacy baseline overwrite and restores only its recorded plan' {
+    It 'blocks legacy baseline overwrite and never changes a plan from incomplete evidence' {
         $path = Join-Path $Global:SkyBackupDir 'previous_power_plan.txt'
         [IO.File]::WriteAllText($path, $script:original)
         { Set-UltimatePowerPlan } | Should Throw
+        $script:fake.Calls = @()
         (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Unverified'
         [IO.File]::ReadAllText($path) | Should Be $script:original
         @($script:fake.Calls | Where-Object { $_ -match '/setacvalueindex|/setdcvalueindex|/delete ' }).Count | Should Be 0
+        $script:fake.Calls.Count | Should Be 0
     }
     It 'rejects concurrent access to the power transaction' {
         $held = Enter-SkyPowerLock -BackupDirectory $Global:SkyBackupDir

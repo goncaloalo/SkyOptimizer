@@ -329,15 +329,12 @@ function Restore-SkyPowerPlan {
             if (-not [IO.File]::Exists($legacyPath)) {
                 return New-SkyActionResult -Status AlreadyCompliant -Reason 'Sem baseline de energia: nenhuma alteração efetuada.' -RestartRequired No
             }
-            # Legacy data can identify a plan, but cannot reconstruct its original setting indices.
+            # A legacy GUID proves neither ownership nor the plan active before an actual change.
             $legacyGuid = [guid]::Empty
             if (-not [guid]::TryParseExact([IO.File]::ReadAllText($legacyPath).Trim(), 'D', [ref]$legacyGuid)) {
                 throw 'GUID inválido no backup legado de energia; nenhum default será aplicado.'
             }
-            if (@(Get-SkyPowerGuids) -notcontains $legacyGuid.ToString()) { throw 'O plano legado já não existe.' }
-            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setactive', $legacyGuid.ToString())
-            if ((Get-SkyActivePowerGuid) -ne $legacyGuid.ToString()) { throw 'A ativação do plano legado não foi confirmada.' }
-            return New-SkyActionResult -Status Unverified -Reason 'Plano legado reativado; índices originais AC/DC não disponíveis. Nenhum default foi imposto.' -RestartRequired No
+            return New-SkyActionResult -Status Unverified -Reason 'Backup legado de energia preservado para revisao manual: autoria e indices originais AC/DC nao demonstrados. Nenhum plano foi alterado.' -RestartRequired No
         }
         if ($state.Status -eq 'Restored') {
             return New-SkyActionResult -Status AlreadyCompliant -Reason 'Este ciclo de energia já foi revertido; nenhuma alteração efetuada.' -RestartRequired No
@@ -459,16 +456,22 @@ function Enter-SkyMutationLock {
 
 function Read-SkyMutationState {
     param([string]$BackupDirectory)
+    $machineId = Get-SkyMachineId
+    $userSid = Get-SkyUserSid
+    if ([string]::IsNullOrWhiteSpace($machineId) -or [string]::IsNullOrWhiteSpace($userSid)) {
+        throw 'Identidade da maquina/utilizador indisponivel. Nenhuma baseline sera criada ou utilizada.'
+    }
     $path = Join-Path $BackupDirectory 'mutation_state.json'
     if (-not [IO.File]::Exists($path)) {
-        return [pscustomobject]@{ SchemaVersion = 1; MachineId = Get-SkyMachineId; UserSid = Get-SkyUserSid; Entries = @() }
+        return [pscustomobject]@{ SchemaVersion = 1; MachineId = $machineId; UserSid = $userSid; Entries = @() }
     }
     $state = [IO.File]::ReadAllText($path) | ConvertFrom-Json -ErrorAction Stop
-    if ($state.SchemaVersion -ne 1 -or $state.MachineId -ne (Get-SkyMachineId) -or
-        $state.UserSid -ne (Get-SkyUserSid) -or $null -eq $state.Entries) {
+    if ($state.SchemaVersion -ne 1 -or $state.MachineId -ne $machineId -or
+        $state.UserSid -ne $userSid -or $null -eq $state.Entries) {
         throw 'Diário inválido ou pertencente a outra máquina/utilizador. Nenhuma baseline será substituída.'
     }
     $ids = @{}
+    $activeResources = @{}
     foreach ($entry in $state.Entries) {
         if (-not $entry.Id -or $ids.ContainsKey($entry.Id) -or $entry.Status -notin @('Pending', 'Applied', 'Restoring', 'Restored')) {
             throw 'Entrada inválida ou duplicada no diário.'
@@ -477,6 +480,11 @@ function Read-SkyMutationState {
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Original
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Before
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Desired
+        if ($entry.Status -ne 'Restored') {
+            $identity = $entry.Resource | ConvertTo-Json -Compress
+            if ($activeResources.ContainsKey($identity)) { throw 'Mais de uma baseline ativa para o recurso. Diario preservado para revisao.' }
+            $activeResources[$identity] = $true
+        }
     }
     return $state
 }
@@ -1010,31 +1018,38 @@ function Save-SkyManifest {
     }
 }
 
-function Test-IsDesktopOrAcPower {
-    try {
-        # Verificar se existe hardware de bateria instalado
-        $battery = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue
-        if (-not $battery) {
-            # Se não tem bateria, é 100% garantido um Desktop / Torre
-            return $true
-        }
-
-        # Se tem bateria (Portátil), verificar se está ligado à tomada (AC Power)
-        $batteryStatus = Get-CimInstance -Namespace root\wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue
-        if ($batteryStatus -and $batteryStatus.PowerOnline -eq $true) {
-            return $true # Portátil ligado à tomada elétrica
-        }
-
-        # Verificar tipo de chassis para confirmação
-        $chassis = Get-CimInstance Win32_SystemEnclosure -ErrorAction SilentlyContinue
-        if ($chassis.ChassisTypes -match '^(3|4|5|6|7|15|16|23|24)$') {
-            return $true
-        }
-
-        return $false # Portátil a funcionar na bateria
-    } catch {
-        return $true
+function Get-SkyAcLineStatus {
+    [CmdletBinding()]
+    param()
+    if (-not ('SkyPowerSourceRead' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+public static class SkyPowerSourceRead {
+    [StructLayout(LayoutKind.Sequential)]
+    struct Status {
+        public byte ACLineStatus, BatteryFlag, BatteryLifePercent, SystemStatusFlag;
+        public uint BatteryLifeTime, BatteryFullLifeTime;
     }
+    [DllImport("kernel32.dll", SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    static extern bool GetSystemPowerStatus(out Status status);
+    public static byte ReadLineStatus() {
+        Status status;
+        if (!GetSystemPowerStatus(out status)) throw new Win32Exception(Marshal.GetLastWin32Error());
+        return status.ACLineStatus;
+    }
+}
+'@ -ErrorAction Stop
+    }
+    [SkyPowerSourceRead]::ReadLineStatus()
+}
+
+function Test-IsDesktopOrAcPower {
+    # Only an explicit Online result permits AC-only experiments. Unknown is not a desktop.
+    try { return ((Get-SkyAcLineStatus) -eq 1) }
+    catch { return $false }
 }
 
 function Test-IsOnBattery {
