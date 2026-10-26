@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "frametime_column": "FrameTimeMs",
+  "interval_kind": "present",
+  "frame_generation": false,
+  "environment": {
+    "cpu": "",
+    "gpu": "",
+    "windows_build": "",
+    "gpu_driver": "",
+    "game_version": "",
+    "scene": "",
+    "settings": "",
+    "capture_tool": "",
+    "capture_version": "",
+    "optimizer_commit": ""
+  },
+  "runs": [
+    {"id": "A1", "condition": "A", "csv": "captures/A1.csv", "filters": {}},
+    {"id": "B1", "condition": "B", "csv": "captures/B1.csv", "filters": {}}
+  ]
+}

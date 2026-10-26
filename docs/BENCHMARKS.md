@@ -2,6 +2,23 @@
 
 Estado: preparado, ainda não executado. Não aplicar otimizações no Windows usado para desenvolver o projeto.
 
+## Analisador offline implementado
+
+`benchmarks/analyze.py` lê capturas CSV já recolhidas. Usa apenas a biblioteca padrão de Python 3.10+; não lança jogos, capturadores nem tweaks. Copiar `benchmarks/manifest.example.json`, preencher a identificação do sistema e acrescentar pelo menos cinco runs por condição. O exemplo não contém medições e é recusado enquanto faltarem os campos obrigatórios.
+
+```powershell
+python -B benchmarks/analyze.py caminho/manifest.json --output caminho/resultado.json
+python -B -m unittest discover -s benchmarks/tests -v
+```
+
+O caminho de cada CSV é relativo ao manifesto. `frametime_column` deve identificar explicitamente intervalos em **milissegundos**. Não escolher durações de trabalho GPU, timestamps absolutos ou latência de renderização como se fossem intervalos entre frames. Declarar `interval_kind` como `present`, `display` ou `render`, conforme a captura e a documentação da versão utilizada. Não existe conversão automática entre estes conceitos.
+
+É possível usar CSV normalizado com coluna `FrameTimeMs` ou indicar a coluna apropriada da versão fixada de PresentMon. Se existirem `ProcessID` ou `SwapChainAddress` com vários valores, selecionar o stream exato em `filters`, por exemplo `{"ProcessID":"1234","SwapChainAddress":"0x123"}`. Todas as condições devem representar a mesma cena/configuração. Guardar também a ordem temporal original e os ficheiros brutos.
+
+O relatório inclui SHA-256 dos bytes analisados, exclusões por filtro, métricas por run, percentis nearest-rank, histograma, picos, mediana, desvio-padrão amostral e coeficiente de variação entre runs. Não mistura todos os frames de A/B numa única amostra independente. Comparações percentuais são descritivas; não são um teste de significância nem uma prova causal. Resultados com menos de cinco runs, menos de 60 segundos ou capturas reutilizadas ficam assinalados. Intervalos inválidos falham a análise; não são descartados silenciosamente.
+
+O analisador não mede temperaturas, clocks, utilização CPU/GPU, DPC/ISR ou input lag. Estes dados devem acompanhar a sessão segundo o protocolo abaixo. Ainda não há integração de sensores, controlo automático de capturas, intervalos de confiança ou gráficos temporais automáticos. O output nunca substitui um ficheiro existente.
+
 ## Separar provas
 
 - **Testes de código:** `Invoke-Pester -Script .\tests -EnableExit`. Mocks e ficheiros temporários verificam lógica, falhas e recuperação. Não medem desempenho do Windows.
@@ -66,4 +83,4 @@ Promover uma alteração apenas quando a melhoria ultrapassa a variabilidade ent
 
 Resultados inconclusivos permanecem experimentais. Falhas de boot, sleep/resume, áudio, USB, rede, anti-cheat ou recuperação bloqueiam a promoção, mesmo com maior FPS médio. Arquivar resultados brutos, manifestos, gráficos e falhas, incluindo resultados negativos.
 
-Esta versão não inclui coletor automático nem analisador de CSV. O protocolo define a recolha e avaliação a implementar depois dos P0.
+Esta versão inclui o analisador offline de CSV descrito acima. A recolha automática e a integração de sensores continuam por implementar.

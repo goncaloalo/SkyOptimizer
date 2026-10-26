@@ -44,6 +44,16 @@ O diário distingue uma restauração efetiva de um recurso já no estado origin
 
 ## Estado das 90 ações
 
+## Bloco 5: análise offline de benchmarks
+
+`benchmarks/analyze.py` e `benchmarks/manifest.example.json` implementam análise de capturas já recolhidas, sem executar jogos ou alterar Windows. O manifesto identifica ambiente, versão da captura, tipo de intervalo e frame generation. O analisador exige intervalos válidos em milissegundos, separa processos/swap chains por filtros e calcula hash dos dados analisados.
+
+O resultado contém FPS médio, 1% low com definição explícita, percentis, histograma, picos e dispersão entre runs. Não mistura frames de diferentes runs como ensaios independentes. Assinala amostras curtas, poucas repetições e capturas reutilizadas; não conclui causalidade ou significância. O ficheiro de saída não substitui resultados existentes.
+
+`benchmarks/tests/test_analyze.py`: **11 testes sintéticos aprovados**, Python 3.14.5. Não existem resultados físicos antes/depois. Telemetria CPU/GPU, sensores, captura ETW e latência de entrada não são inferidos a partir dos frametimes. Procedimento completo e limitações em [BENCHMARKS.md](BENCHMARKS.md).
+
+## Catálogo de execução
+
 O catálogo [ACOES-ESTADO.json](ACOES-ESTADO.json) conserva **90 IDs únicos**, finalidade, decisão da auditoria, requisitos, estado de implementação e elegibilidade de execução. Nesta etapa, **17 ações estão migradas para Apply**: 1, 3, 6, 9, 13, 17, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79 e 86. A ação 24 foi revista como manutenção separada. As restantes ações mantêm o código para revisão, mas o dispatcher impede execução sem migração. Isto não significa que todas as 90 ações tenham sido corrigidas ou certificadas.
 
 ## Testes e ficheiros
