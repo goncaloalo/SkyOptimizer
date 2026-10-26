@@ -1537,36 +1537,43 @@ function Disable-AppArchival {
 
 # --- CATEGORIA 6: CONTROLO INTELIGENTE DE WINDOWS UPDATE ---
 
+function Test-SkyUpdatePolicySupport {
+    [CmdletBinding()]
+    param()
+    $systems = @(Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, BuildNumber, ProductType, OperatingSystemSKU -ErrorAction Stop)
+    if ($systems.Count -ne 1) { return $false }
+    $os = $systems[0]
+    $build = 0
+    if (-not [int]::TryParse([string]$os.BuildNumber, [ref]$build)) { return $false }
+    # Conservative client matrix: Pro/N, Enterprise/N/LTSC and Education/N.
+    # Unknown editions, Home and Server are not assumed to support these policies.
+    return ($os.Version -match '^10\.0\.' -and $build -ge 15063 -and $os.ProductType -eq 1 -and
+        $os.OperatingSystemSKU -in @(4, 27, 48, 49, 121, 122, 125, 126))
+}
+
 function Block-AutomaticDriverUpdates {
     [CmdletBinding()]
     param()
 
-    $wuPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-    Ensure-RegistryPath -KeyPath $wuPolicy
-    Backup-RegistryKey -KeyPath $wuPolicy -BackupName "19_WU_ExcludeDrivers"
-    Set-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord -Force
-
-    $dsKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching"
-    Ensure-RegistryPath -KeyPath $dsKey
-    Backup-RegistryKey -KeyPath $dsKey -BackupName "19_DriverSearching_Order"
-    Set-ItemProperty -Path $dsKey -Name "SearchOrderConfig" -Value 0 -Type DWord -Force
-
-    Write-SkyLog -Message "Substituição automática de drivers de GPU/Hardware pelo Windows Update bloqueada." -Level "Success"
-    return $true
+    if (-not (Test-SkyUpdatePolicySupport)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Build/edicao cliente fora da matriz de politicas suportadas; nenhuma alteracao.' -RestartRequired No
+    }
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate' -Name ExcludeWUDriversInQualityUpdate -Type DWord -Value 1
+    $result.Reason += ' Politica para excluir drivers das atualizacoes de qualidade; nao bloqueia instalacao manual, OEM ou todos os percursos de atualizacao. Consumo efetivo por Windows Update por validar.'
+    $result
 }
 
 function Disable-DeliveryOptimizationP2P {
     [CmdletBinding()]
     param()
 
-    $doKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
-    Ensure-RegistryPath -KeyPath $doKey
-    Backup-RegistryKey -KeyPath $doKey -BackupName "20_DeliveryOptimization_P2P"
-    Set-ItemProperty -Path $doKey -Name "DODownloadMode" -Value 0 -Type DWord -Force
-    Set-ItemProperty -Path $doKey -Name "DOMinDiskSizeAllowedToPeer" -Value 100 -Type DWord -Force
-
-    Write-SkyLog -Message "Otimização de Entrega P2P desativada (largura de banda e ping protegidos)." -Level "Success"
-    return $true
+    if (-not (Test-SkyUpdatePolicySupport)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Build/edicao cliente fora da matriz de politicas suportadas; nenhuma alteracao.' -RestartRequired No
+    }
+    # HTTP-only mode already excludes peers. Leave cache limits and services untouched.
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' -Name DODownloadMode -Type DWord -Value 0
+    $result.Reason += ' HTTP-only configurado; downloads HTTP/Connected Cache continuam permitidos. Nao garante menor ping nem limita downloads. Consumo efetivo pelo servico por validar.'
+    $result
 }
 
 function Set-ManualWindowsUpdate {
@@ -3613,7 +3620,7 @@ function Get-SkyProfileActionIds {
 }
 
 function Get-SkyMigratedActionIds {
-    @(1, 3, 6, 9, 13, 17, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86)
+    @(1, 3, 6, 9, 13, 17, 19, 20, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86)
 }
 
 function Invoke-SkyEligibleAction {

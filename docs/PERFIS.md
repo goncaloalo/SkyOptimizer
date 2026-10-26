@@ -23,7 +23,8 @@ Mudar de perfil não desfaz configurações previamente aplicadas. Executar Undo
 
 ## Condições reais
 
-- IDs migrados nesta entrega: **1, 3, 6, 9, 13, 17, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86**. 13 e 17 são preferências; a seleção explícita não as transforma em otimizações de FPS.
+- IDs migrados nesta entrega: **1, 3, 6, 9, 13, 17, 19, 20, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86**. 13 e 17 são preferências; a seleção explícita não as transforma em otimizações de FPS.
+- 19/20 são escolhas explícitas de laboratório. Exigem build ≥ 15063, cliente Windows 10/11 e SKU conhecido Pro/N, Enterprise/N/LTSC ou Education/N. Home, Server e outras variantes ficam fora desta matriz conservadora. 19 exclui drivers das atualizações de qualidade, sem bloquear todos os métodos de instalação. 20 impede peering, sem impedir downloads HTTP ou garantir ping inferior. Não modificam serviços, SearchOrderConfig nem limites de cache.
 - 41 verifica instalação e versão nos caminhos habituais: Edge ≥ 88; Chrome ≥ 19. Instalações noutros caminhos ficam por detetar. Políticas são escritas apenas uma vez em HKLM. Não se afirma que foram aplicadas por browsers ainda em execução nem se estima RAM libertada.
 - 42 exige build ≥ 22621 e mantém as flags gráficas alheias. É experimental: o armazenamento interno `DirectXUserGlobalSettings` não constitui um contrato público de compatibilidade. Validar no Windows e no jogo. Foram retirados os overrides FSE concorrentes dessa ação.
 - NIC: físico, ativo, identidade e driver confirmados; valor `0` suportado pela propriedade existente. Flow Control/EEE/DMA são limitados a Ethernet. Só a configuração persistida foi verificada; reinício e teste do hardware continuam necessários.

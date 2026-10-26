@@ -21,6 +21,7 @@ Describe 'Tracked registry lifecycle without Windows writes' {
     Mock Get-SkyUserSid { 'fake-user' }
     Mock Get-SkyWindowsBuild { 22631 }
     Mock Get-SkyBrowserMajorVersion { 130 }
+    Mock Test-SkyUpdatePolicySupport { $true }
     Mock Open-SkyRegistryBase { throw 'Real registry access forbidden.' }
     Mock Invoke-SkyNativeProcess { throw 'Real native process forbidden.' }
     Mock Get-SkyResourceState {
@@ -172,6 +173,29 @@ Describe 'Tracked registry lifecycle without Windows writes' {
         $null = Restore-SkyTrackedChanges $Global:SkyBackupDir
         (Test-SkyStateEqual $script:values[$identity] $original) | Should Be $true
         $script:writes | Should Be 2
+    }
+    It 'restores update policies after repeated Apply without touching other driver and peer settings' {
+        $peer = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' 'DOMinDiskSizeAllowedToPeer'
+        $driver = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching' 'SearchOrderConfig'
+        $untouched = ConvertTo-SkyRegistryState -Exists $true -Kind DWord -Value 77
+        foreach ($resource in @($peer, $driver)) { $script:values[($resource | ConvertTo-Json -Compress)] = $untouched }
+        $mode = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' 'DODownloadMode'
+        $modeKey = $mode | ConvertTo-Json -Compress
+        $original = ConvertTo-SkyRegistryState -Exists $true -Kind DWord -Value 2
+        $script:values[$modeKey] = $original
+        foreach ($pass in 1..2) {
+            $expected = if ($pass -eq 1) { 'Applied' } else { 'AlreadyCompliant' }
+            (Invoke-SkyAction { Block-AutomaticDriverUpdates }).Status | Should Be $expected
+            (Invoke-SkyAction { Disable-DeliveryOptimizationP2P }).Status | Should Be $expected
+        }
+        @((Read-SkyMutationState $Global:SkyBackupDir).Entries).Count | Should Be 2
+        $null = Restore-SkyTrackedChanges $Global:SkyBackupDir
+        (Test-SkyStateEqual $script:values[$modeKey] $original) | Should Be $true
+        foreach ($resource in @($peer, $driver)) {
+            (Test-SkyStateEqual $script:values[($resource | ConvertTo-Json -Compress)] $untouched) | Should Be $true
+        }
+        $script:writes | Should Be 4
+        @($script:values.Values | Where-Object Exists).Count | Should Be 3
     }
     It 'does not overwrite a composed value changed after its preparation' {
         $before = ConvertTo-SkyRegistryState -Exists $false

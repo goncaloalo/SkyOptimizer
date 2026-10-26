@@ -42,8 +42,6 @@ O painel usa a mesma pasta central de backups. Não copia a baseline sobre si pr
 
 O diário distingue uma restauração efetiva de um recurso já no estado original. Novos testes cobrem falha na persistência final depois de Apply/Undo, sem perder a capacidade de recuperação. A CLI comunica falhas ou execução incompleta, em vez de terminar sempre com sucesso.
 
-## Estado das 90 ações
-
 ## Bloco 5: análise offline de benchmarks
 
 `benchmarks/analyze.py` e `benchmarks/manifest.example.json` implementam análise de capturas já recolhidas, sem executar jogos ou alterar Windows. O manifesto identifica ambiente, versão da captura, tipo de intervalo e frame generation. O analisador exige intervalos válidos em milissegundos, separa processos/swap chains por filtros e calcula hash dos dados analisados.
@@ -55,6 +53,20 @@ O resultado contém FPS médio, 1% low com definição explícita, percentis, hi
 ## Catálogo de execução
 
 O catálogo [ACOES-ESTADO.json](ACOES-ESTADO.json) conserva **90 IDs únicos**, finalidade, decisão da auditoria, requisitos, estado de implementação e elegibilidade de execução. Nesta etapa, **17 ações estão migradas para Apply**: 1, 3, 6, 9, 13, 17, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79 e 86. A ação 24 foi revista como manutenção separada. As restantes ações mantêm o código para revisão, mas o dispatcher impede execução sem migração. Isto não significa que todas as 90 ações tenham sido corrigidas ou certificadas.
+
+### Bloco 6: políticas de drivers e Delivery Optimization
+
+As ações **19 e 20** passam a usar o diário por valor, elevando para **19** o número de ações elegíveis. Continuam fora de Balanced/Performance, disponíveis apenas por seleção explícita em Extreme. Teste integrado confirma Apply repetido, Undo, ausência original e preservação das configurações alheias.
+
+19 altera apenas `ExcludeWUDriversInQualityUpdate`; deixa `SearchOrderConfig` intacto. É uma política de exclusão de drivers das atualizações de qualidade, não um bloqueio de toda a instalação de drivers. Pode ajudar a manter uma versão já ensaiada, mas também adiar correções: gerir atualizações de drivers continua necessário. [Microsoft: política de drivers](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-update#excludewudriversinqualityupdate).
+
+20 altera apenas `DODownloadMode=0`. Retira a escrita redundante de `DOMinDiskSizeAllowedToPeer`, sem apagar um valor já existente. O modo HTTP-only exclui peers; permite downloads HTTP e Connected Cache. Pode reduzir partilha P2P concorrente, mas não limita downloads nem garante menor ping. Pode aumentar tráfego WAN onde peers locais seriam úteis. [Microsoft: modos de transferência](https://learn.microsoft.com/en-us/windows/deployment/do/waas-delivery-optimization-reference), [política DODownloadMode](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-deliveryoptimization#dodownloadmode).
+
+Ambas verificam versão 10.0 (Windows 10/11), build mínima 15063, ProductType cliente e SKUs explicitamente enumerados: Pro/N, Enterprise/N/LTSC e Education/N. Home, Server, edições desconhecidas e falha na deteção não originam escritas. Esta matriz conservadora não cobre todas as variantes que a Microsoft documenta, incluindo IoT e Pro for Workstations. [Identificadores de produto](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getproductinfo).
+
+A pós-verificação confirma o registo; consumo pelo serviço, precedência GPO/MDM e efeitos em jogos continuam dependentes de integração. Medir versão do driver, tráfego de atualização/P2P, CPU/I/O e frametimes sob carga concorrente. Não foi executado Windows Update nem Delivery Optimization neste computador.
+
+Validação do bloco 6: **30 testes focados aprovados** (`Journal.Tests.ps1` e `UpdatePolicies.Tests.ps1`), incluindo seis casos novos. Nenhuma operação real de Windows.
 
 ## Testes e ficheiros
 

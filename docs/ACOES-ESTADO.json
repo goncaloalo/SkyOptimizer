@@ -252,12 +252,14 @@
     "Funcao": "Block-AutomaticDriverUpdates",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Só com estratégia de atualização testada; impedir substituição não equivale a manter drivers bons indefinidamente.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "Windows 10/11 cliente build >=15063; SKUs Pro/N, Enterprise/N/LTSC, Education/N. Exclusão apenas de drivers nas atualizações de qualidade; não altera SearchOrderConfig. Validar precedência GPO/MDM e gerir correções de drivers.",
+    "EstadoImplementacao": "Migrada: política única com baseline tipada e Undo; capacidade de edição/build verificada; consumo efetivo por validar",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": []
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ]
   },
   {
     "Id": 20,
@@ -265,12 +267,14 @@
     "Funcao": "Disable-DeliveryOptimizationP2P",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Limitar tráfego concorrente quando presente; medir carga/rede e preservar capacidade de atualizar.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "Windows 10/11 cliente build >=15063; SKUs conhecidos. DODownloadMode=0 sem alterar cache/serviços; HTTP/Connected Cache continuam permitidos. Medir tráfego WAN, P2P e frametimes sob carga; não garante ping inferior.",
+    "EstadoImplementacao": "Migrada: política única com baseline tipada e Undo; capacidade de edição/build verificada; consumo efetivo por validar",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": []
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ]
   },
   {
     "Id": 21,
