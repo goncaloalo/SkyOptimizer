@@ -1,3 +1,4 @@
 # Runtime logs and temporary folders
 Logs/
 Backups/
+guest.local.json

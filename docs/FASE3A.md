@@ -20,7 +20,7 @@ Fontes: [GetSystemPowerStatus](https://learn.microsoft.com/en-us/windows/win32/a
 
 ## 2. Validação pendente
 
-Os resultados desta fase são testes de código, não integração executada nem benchmarks. Os procedimentos de VM e a investigação por dispositivo acompanham os próximos blocos. Não se promove qualquer ação por aumentar a contagem do catálogo.
+Os resultados desta fase são testes de código, não integração executada nem benchmarks. Procedimentos de VM em [INTEGRACAO-VM.md](INTEGRACAO-VM.md), investigação por dispositivo em [HARDWARE-3A.md](HARDWARE-3A.md). Não se promove qualquer ação por aumentar a contagem do catálogo.
 
 ## 3. Migração e retirada por mecanismo
 
@@ -30,3 +30,11 @@ Os resultados desta fase são testes de código, não integração executada nem
 - Não foram apagadas configurações antigas do Windows. A retirada de código não permite inferir os valores anteriores de clientes que executaram versões legadas.
 
 Justificação, versões, hardware, riscos, fontes e critérios de desbloqueio em [HARDWARE-3A.md](HARDWARE-3A.md). Validação focada do bloco: **69 testes aprovados**, incluindo os ciclos USB e a política de background. Nenhuma integração real ou benchmark.
+
+## 4. Integração preparada para VM
+
+`integration/SkyVmHarness.ps1` implementa um ensaio faseado da fixture de registo: Prepare, Apply repetido, verificação num novo boot, Undo repetido e verificação após outro boot. Inclui falhas após escrita em Apply/Undo, retentativa e conflito externo preservado. Carrega apenas declarações do produto; não aplica o perfil completo nem gera o painel.
+
+O guard exige opt-in explícito, manifesto com MachineId/SID, hash do source, referência de snapshot e modelo reconhecido de guest. Recusa host físico, origem diferente, diretório já usado ou caminhos reparse. Não cria snapshots nem comprova a sua existência. A fixture e os relatórios ficam em locais exclusivos do RunId; não há reboot ou limpeza automática.
+
+**12 testes do harness aprovados com registo/processos simulados e ficheiros TestDrive**, incluindo chamadas separadas com estado persistido e reposição das variáveis do chamador. Nenhum cenário real do harness foi executado. Os passos manuais cobrem energia, serviços, NIC, políticas, elevação, contas diferentes, painel e concorrência. Serviços/NIC e hardware físico continuam sem integração executada.
