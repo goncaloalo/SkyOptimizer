@@ -1,12 +1,17 @@
-﻿{
-    "Date":  "2026-10-21",
+{
+    "Date":  "2026-10-26",
     "PowerShell":  "5.1.26100.9711",
     "Pester":  "3.4.0",
-    "Command":  "Invoke-Pester -Script .\\tests -PassThru; exit 1 se FailedCount \u003e 0",
-    "Total":  44,
-    "Passed":  44,
+    "Command":  "Invoke-Pester -Script .\\tests -PassThru",
+    "Total":  93,
+    "Passed":  93,
     "Failed":  0,
     "Skipped":  0,
     "Pending":  0,
-    "WindowsChangesApplied":  false
+    "Python":  "3.14.5",
+    "PythonCommand":  "python -B -m unittest discover -s benchmarks/tests -v",
+    "PythonPassed":  11,
+    "PythonFailed":  0,
+    "WindowsChangesApplied":  false,
+    "PhysicalBenchmarksPerformed":  false
 }

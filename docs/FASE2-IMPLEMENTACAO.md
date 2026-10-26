@@ -1,5 +1,7 @@
 # Fase 2 — primeiro conjunto de correções
 
+> Documento histórico do primeiro conjunto. Estado atual: [continuação](FASE2-CONTINUACAO.md), [perfis](PERFIS.md) e [90 ações](ACOES-ESTADO.json).
+
 Data: 21 de outubro de 2026. Projeto: **apenas SkyOptimizer**.
 
 ## Estado e decisão de âmbito

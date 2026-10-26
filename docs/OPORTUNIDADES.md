@@ -42,10 +42,10 @@ Estas propostas não foram aplicadas. Não dependem de novos tweaks genéricos; 
 
 **Âmbito:** jogo e driver identificados; caminhos e regras variam por fabricante/API. **Vantagem possível:** evitar regressões introduzidas pelo próprio otimizador. **Riscos:** cache inválida pode precisar de reparação, e espaço em disco é finito. **Medição:** runs com caches aquecidas, eventos de compilação quando disponíveis e I/O correlacionado. Primeiro unificar a ação 24 e o botão do painel; não repetir a limpeza automaticamente após cada sessão.
 
-## Perfis futuros
+## Critérios para evolução dos perfis
 
 - **Balanced:** apenas ações migradas com rollback, pós-verificação e baixo impacto funcional demonstrado. Não usar este nome para o Apply legado atual.
 - **Performance:** acrescentar mudanças condicionadas a hardware/carga e aos ensaios aprovados.
 - **Extreme:** experiências explicitamente selecionadas, com risco, objetivo e reversão documentados. Rejeitar automaticamente ações cujos requisitos não possam ser determinados.
 
-Segurança/anti-cheat é um requisito de compatibilidade, não um interruptor «mais FPS». A seleção precisa de estado efetivo e requisitos atuais do jogo; nenhum perfil aqui apresentado promete essa compatibilidade. Os três perfis não foram implementados neste conjunto.
+Segurança/anti-cheat é um requisito de compatibilidade, não um interruptor «mais FPS». A seleção precisa de estado efetivo e requisitos atuais do jogo; nenhum perfil aqui apresentado promete essa compatibilidade. Existem agora três perfis limitados de desenvolvimento, descritos em [PERFIS.md](PERFIS.md). As propostas acima continuam dependentes de integração e medições; não constituem ganhos demonstrados.

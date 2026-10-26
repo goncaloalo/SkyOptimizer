@@ -1,31 +1,23 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.8 - Toolkit de Otimização Windows 10/11, com reversão legada ainda em validação.
+    SkyOptimizer v2.8 - perfis de desenvolvimento com baseline e Undo por recurso.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
-    Desenvolvido especificamente para suporte e otimização remota via AnyDesk em computadores de uso diário
-    e máquinas de gaming competitivo (FiveM, CS2, ARC Raiders, etc.).
-    Aplica 80 otimizações de elite: baixa latência, estabilização de frametimes, agendamento de CPU (0x26),
-    MMCSS para jogos, HAGS condicional (>=6GB VRAM), NIC e USB sem poupança de energia, modo MSI exclusivo
-    na GPU dedicada, debloat de navegadores em background, DirectFlip (Win11), Re-Trim de SSD NVMe,
-    LLMNR desativado, sniffing de pastas desativado, agrupamento svchost, remoção de bloatware AppX,
-    kernel e drivers em RAM (DisablePagingExecutive), desativação de Page Combining, suspensão inteligente
-    de indexação em jogos, remoção de limite SMB, desativação de Aero Shake, caminhos longos Win32 (>260 chars),
-    eliminação de DMA Coalescing em rede, controlo de crash BSOD, expansão de cache de ícones (4MB),
-    bloqueio de firmware WPBT, eliminação de audio ducking, menu clássico Win11 sem atrasos, aceleração
-    visual de janelas, telemetria NVIDIA em fundo, qualidade 100% wallpaper, diagnóstico silencioso,
-    resposta rápida de teclado (strafe seguro sem FilterKeys), moderação de interrupções ITR desativada (hitreg instantâneo),
-    desativação de RSC e LSO (ticks de dados puros), Flow Control desativado (anti-bufferbloat), gestão de portas efémeras
-    MaxUserPort/TcpTimedWaitDelay, otimização de pilha TCP com proteção de velocidade de fibra (AutoTuning Normal),
-    ativação de Modo de Jogo nativo (AutoGameModeEnabled=1) e otimização de ecrã inteiro e apresentação (GameDVR FSE=2).
-    Inclui motor de salvaguarda total, relatório Antes vs. Depois e implementação automática do 'Painel do Cliente'
-    no Ambiente de Trabalho com atalhos de 1 clique (Impressora, Bluetooth, Pesquisa, VBS, Shaders e Reverter).
+    Mantém o catálogo de 90 ações, mas só executa ações selecionadas e migradas.
+    As restantes conservam o código para revisão e ficam bloqueadas no dispatcher.
+    Configurações verificadas não são ganhos comprovados de FPS, frametimes ou input lag.
+    Backups legados incompletos são preservados para revisão; não se aplicam defaults no Undo.
+    Esta branch ainda exige integração num Windows descartável e benchmarks físicos.
 .PARAMETER Apply
-    Aplica diretamente as 80 otimizações e gera o Painel do Cliente sem exibir o menu interativo.
+    Aplica o perfil selecionado e gera o painel existente.
+.PARAMETER Profile
+    Balanced (padrão), Performance ou Extreme. Consultar docs/PERFIS.md.
+.PARAMETER ExperimentalActions
+    IDs adicionais separados por vírgula, apenas para Extreme. Ações não migradas não são executadas.
 .PARAMETER Clean
-    Executa exclusivamente a rotina de limpeza de shaders e ficheiros temporários.
+    Limpeza explícita de diagnóstico de shaders, com confirmação e sem Undo dos ficheiros eliminados.
 .PARAMETER Undo
-    Executa diretamente a reversão de todas as alterações sem exibir o menu interativo.
+    Reverte apenas recursos com baseline verificável, preservando conflitos externos.
 .PARAMETER DeployPanel
     Gera exclusivamente o 'Painel do Cliente' no Ambiente de Trabalho.
 .EXAMPLE
@@ -33,7 +25,7 @@
     Apresenta o menu interativo inicial.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica as 80 otimizações e gera o Painel do Cliente no Desktop.
+    Aplica Gaming - Balanced e gera o painel no Desktop.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -42,7 +34,7 @@
     Executa a manutenção e limpeza de caches de shaders.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Undo
-    Reverte todas as otimizações de volta para o estado original da máquina.
+    Restaura as baselines verificáveis e comunica conflitos ou reversões pendentes.
 .NOTES
     Autor: SkyOS Team
     Versão: 2.6.0
@@ -67,7 +59,13 @@ param(
     [switch]$Repair,
 
     [Parameter(ParameterSetName = "AuditDirect")]
-    [switch]$Audit
+    [switch]$Audit,
+
+    [ValidateSet('Balanced', 'Performance', 'Extreme')]
+    [string]$Profile = 'Balanced',
+
+    [ValidatePattern('^(\d{1,2}(,\d{1,2})*)?$')]
+    [string]$ExperimentalActions = ''
 )
 
 # ==============================================================================
@@ -93,6 +91,8 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     elseif ($DeployPanel) { $paramString = " -DeployPanel" }
     elseif ($Repair) { $paramString = " -Repair" }
     elseif ($Audit) { $paramString = " -Audit" }
+    $paramString += " -Profile $Profile"
+    if ($ExperimentalActions) { $paramString += " -ExperimentalActions $ExperimentalActions" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
     Start-Process powershell.exe -ArgumentList $argsList -Verb RunAs
     exit
@@ -252,7 +252,7 @@ function Write-SkyAtomicFile {
 function New-SkyActionResult {
     [CmdletBinding()]
     param(
-        [ValidateSet('Applied', 'AlreadyCompliant', 'Incompatible', 'Failed', 'Unverified')]
+        [ValidateSet('Applied', 'AlreadyCompliant', 'Incompatible', 'Failed', 'Unverified', 'NotSelected', 'Deferred')]
         [string]$Status,
         [string]$Reason,
         [ValidateSet('Yes', 'No', 'Unknown')][string]$RestartRequired = 'Unknown'
@@ -633,7 +633,7 @@ function Test-SkyStateEqual {
 
 function Invoke-SkyTrackedChange {
     [CmdletBinding()]
-    param($Resource, $Desired, [string]$BackupDirectory = $Global:SkyBackupDir)
+    param($Resource, $Desired, [string]$BackupDirectory = $Global:SkyBackupDir, $ExpectedBefore)
     Assert-SkyResourceState -Resource $Resource -State $Desired
     $lock = Enter-SkyMutationLock $BackupDirectory
     try {
@@ -641,6 +641,9 @@ function Invoke-SkyTrackedChange {
         $journal = Read-SkyMutationState $BackupDirectory
         $current = Get-SkyResourceState $Resource
         Assert-SkyResourceState -Resource $Resource -State $current
+        if ($PSBoundParameters.ContainsKey('ExpectedBefore') -and -not (Test-SkyStateEqual $current $ExpectedBefore)) {
+            throw 'Estado mudou desde a preparação; alteração composta cancelada.'
+        }
         $identity = ($Resource | ConvertTo-Json -Compress)
         $entries = @($journal.Entries | Where-Object { $_.Status -ne 'Restored' -and ($_.Resource | ConvertTo-Json -Compress) -ieq $identity })
         if ($entries.Count -gt 1) { throw 'Mais de uma baseline ativa para o recurso.' }
@@ -683,6 +686,7 @@ function Restore-SkyTrackedChanges {
             if ($entry.Status -eq 'Restored') { continue }
             if ($ServiceName -and ($entry.Resource.Type -notin @('ServiceRuntime', 'ServiceStartup') -or $entry.Resource.Name -ne $ServiceName)) { continue }
             try {
+                $didRestore = $false
                 $current = Get-SkyResourceState $entry.Resource
                 if (-not (Test-SkyStateEqual $current $entry.Original)) {
                     $expected = Test-SkyStateEqual $current $entry.Desired
@@ -692,10 +696,12 @@ function Restore-SkyTrackedChanges {
                     if (-not (Test-SkyStateEqual (Get-SkyResourceState $entry.Resource) $current)) { throw 'Conflito antes da reversão.' }
                     Set-SkyResourceState -Resource $entry.Resource -State $entry.Original
                     if (-not (Test-SkyStateEqual (Get-SkyResourceState $entry.Resource) $entry.Original)) { throw 'Reversão não confirmada.' }
+                    $didRestore = $true
                 }
                 $entry.Status = 'Restored'; Save-SkyMutationState $journal $BackupDirectory
                 $restart = if ($entry.Resource.Type -eq 'NicRegistry') { 'Yes' } else { 'Unknown' }
-                New-SkyActionResult -Status Applied -Reason "Baseline restaurada: $($entry.Id)." -RestartRequired $restart
+                $status = if ($didRestore) { 'Applied' } else { 'AlreadyCompliant' }
+                New-SkyActionResult -Status $status -Reason "Baseline confirmada: $($entry.Id)." -RestartRequired $restart
             } catch { New-SkyActionResult -Status Failed -Reason "$($entry.Id): $($_.Exception.Message)" }
         }
     } finally { $lock.Dispose() }
@@ -876,6 +882,7 @@ function Get-SkyUndoScope {
     $files = @(Get-ChildItem -LiteralPath $BackupDirectory -File -ErrorAction Stop |
         Where-Object { $_.Length -gt 0 -and ($_.Extension -eq '.reg' -or $_.Name -match '^(previous_|created_keys\.txt$|power_state\.json$)') })
     if ([IO.File]::Exists((Join-Path $BackupDirectory 'mutation_state.json'))) { return 'Tracked' }
+    if (@(Get-SkyLegacyBackupFiles $BackupDirectory).Count) { return 'LegacyMixed' }
     if ($files.Count -eq 0) { return 'None' }
     if (@($files | Where-Object { $_.Name -notin @('power_state.json', 'previous_power_plan.txt') }).Count -eq 0) { return 'PowerOnly' }
     return 'LegacyMixed'
@@ -893,8 +900,8 @@ function Invoke-SkyAction {
         if ($script:SkyActionContext.ErrorLogged) { throw 'A ação registou um erro; consultar o log.' }
         $verified = @($output | Where-Object { $_ -and $_.PSTypeNames -contains 'SkyOptimizer.ActionResult' })
         if ($verified.Count -gt 0) {
-            if (@($verified | Where-Object Status -eq 'Failed').Count) { throw 'Uma altera??o falhou; consultar os resultados.' }
-            if (@($verified | Where-Object Status -eq 'Unverified').Count) { return New-SkyActionResult -Status Unverified -Reason 'Verifica??o incompleta.' }
+            if (@($verified | Where-Object Status -eq 'Failed').Count) { throw 'Uma alteração falhou; consultar os resultados.' }
+            if (@($verified | Where-Object Status -eq 'Unverified').Count) { return New-SkyActionResult -Status Unverified -Reason 'Verificação incompleta.' }
             $status = if (@($verified | Where-Object Status -eq 'Applied').Count) { 'Applied' }
                 elseif (@($verified | Where-Object Status -eq 'Incompatible').Count) { 'Incompatible' } else { 'AlreadyCompliant' }
             $restart = if (@($verified | Where-Object RestartRequired -eq 'Yes').Count) { 'Yes' }
@@ -1264,28 +1271,6 @@ function Disable-FaultTolerantHeap {
 function Disable-Superfetch {
     [CmdletBinding()]
     param()
-
-    $sysDriveLetter = $env:SystemDrive.Substring(0, 1)
-    $partition = Get-Partition -DriveLetter $sysDriveLetter -ErrorAction SilentlyContinue
-    $disk = if ($partition) { Get-PhysicalDisk -DeviceNumber $partition.DiskNumber -ErrorAction SilentlyContinue } else { $null }
-
-    $isSSD = $false
-    if ($disk) {
-        if ($disk.MediaType -in @('SSD', 'NVMe') -or $disk.BusType -eq 'NVMe') {
-            $isSSD = $true
-        }
-    } else {
-        $wmiDrive = Get-CimInstance Win32_DiskDrive -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($wmiDrive.Model -match 'SSD|NVMe') {
-            $isSSD = $true
-        }
-    }
-
-    if (-not $isSSD) {
-        Write-SkyLog -Message "Disco detetado como HDD ou Virtual/Indeterminado. SysMain mantido ativo por segurança." -Level "Warning"
-        return $true
-    }
-
     Disable-SkyService -Name 'SysMain'
 }
 
@@ -1646,68 +1631,43 @@ function Optimize-NTFS {
     return $true
 }
 
+function Get-SkyShaderCacheFiles {
+    $root = [IO.Path]::GetFullPath($env:LOCALAPPDATA)
+    foreach ($relative in @('NVIDIA\DXCache', 'NVIDIA\GLCache', 'D3DSCache')) {
+        $path = [IO.Path]::GetFullPath((Join-Path $root $relative))
+        if (-not $path.StartsWith($root.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Caminho de cache fora do âmbito.' }
+        if (-not [IO.Directory]::Exists($path)) { continue }
+        $cursor = Get-Item -LiteralPath $path -Force -ErrorAction Stop
+        while ($cursor) {
+            if ($cursor.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Cache sob junction/symlink: limpeza recusada.' }
+            $cursor = $cursor.Parent
+        }
+        Get-ChildItem -LiteralPath $path -File -Force -Attributes !ReparsePoint -ErrorAction Stop
+    }
+}
+
 function Clear-ShaderCache {
     [CmdletBinding()]
     param()
-
-    $clearedCount = 0
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $maxDurationMs = 6000 # Limite de tempo de segurança absoluto: 6 segundos
-
-    # Pastas de cache de shaders (NVIDIA e DirectX)
-    $shaderDirs = @(
-        (Join-Path $env:LOCALAPPDATA "NVIDIA\DXCache"),
-        (Join-Path $env:LOCALAPPDATA "NVIDIA\GLCache"),
-        (Join-Path $env:LOCALAPPDATA "D3DSCache")
-    )
-
-    foreach ($dir in $shaderDirs) {
-        if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
-        if (Test-Path $dir) {
-            # Evita recursão infinita e bloqueios em ficheiros mapeados em memória pelo driver
-            $files = Get-ChildItem -Path $dir -File -ErrorAction SilentlyContinue | Select-Object -First 300
-            foreach ($f in $files) {
-                if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
-                try {
-                    Remove-Item -Path $f.FullName -Force -ErrorAction SilentlyContinue
-                    $clearedCount++
-                } catch {}
-            }
-        }
+    Write-Host 'Manutenção de diagnóstico: a reconstrução de shaders pode causar stuttering. Não aumenta FPS por definição.' -ForegroundColor Yellow
+    $confirm = Read-Host 'Eliminar apenas caches locais NVIDIA/DirectX, sem possibilidade de Undo? (S/N)'
+    if ($confirm -notmatch '^(s|sim|y|yes)$') {
+        return New-SkyActionResult -Status NotSelected -Reason 'Limpeza cancelada; caches preservadas.' -RestartRequired No
     }
-
-    # Limpeza segura de ficheiros temporários órfãos com mais de 7 dias (ignora ficheiros recentes em uso)
-    $tempDirs = @($env:TEMP, "$env:SystemRoot\Temp")
-    $cutoff = (Get-Date).AddDays(-7)
-
-    foreach ($td in $tempDirs) {
-        if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
-        if (Test-Path $td) {
-            # Ignora junções e pontos de nova análise para evitar loops em symlinks
-            $tempFiles = Get-ChildItem -Path $td -File -Attributes !ReparsePoint -ErrorAction SilentlyContinue |
-                Where-Object { $_.LastWriteTime -lt $cutoff } |
-                Select-Object -First 300
-
-            foreach ($tf in $tempFiles) {
-                if ($sw.ElapsedMilliseconds -ge $maxDurationMs) { break }
-                try {
-                    Remove-Item -Path $tf.FullName -Force -ErrorAction SilentlyContinue
-                    $clearedCount++
-                } catch {}
-            }
-        }
+    # Enumerate and validate all locations before deleting anything. No recursive traversal.
+    $files = @(Get-SkyShaderCacheFiles)
+    $removed = 0; $failed = 0
+    foreach ($file in $files) {
+        try {
+            Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+            if (Test-Path -LiteralPath $file.FullName -ErrorAction Stop) { throw 'Ficheiro ainda presente.' }
+            $removed++
+        } catch { $failed++ }
     }
-
-    # Invocar a limpeza silenciosa nativa do Windows em segundo plano (CleanMgr SilentCleanup)
-    $null = Start-ScheduledTask -TaskPath "\Microsoft\Windows\DiskCleanup" -TaskName "SilentCleanup" -ErrorAction SilentlyContinue
-
-    if ($sw.ElapsedMilliseconds -ge $maxDurationMs) {
-        Write-SkyLog -Message "Caches de shaders e ficheiros temporários limpos ($clearedCount ficheiros removidos; limite de segurança de 6s respeitado para evitar congelamentos)." -Level "Success"
-    } else {
-        Write-SkyLog -Message "Caches de shaders e ficheiros temporários limpos ($clearedCount ficheiros removidos com segurança em $($sw.ElapsedMilliseconds)ms)." -Level "Success"
-    }
-    return $true
+    $status = if ($failed) { 'Failed' } elseif ($removed) { 'Applied' } else { 'AlreadyCompliant' }
+    New-SkyActionResult -Status $status -Reason "Limpeza de diagnóstico: $removed ficheiros removidos, $failed falhas. Reaquecer caches antes de comparar frametimes." -RestartRequired No
 }
+
 
 # --- CATEGORIA 8: PROCESSOS EM SEGUNDO PLANO (DEBLOAT NÃO-DESTRUTIVO) ---
 
@@ -1975,7 +1935,7 @@ function Optimize-NetworkAdapterPower {
     [CmdletBinding()]
     param()
     if (-not (Test-IsDesktopOrAcPower)) {
-        return New-SkyActionResult -Status Incompatible -Reason 'Em bateria: configura??o de energia de rede preservada.' -RestartRequired No
+        return New-SkyActionResult -Status Incompatible -Reason 'Em bateria: configuração de energia de rede preservada.' -RestartRequired No
     }
     Set-SkyNicProperties -Keywords @('*EEE') -EthernetOnly
 }
@@ -2054,57 +2014,9 @@ function Enable-GpuMsiMode {
 # 4.12 NAVEGADORES, JOGOS EM JANELA & ARMAZENAMENTO AVANÇADO
 # ==============================================================================
 
-function Disable-BrowserBackgroundTasks {
-    [CmdletBinding()]
-    param()
 
-    # Microsoft Edge - Desativar Startup Boost e processos em segundo plano
-    $edgePolicyKey = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
-    Ensure-RegistryPath -KeyPath $edgePolicyKey
-    Backup-RegistryKey -KeyPath $edgePolicyKey -BackupName "41_Edge_MachinePolicy"
-    Set-ItemProperty -Path $edgePolicyKey -Name "StartupBoostEnabled" -Value 0 -Type DWord -Force
-    Set-ItemProperty -Path $edgePolicyKey -Name "BackgroundModeEnabled" -Value 0 -Type DWord -Force
 
-    $edgeUserKey = "HKCU:\SOFTWARE\Policies\Microsoft\Edge"
-    Ensure-RegistryPath -KeyPath $edgeUserKey
-    Backup-RegistryKey -KeyPath $edgeUserKey -BackupName "41_Edge_UserPolicy"
-    Set-ItemProperty -Path $edgeUserKey -Name "StartupBoostEnabled" -Value 0 -Type DWord -Force
-    Set-ItemProperty -Path $edgeUserKey -Name "BackgroundModeEnabled" -Value 0 -Type DWord -Force
 
-    # Google Chrome - Desativar aplicações em segundo plano quando fechado
-    $chromePolicyKey = "HKLM:\SOFTWARE\Policies\Google\Chrome"
-    Ensure-RegistryPath -KeyPath $chromePolicyKey
-    Backup-RegistryKey -KeyPath $chromePolicyKey -BackupName "41_Chrome_MachinePolicy"
-    Set-ItemProperty -Path $chromePolicyKey -Name "BackgroundModeEnabled" -Value 0 -Type DWord -Force
-
-    $chromeUserKey = "HKCU:\SOFTWARE\Policies\Google\Chrome"
-    Ensure-RegistryPath -KeyPath $chromeUserKey
-    Backup-RegistryKey -KeyPath $chromeUserKey -BackupName "41_Chrome_UserPolicy"
-    Set-ItemProperty -Path $chromeUserKey -Name "BackgroundModeEnabled" -Value 0 -Type DWord -Force
-
-    Write-SkyLog -Message "Processos em segundo plano do Edge (Startup Boost) e Chrome desativados (liberta 300-800MB RAM)." -Level "Success"
-    return $true
-}
-
-function Enable-WindowedOptimizations {
-    [CmdletBinding()]
-    param()
-
-    # Windows 11 - Otimizações para jogos em janela (DirectFlip / SwapEffectUpgrade)
-    $dxKey = "HKCU:\Software\Microsoft\DirectX\UserGpuPreferences"
-    Ensure-RegistryPath -KeyPath $dxKey
-    Backup-RegistryKey -KeyPath $dxKey -BackupName "42_DirectX_Windowed"
-    Set-ItemProperty -Path $dxKey -Name "DirectXUserGlobalSettings" -Value "SwapEffectUpgradeEnable=1;" -Type String -Force
-
-    $gcsKey = "HKCU:\System\GameConfigStore"
-    Ensure-RegistryPath -KeyPath $gcsKey
-    Backup-RegistryKey -KeyPath $gcsKey -BackupName "42_GameConfigStore_Windowed"
-    Set-ItemProperty -Path $gcsKey -Name "GameDVR_EFSEnabled" -Value 1 -Type DWord -Force
-    Set-ItemProperty -Path $gcsKey -Name "GameDVR_DSEBehavior" -Value 2 -Type DWord -Force
-
-    Write-SkyLog -Message "DirectFlip / Otimizações para jogos em janela ativadas (menor latência em Borderless)." -Level "Success"
-    return $true
-}
 
 function Invoke-SsdReTrim {
     [CmdletBinding()]
@@ -2785,7 +2697,7 @@ function Optimize-TcpSocketsAndPorts {
 function Optimize-NetshTcpGlobal {
     [CmdletBinding()]
     param()
-    New-SkyActionResult -Status Unverified -Reason 'Experi?ncia isolada: altera??es TCP globais n?o executadas sem diagn?stico e baseline estruturada. UDP e FPS n?o beneficiam automaticamente destes par?metros.' -RestartRequired No
+    New-SkyActionResult -Status Unverified -Reason 'Experiência isolada: alterações TCP globais não executadas sem diagnóstico e baseline estruturada. UDP e FPS não beneficiam automaticamente destes parâmetros.' -RestartRequired No
 }
 
 # ==============================================================================
@@ -3023,6 +2935,20 @@ function Disable-CloudClipboardSync {
 # 4.20 GERADOR DO 'PAINEL DO CLIENTE' NO AMBIENTE DE TRABALHO
 # ==============================================================================
 
+function Assert-SkyPanelBackupDirectory {
+    [CmdletBinding()]
+    param([string]$ActiveDirectory, [string]$PanelDirectory)
+    if ([string]::IsNullOrWhiteSpace($ActiveDirectory) -or [string]::IsNullOrWhiteSpace($PanelDirectory)) {
+        throw 'A pasta central de backups deve estar definida.'
+    }
+    $active = [IO.Path]::GetFullPath($ActiveDirectory).TrimEnd('\', '/')
+    $panel = [IO.Path]::GetFullPath($PanelDirectory).TrimEnd('\', '/')
+    if (-not [string]::Equals($active, $panel, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Painel e Apply devem usar a mesma baseline central. Backups distintos nao serao copiados nem substituidos.'
+    }
+    if (-not [IO.Directory]::Exists($active)) { throw 'A pasta central de backups nao existe.' }
+}
+
 function Deploy-ClientPanel {
     [CmdletBinding()]
     param(
@@ -3031,6 +2957,9 @@ function Deploy-ClientPanel {
     )
 
     try {
+        $permDir = Join-Path $env:SystemDrive "ProgramData\SkyOptimizer"
+        $permBackups = Join-Path $permDir "Backups"
+        Assert-SkyPanelBackupDirectory -ActiveDirectory $Global:SkyBackupDir -PanelDirectory $permBackups
         $desktopPath = [Environment]::GetFolderPath('Desktop')
         if (-not (Test-Path $desktopPath)) {
             $desktopPath = Join-Path $env:USERPROFILE "Desktop"
@@ -3040,26 +2969,7 @@ function Deploy-ClientPanel {
             New-Item -ItemType Directory -Path $panelDir -Force | Out-Null
         }
 
-        # 1. Configurar Cofre Permanente e Garantir Proteção de Propriedade Intelectual (Zero Code Exposure)
-        $permDir = Join-Path $env:SystemDrive "ProgramData\SkyOptimizer"
-        if (-not (Test-Path $permDir)) {
-            New-Item -ItemType Directory -Path $permDir -Force | Out-Null
-        }
-
-        # SEGURANÇA IP: Garantir que o script mestre com as 78 otimizações NUNCA fica no PC do cliente
-        $oldMasterScript = Join-Path $permDir "SkyOptimizer.ps1"
-        if (Test-Path $oldMasterScript) {
-            Remove-Item -Path $oldMasterScript -Force -ErrorAction SilentlyContinue
-        }
-
-        # Sincronizar pasta de Backups para o local permanente
-        $permBackups = Join-Path $permDir "Backups"
-        if (Test-Path $Global:SkyBackupDir) {
-            if (-not (Test-Path $permBackups)) {
-                New-Item -ItemType Directory -Path $permBackups -Force | Out-Null
-            }
-            Copy-Item -Path (Join-Path $Global:SkyBackupDir "*") -Destination $permBackups -Recurse -Force -ErrorAction SilentlyContinue
-        }
+        # Apply e painel partilham a baseline central. Nao copiar backups nem apagar scripts existentes.
 
         # Gerar Motor Leve de Reversão Exclusivo (Apenas código de restauro - ZERO segredos ou funções de tuning)
         $revertScriptPath = Join-Path $permDir "SkyRevert.ps1"
@@ -3096,8 +3006,8 @@ Write-Host @"
 "@ -ForegroundColor Cyan
 
 Write-Host "`n[!] ATENCAO: Este procedimento ira reverter as configuracoes do sistema" -ForegroundColor Yellow
-Write-Host "    de volta para o estado original da sua maquina." -ForegroundColor Gray
-Write-Host "    Os seus ficheiros originais de backup serao restaurados com seguranca.`n" -ForegroundColor Gray
+Write-Host "    apenas quando existe uma baseline verificavel do recurso." -ForegroundColor Gray
+Write-Host "    Backups legados e conflitos externos serao preservados para revisao.`n" -ForegroundColor Gray
 
 $confirm = Read-Host "Deseja realmente reverter todas as otimizacoes? (S/N)"
 if ($confirm -notmatch '^(s|sim|y|yes)$') {
@@ -3115,13 +3025,14 @@ if (-not (Test-Path $backupDir)) {
 # SKY_POWER_RESTORE_FUNCTIONS
 $results = @(Invoke-SkyVerifiedUndo -BackupDirectory $backupDir)
 foreach ($result in $results) { Write-Host "[$($result.Status)] $($result.Reason)" }
-Write-Host 'Backups e painel preservados. Reinicie quando indicado; ganhos n?o foram medidos.'
+Write-Host 'Backups e painel preservados. Reinicie quando indicado; ganhos nao foram medidos.'
 if (@($results | Where-Object Status -eq 'Failed').Count) { exit 1 }
+if (@($results | Where-Object Status -eq 'Unverified').Count) { exit 2 }
 exit 0
 
 '@
         $revertScriptCode = $revertScriptCode.Replace('# SKY_POWER_RESTORE_FUNCTIONS', (Get-SkyPowerRestoreSource))
-        [System.IO.File]::WriteAllText($revertScriptPath, $revertScriptCode, [System.Text.Encoding]::UTF8)
+        Write-SkyAtomicFile -Path $revertScriptPath -Content $revertScriptCode
 
         # Limpar atalhos antigos ou duplicados se existirem
         $obsoleteFiles = @(
@@ -3138,7 +3049,7 @@ exit 0
         )
         foreach ($old in $obsoleteFiles) {
             $oldPath = Join-Path $panelDir $old
-            if (Test-Path $oldPath) { Remove-Item -Path $oldPath -Force -ErrorAction SilentlyContinue }
+            if (Test-Path -LiteralPath $oldPath) { Remove-Item -LiteralPath $oldPath -Force -ErrorAction Stop }
         }
 
         # 1. Atalho Reverter Otimizações (Executa exclusivamente o motor SkyRevert.ps1)
@@ -3160,7 +3071,7 @@ exit 0
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd"), $vbsCmd, [System.Text.Encoding]::ASCII)
 
         # 5. Atalho Limpeza de Shaders e Caches de Jogos
-        $cleanCmd = "@echo off`r`ntitle SkyOptimizer - Limpeza de Shaders e Caches`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -Command `"& { Write-Host '===================================================' -ForegroundColor Cyan; Write-Host '   SkyOptimizer - Limpeza de Shaders e Caches' -ForegroundColor Cyan; Write-Host '===================================================' -ForegroundColor Cyan; `$cleared = 0; `$dirs = @(\`"`$env:LOCALAPPDATA\NVIDIA\DXCache\`", \`"`$env:LOCALAPPDATA\NVIDIA\GLCache\`", \`"`$env:LOCALAPPDATA\D3DSCache\`", \`"`$env:LOCALAPPDATA\CitizenFX\cache\`", \`"`$env:TEMP\`", \`"`$env:SystemRoot\Temp\`); foreach (`$d in `$dirs) { if (Test-Path `$d) { Get-ChildItem -Path `$d -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { try { Remove-Item -Path `$_.FullName -Force -ErrorAction SilentlyContinue; `$cleared++ } catch {} } } }; Write-Host '`n[OK] Limpeza concluida com sucesso! ' -NoNewline -ForegroundColor Green; Write-Host \`"`$cleared ficheiro(s) de cache e shaders removidos.\`" -ForegroundColor White; pause }`"`r`npause"
+        $cleanCmd = "@echo off`r`necho Limpeza automatica de shaders suspensa: reconstruir caches pode causar stuttering.`r`necho Use a limpeza de diagnostico no SkyOptimizer apenas com causa identificada.`r`npause"
         [System.IO.File]::WriteAllText((Join-Path $panelDir "[5] Limpar Shaders e Caches de Jogos.cmd"), $cleanCmd, [System.Text.Encoding]::ASCII)
 
         # 6. Atalho Alternar Localização e GPS
@@ -3174,85 +3085,22 @@ exit 0
 
         # Ficheiro LÊ-ME (Suporte SkyOptimizer)
         $readmeTxt = @"
-================================================================================
-                    SkyOptimizer - Painel de Controlo & Suporte
-================================================================================
-Comunidade Oficial & Suporte: https://discord.gg/cE8ZaDRGV5
-================================================================================
+SkyOptimizer - painel de desenvolvimento
 
-Boas! O teu computador foi otimizado a fundo pelo teu técnico do SkyOptimizer.
-Foram aplicadas 90 otimizações cirúrgicas de kernel, rede, input de rato/teclado,
-gestão de memória e energia para espremer o máximo de fluidez, reduzir a latência
-ao milissegundo e estabilizar os teus frametimes.
+Esta branch ainda exige testes de integracao e benchmarks em laboratorio.
+O relatorio descreve configuracoes verificadas, nao ganhos de FPS/input lag.
 
-🎮 Compatibilidade Total de Jogos:
-Estas otimizações cobrem todos os teus jogos favoritos em DirectX 11, DirectX 12
-e Vulkan:
-- Shooters Competitivos: CS2, VALORANT, Rainbow Six Siege, Overwatch 2, Apex Legends
-- Roleplay & Open-World: FiveM, RedM, GTA V, Rust, DayZ, Escape from Tarkov
-- Battle Royale & Ação: Warzone, Fortnite, PUBG, ARC Raiders, The Finals
-- Desporto & Simulação: EA SPORTS FC 24/25, Rocket League, Assetto Corsa, F1, Forza
+[1] Undo restaura apenas baselines verificaveis. Conflitos e backups antigos
+    ficam preservados para revisao. Nao elimina o painel nem os backups.
+[2]/[3] Impressora/Bluetooth: desativar com baseline; segundo clique restaura
+    o estado original desse servico. Dependentes ativos impedem a paragem.
+    Nao inventa defaults para um servico originalmente desativado.
+[4] VBS: alternancia suspensa ate validar arranque e requisitos de anti-cheat.
+[5] Shaders: limpeza automatica suspensa; recompilacao pode causar stuttering.
+[6] Localizacao: restaurar pelo Undo geral; alternancia independente pendente.
 
---------------------------------------------------------------------------------
-ATALHOS DE 1 CLIQUE NO AMBIENTE DE TRABALHO:
---------------------------------------------------------------------------------
-
-1. [1] Reverter Todas as Otimizacoes.cmd
-   - Se por algum motivo quiseres repor o teu Windows exatamente como estava antes,
-     dá 2 cliques aqui. O restauro repõe 100% dos teus ficheiros de registo e
-     serviços originais com segurança total.
-
-2. [2] Alternar Impressora (Ligar-Desligar).cmd
-   - O serviço de spooler de impressão consome processos em segundo plano.
-     Se precisares de imprimir faturas ou documentos, clica aqui para ligar na hora.
-     Quando acabares, clica de novo para desligar e poupar CPU.
-
-3. [3] Alternar Bluetooth (Ligar-Desligar).cmd
-   - Se usares comandos sem fios (Xbox, PS5, PS4) ou auscultadores Bluetooth,
-     clica 2 cliques para ativar. Se usas rato e teclado por cabo/dongle 2.4GHz,
-     mantém desligado para latência zero.
-
-4. [4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd
-   - O Isolamento do Núcleo (VBS/HVCI) protege o Windows, mas rouba 5% a 15% de FPS
-     e cria micro-stutters na CPU:
-     * Queres mais FPS em FiveM, CS2, Warzone, Fortnite, Rust, Tarkov, etc.? DESLIGA.
-     * Queres jogar VALORANT, LoL ou CS2 no FACEIT? LIGA (obrigatório pelo anti-cheat).
-
-5. [5] Limpar Shaders e Caches de Jogos.cmd
-   - Executa uma vez por mês ou sempre que notares engasgos após um update de driver
-     da gráfica. Limpa em segundos caches corrompidas de DirectX, NVIDIA e FiveM.
-
-6. [6] Alternar Localizacao e GPS (Ligar-Desligar).cmd
-   - A telemetria de localização efetua varreduras de redes Wi-Fi e IP em segundo plano.
-     Mantém desligada para zero interrupções de rede e ping estável nos teus jogos.
-     Se precisares de usar Mapas, Meteorologia ou serviços com GPS no browser,
-     clica 2 cliques para ativar na hora.
-
---------------------------------------------------------------------------------
-🚀 QUERES AINDA MAIS FPS? SESSÃO VIP DE BIOS & HARDWARE TUNING
---------------------------------------------------------------------------------
-O teu Windows já está afinado ao limite. Mas sabias que pode haver 15% a 30% de
-performance extra ainda "adormecida" na tua máquina?
-
-Muitos computadores saem de fábrica ou de montagem com:
-- Memória RAM a correr à velocidade mínima base (sem XMP/EXPO ativo na BIOS)
-- Re-Size BAR desativado (a GPU e a CPU comunicam com limites de banda)
-- Curvas de ventoinhas desreguladas (levando a thermal throttling / perdas de clock)
-- Voltagens excessivas de fábrica que aquecem a CPU e reduzem frequências Boost
-
-⚠️ AVISO IMPORTANTE:
-Alterar opções na BIOS sem conhecimento avançado pode impedir o computador de
-ligar, dar ecrã preto ou até danificar componentes por sobretensão.
-Não mexas sozinho na BIOS através de tutoriais genéricos da internet!
-
-👉 Se queres desbloquear o potencial máximo do teu hardware em segurança absoluta,
-fala comigo no Discord oficial da SkyOptimizer para agendares uma sessão VIP
-dedicada de BIOS & Hardware Tuning!
-
---------------------------------------------------------------------------------
-Comunidade Oficial SkyOptimizer:
-👉 Discord: https://discord.gg/cE8ZaDRGV5
-================================================================================
+Alteracoes NIC exigem reinicio e teste de ligacao. A confirmacao no registo
+nao prova aplicacao pelo driver. Nao ha compatibilidade universal certificada.
 "@
         [System.IO.File]::WriteAllText((Join-Path $panelDir "LÊ-ME (Suporte SkyOptimizer).txt"), $readmeTxt, [System.Text.Encoding]::UTF8)
 
@@ -3308,6 +3156,15 @@ function Repair-WindowsSystemIntegrity {
 function Invoke-SkyOptimize {
     [CmdletBinding()]
     param()
+    $script:SkyLastExitCode = 1
+
+    $experiments = if ($ExperimentalActions) { [int[]]$ExperimentalActions.Split(',') } else { @() }
+    $selectedIds = @(Get-SkyProfileActionIds -Profile $Profile -Experiments $experiments)
+    Write-Host "Gaming - $Profile | IDs selecionados: $($selectedIds -join ', ')" -ForegroundColor Cyan
+    Write-Host 'Mudar de perfil não desfaz alterações anteriores. Para comparar perfis, executar Undo e confirmar a baseline primeiro.' -ForegroundColor Yellow
+    if ($Profile -in @('Performance', 'Extreme')) {
+        Write-Host 'Este perfil desativa capturas Game DVR e políticas de tarefas de browsers em fundo. Ganhos dependem da carga concorrente.' -ForegroundColor Yellow
+    }
 
     if (@(Get-SkyLegacyBackupFiles $Global:SkyBackupDir).Count) {
         Write-SkyLog -Message 'Apply bloqueado: backups legados precisam de revisão. Não serão substituídos nem interpretados como baseline exata.' -Level Error
@@ -3382,8 +3239,8 @@ function Invoke-SkyOptimize {
     }
 
     # 2. Execução das 90 Otimizações
-    Write-Host "`n>>> [Passo 2/3] A executar Otimizações Seguras (90 Tweaks)" -ForegroundColor Magenta
-    Write-Host "Todas as chaves de registo alteradas são guardadas em .\Backups\`n" -ForegroundColor Gray
+    Write-Host "`n>>> [Passo 2/3] A avaliar as 90 ações para Gaming - $Profile" -ForegroundColor Magenta
+    Write-Host "Apenas ações selecionadas e migradas são executadas. Baselines por recurso em $Global:SkyBackupDir.`n" -ForegroundColor Gray
 
     $tweaks = @(
         # Categoria 1: Sistema e Desempenho
@@ -3392,7 +3249,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 3;  Category = "Sistema & Desempenho"; Name = "Core Parking: configuração experimental em AC (DC preservado)"; Action = { Disable-CoreParking } },
         [ordered]@{ Id = 4;  Category = "Sistema & Desempenho"; Name = "Desativação de Hibernação (Libertar hiberfil.sys)"; Action = { Disable-Hibernation } },
         [ordered]@{ Id = 5;  Category = "Sistema & Desempenho"; Name = "Desativação de Fault Tolerant Heap (FTH)"; Action = { Disable-FaultTolerantHeap } },
-        [ordered]@{ Id = 6;  Category = "Sistema & Desempenho"; Name = "SysMain / Superfetch (Inteligente para SSD)"; Action = { Disable-Superfetch } },
+        [ordered]@{ Id = 6;  Category = "Sistema & Desempenho"; Name = "SysMain: experiência com baseline de arranque e execução"; Action = { Disable-Superfetch } },
 
         # Categoria 2: Input e Gaming
         [ordered]@{ Id = 7;  Category = "Input & Gaming"; Name = "Desativação de Aceleração de Rato (1:1 Raw Input)"; Action = { Disable-MouseAcceleration } },
@@ -3450,7 +3307,7 @@ function Invoke-SkyOptimize {
 
         # Categoria 12: Navegadores, Jogos em Janela & Armazenamento Avançado
         [ordered]@{ Id = 41; Category = "Navegadores & Janelas"; Name = "Desativação de Tarefas em Segundo Plano de Navegadores (Edge/Chrome)"; Action = { Disable-BrowserBackgroundTasks } },
-        [ordered]@{ Id = 42; Category = "Navegadores & Janelas"; Name = "DirectFlip / Otimizações para Jogos em Janela (Windows 11)"; Action = { Enable-WindowedOptimizations } },
+        [ordered]@{ Id = 42; Category = "Navegadores & Janelas"; Name = "Apresentação em janela: experiência Windows 11 com flags alheias preservadas"; Action = { Enable-WindowedOptimizations } },
         [ordered]@{ Id = 43; Category = "Navegadores & Janelas"; Name = "Re-Trim Otimizado de Memória Flash em SSDs NVMe (Drive C:)"; Action = { Invoke-SsdReTrim } },
 
         # Categoria 13: Otimizações de Elite (Rede, Explorador & Agendador)
@@ -3476,7 +3333,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 57; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Histórico de Atividades e Tracing de Diagnóstico Contínuo"; Action = { Disable-ActivityHistoryAndDiagnosticTracing } },
         [ordered]@{ Id = 58; Category = "Agendador & Telemetria Avançada"; Name = "Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)"; Action = { Disable-SilentAppInstallation } },
         [ordered]@{ Id = 59; Category = "Agendador & Telemetria Avançada"; Name = "Ativação de Caminhos Longos de Ficheiro Win32 (>260 Chars para FiveM/Mods)"; Action = { Enable-LongFilePaths } },
-        [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de DMA Coalescing em Adaptadores de Rede (Menor Jitter/Latência)"; Action = { Disable-NetworkDmaCoalescing } },
+        [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "DMA Coalescing: experiência por adaptador Ethernet suportado"; Action = { Disable-NetworkDmaCoalescing } },
 
         # Categoria 17: Interface, Janelas & Multimédia
         [ordered]@{ Id = 61; Category = "Interface & Multimédia"; Name = "Expansão da Cache de Ícones do Explorador (4096 KB sem Recarregamentos)"; Action = { Optimize-ExplorerIconCache } },
@@ -3496,9 +3353,9 @@ function Invoke-SkyOptimize {
 
         # Categoria 19: Rede Competitiva, Hitreg & Resposta de Movimento
         [ordered]@{ Id = 73; Category = "Competitivo: Hitreg & Movimento"; Name = "Resposta Rápida de Teclado & Strafe (Delay 0, Speed 31 Nativo)"; Action = { Optimize-KeyboardRepeatResponse } },
-        [ordered]@{ Id = 74; Category = "Competitivo: Hitreg & Movimento"; Name = "Moderação de Interrupções Desativada (ITR = 0 / Hitreg Instantâneo)"; Action = { Disable-NetworkInterruptModeration } },
-        [ordered]@{ Id = 75; Category = "Competitivo: Hitreg & Movimento"; Name = "Desativação de RSC e LSO na Rede (Ticks Puros sem Agregação)"; Action = { Disable-NetworkRscAndLso } },
-        [ordered]@{ Id = 76; Category = "Competitivo: Hitreg & Movimento"; Name = "Desativação de Controlo de Fluxo na Rede (Flow Control Off / Anti-Bufferbloat)"; Action = { Disable-NetworkFlowControl } },
+        [ordered]@{ Id = 74; Category = "Competitivo: Hitreg & Movimento"; Name = "Interrupt Moderation: experiência por NIC, medir CPU/DPC e latência"; Action = { Disable-NetworkInterruptModeration } },
+        [ordered]@{ Id = 75; Category = "Competitivo: Hitreg & Movimento"; Name = "RSC/LSO: experiência por NIC, medir throughput e latência"; Action = { Disable-NetworkRscAndLso } },
+        [ordered]@{ Id = 76; Category = "Competitivo: Hitreg & Movimento"; Name = "Flow Control: experiência Ethernet, sem promessa de eliminar bufferbloat"; Action = { Disable-NetworkFlowControl } },
         [ordered]@{ Id = 77; Category = "Competitivo: Hitreg & Movimento"; Name = "Gestão de Sockets e Portas Efémeras TCP/IP (MaxUserPort=65534, WaitDelay=30s)"; Action = { Optimize-TcpSocketsAndPorts } },
         [ordered]@{ Id = 78; Category = "Competitivo: Hitreg & Movimento"; Name = "Otimização de Pilha TCP Global (Timestamps/ECN Off, AutoTuning Normal)"; Action = { Optimize-NetshTcpGlobal } },
 
@@ -3527,6 +3384,8 @@ function Invoke-SkyOptimize {
     $totalAlreadyCompliant = 0
     $totalIncompatible = 0
     $totalUnverified = 0
+    $totalNotSelected = 0
+    $totalDeferred = 0
     $actionResults = @()
     $failureDetails = @()
 
@@ -3539,9 +3398,9 @@ function Invoke-SkyOptimize {
         Write-Host ("[*] [{0,2}/{1}] {2}" -f $item.Id, $tweaks.Count, $item.Name) -ForegroundColor White
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
-        $result = Invoke-SkyEligibleAction -Id $item.Id -Action $item.Action
+        $result = Invoke-SkyEligibleAction -Id $item.Id -Action $item.Action -SelectedIds $selectedIds
         $actionResults += [pscustomobject]@{
-            Id = $item.Id; Name = $item.Name; Status = $result.Status
+            Id = $item.Id; Name = $item.Name; Profile = $Profile; Status = $result.Status
             Reason = $result.Reason; RestartRequired = $result.RestartRequired
         }
         switch ($result.Status) {
@@ -3554,6 +3413,8 @@ function Invoke-SkyOptimize {
             }
             'AlreadyCompliant' { $totalAlreadyCompliant++; Write-SkyLog -Message $result.Reason -Level Info }
             'Incompatible' { $totalIncompatible++; Write-SkyLog -Message $result.Reason -Level Warning }
+            'NotSelected' { $totalNotSelected++; Write-SkyLog -Message $result.Reason -Level Info }
+            'Deferred' { $totalDeferred++; Write-SkyLog -Message $result.Reason -Level Warning }
             'Unverified' { $totalUnverified++; Write-SkyLog -Message $result.Reason -Level Warning }
             'Failed' {
                 $totalFailed++
@@ -3612,6 +3473,8 @@ function Invoke-SkyOptimize {
   Já conformes:               $totalAlreadyCompliant
   Incompatíveis:               $totalIncompatible
   Sem validação completa:     $totalUnverified
+  Fora da selecao:            $totalNotSelected
+  Migracao pendente:          $totalDeferred
   Falhas:                     $totalFailed
   Detalhe/reinício por ação:   $Global:SkyBackupDir\execution_results.json
 ================================================================================
@@ -3629,7 +3492,10 @@ function Invoke-SkyOptimize {
 ================================================================================
                          RELATÓRIO DE EXECUÇÃO
 ================================================================================
-  Total de Tweaks Executados:  $($tweaks.Count)
+  Total de entradas avaliadas: $($tweaks.Count)
+  Perfil:                     Gaming - $Profile
+  Fora da selecao:             $totalNotSelected
+  Migracao pendente:           $totalDeferred
   Aplicadas e verificadas:     $totalSuccess
   Já conformes:                $totalAlreadyCompliant
   Incompatíveis:               $totalIncompatible
@@ -3666,6 +3532,7 @@ function Invoke-SkyOptimize {
     }
 
     Write-Host "`nSessão terminada: $totalFailed falhas e $totalUnverified ações sem validação completa. Consulte o relatório antes de considerar o sistema validado." -ForegroundColor Cyan
+    $script:SkyLastExitCode = if ($totalFailed) { 1 } elseif ($totalDeferred -or $totalUnverified) { 2 } else { 0 }
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 
@@ -3673,13 +3540,96 @@ function Invoke-SkyOptimize {
 # 6. FUNÇÃO DE REVERSÃO / UNDO (RESTAURAR ESTADO ORIGINAL)
 # ==============================================================================
 
+
+
+function Get-SkyWindowsBuild {
+    [Environment]::OSVersion.Version.Build
+}
+
+function Get-SkyBrowserMajorVersion {
+    param([ValidateSet('Edge', 'Chrome')][string]$Browser)
+    $relative = if ($Browser -eq 'Edge') { 'Microsoft\Edge\Application\msedge.exe' } else { 'Google\Chrome\Application\chrome.exe' }
+    foreach ($root in @(${env:ProgramFiles(x86)}, $env:ProgramFiles, $env:LOCALAPPDATA)) {
+        if (-not $root) { continue }
+        $path = Join-Path $root $relative
+        if ([IO.File]::Exists($path)) { return (Get-Item -LiteralPath $path -ErrorAction Stop).VersionInfo.FileMajorPart }
+    }
+    return 0
+}
+
+function Disable-BrowserBackgroundTasks {
+    [CmdletBinding()]
+    param()
+    # Machine policy is sufficient. Duplicating it in HKCU adds no performance benefit.
+    $found = $false
+    if ((Get-SkyBrowserMajorVersion Edge) -ge 88) {
+        Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' -Name StartupBoostEnabled -Type DWord -Value 0
+        Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' -Name BackgroundModeEnabled -Type DWord -Value 0
+        $found = $true
+    }
+    if ((Get-SkyBrowserMajorVersion Chrome) -ge 19) {
+        Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Google\Chrome' -Name BackgroundModeEnabled -Type DWord -Value 0
+        $found = $true
+    }
+    if (-not $found) { New-SkyActionResult -Status Incompatible -Reason 'Nenhum browser suportado localizado; políticas preservadas.' -RestartRequired No }
+}
+
+function Merge-SkyGraphicsFlag {
+    param([AllowEmptyString()][string]$Settings)
+    $pattern = '(^|;)SwapEffectUpgradeEnable=[^;]*'
+    $matches = [regex]::Matches($Settings, $pattern)
+    if ($matches.Count -gt 1) { throw 'Flag gráfica duplicada: configuração ambígua preservada.' }
+    if ($matches.Count -eq 1) { return [regex]::Replace($Settings, $pattern, '${1}SwapEffectUpgradeEnable=1') }
+    if ($Settings -and -not $Settings.EndsWith(';')) { $Settings += ';' }
+    return $Settings + 'SwapEffectUpgradeEnable=1;'
+}
+
+function Enable-WindowedOptimizations {
+    [CmdletBinding()]
+    param()
+    if ((Get-SkyWindowsBuild) -lt 22621) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Esta experiência requer Windows 11 22H2 ou posterior.' -RestartRequired No
+    }
+    $path = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
+    $resource = ConvertTo-SkyRegistryResource $path 'DirectXUserGlobalSettings'
+    $before = Get-SkyResourceState $resource
+    if ($before.Exists -and $before.Kind -ne 'String') { throw 'Tipo inesperado das preferências gráficas; preservado.' }
+    $value = Merge-SkyGraphicsFlag -Settings $(if ($before.Exists) { $before.Data } else { '' })
+    # Leave Auto HDR, VRR and unknown flags intact. Do not impose overlapping FSE overrides.
+    $result = Invoke-SkyTrackedChange -Resource $resource -Desired (ConvertTo-SkyRegistryState -Exists $true -Kind String -Value $value) -ExpectedBefore $before
+    $result.Reason = 'Flag de apresentação configurada; outras flags preservadas. Reiniciar o jogo e validar apresentação/frametimes; o registo não prova consumo pelo Windows.'
+    $result
+}
+
+function Get-SkyProfileActionIds {
+    param([ValidateSet('Balanced', 'Performance', 'Extreme')][string]$Profile = 'Balanced', [int[]]$Experiments = @())
+    if (@($Experiments | Where-Object { $_ -lt 1 -or $_ -gt 90 }).Count) { throw 'IDs de ações devem estar entre 1 e 90.' }
+    if ($Experiments.Count -and $Profile -ne 'Extreme') { throw 'Ações adicionais exigem o perfil Extreme e uma comparação de laboratório.' }
+    $ids = @(79)
+    if ($Profile -in @('Performance', 'Extreme')) { $ids += @(9, 41) }
+    if ($Profile -eq 'Extreme') { $ids += $Experiments }
+    if ($ids -contains 3) { $ids += 1 }
+    $ids | Sort-Object -Unique
+}
+
+function Get-SkyMigratedActionIds {
+    @(1, 3, 6, 9, 13, 17, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86)
+}
+
 function Invoke-SkyEligibleAction {
-    param([int]$Id, [scriptblock]$Action)
-    if ($Id -notin @(1, 3, 6, 9, 13, 17, 38, 48, 60, 71, 74, 75, 76, 79, 86)) {
-        return New-SkyActionResult -Status Unverified -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.'
+    param([int]$Id, [scriptblock]$Action, [int[]]$SelectedIds = @(79))
+    if ($Id -notin $SelectedIds) {
+        return New-SkyActionResult -Status NotSelected -Reason 'Fora do perfil/experiência selecionado; não executada.' -RestartRequired No
+    }
+    if ($Id -notin (Get-SkyMigratedActionIds)) {
+        return New-SkyActionResult -Status Deferred -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.' -RestartRequired No
+    }
+    if ((Get-SkyWindowsBuild) -lt 15063) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Build anterior ao mínimo deste conjunto; nenhuma alteração aplicada.' -RestartRequired No
     }
     Invoke-SkyAction -Action $Action
 }
+
 
 function Invoke-SkyVerifiedUndo {
     param([string]$BackupDirectory)
@@ -3696,13 +3646,16 @@ function Invoke-SkyVerifiedUndo {
 function Invoke-SkyUndo {
     [CmdletBinding()]
     param()
+    $script:SkyLastExitCode = 0
     if ((Get-SkyUndoScope $Global:SkyBackupDir) -eq 'None') {
-        Write-SkyLog -Message 'Sem backups de altera??es: nenhuma configura??o ser? modificada.' -Level Warning
+        Write-SkyLog -Message 'Sem backups de alterações: nenhuma configuração será modificada.' -Level Warning
         return
     }
-    $confirm = Read-Host 'Reverter apenas altera??es com baseline verific?vel? (S/N)'
+    $confirm = Read-Host 'Reverter apenas alterações com baseline verificável? (S/N)'
     if ($confirm -notmatch '^(s|sim|y|yes)$') { return }
     foreach ($result in @(Invoke-SkyVerifiedUndo -BackupDirectory $Global:SkyBackupDir)) {
+        if ($result.Status -eq 'Failed') { $script:SkyLastExitCode = 1 }
+        elseif ($result.Status -eq 'Unverified' -and $script:SkyLastExitCode -eq 0) { $script:SkyLastExitCode = 2 }
         $level = if ($result.Status -eq 'Failed') { 'Error' } else { 'Info' }
         Write-SkyLog -Message "[$($result.Status)] $($result.Reason)" -Level $level
     }
@@ -3847,27 +3800,27 @@ function Invoke-SkyHardwareAudit {
 # Se invocado com parâmetros diretos de linha de comando:
 if ($Apply) {
     Invoke-SkyOptimize
-    exit 0
+    exit $script:SkyLastExitCode
 }
 
 if ($Clean) {
     Clear-Host
-    Write-Host ">>> A executar Limpeza de Caches de Shaders e Temporários..." -ForegroundColor Cyan
-    Clear-ShaderCache
-    Write-Host "`n[OK] Manutenção de Shaders concluída." -ForegroundColor Green
+    $result = Clear-ShaderCache
+    Write-Host "[$($result.Status)] $($result.Reason)"
+    if ($result.Status -eq 'Failed') { exit 1 }
     exit 0
 }
 
 if ($Undo) {
     Invoke-SkyUndo
-    exit 0
+    exit $script:SkyLastExitCode
 }
 
 if ($DeployPanel) {
     Clear-Host
     Write-Host ">>> A gerar 'Painel do Cliente' no Ambiente de Trabalho..." -ForegroundColor Cyan
-    Deploy-ClientPanel
-    Write-Host "`n[OK] Painel gerado com sucesso no Desktop." -ForegroundColor Green
+    if ((Deploy-ClientPanel) -ne $true) { Write-Error 'Falha na geração do painel.'; exit 1 }
+    Write-Host "`nPainel gerado no Desktop." -ForegroundColor Green
     exit 0
 }
 
@@ -3897,16 +3850,17 @@ while ($true) {
     Write-Host "                          Versão: 2.8.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Otimizações Completas (90 Tweaks)" -ForegroundColor Green
+    Write-Host "[1] Aplicar Gaming - $Profile (apenas ações selecionadas e migradas)" -ForegroundColor Green
     Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Magenta
     Write-Host "[3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)" -ForegroundColor Yellow
     Write-Host "[4] Limpeza de Caches e Shaders" -ForegroundColor Cyan
-    Write-Host "[5] Reverter Alterações (100% Desfazer)" -ForegroundColor DarkYellow
+    Write-Host "[5] Reverter alterações com baseline verificável" -ForegroundColor DarkYellow
     Write-Host "[6] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Blue
     Write-Host "[7] Sair" -ForegroundColor Red
+    Write-Host "[8] Selecionar perfil / experiências de laboratório" -ForegroundColor Cyan
     Write-Host "================================================================================" -ForegroundColor Cyan
     
-    $choice = Read-Host "Escolha uma opção (1-7)"
+    $choice = Read-Host "Escolha uma opção (1-8)"
 
     switch ($choice.Trim()) {
         "1" {
@@ -3923,7 +3877,7 @@ while ($true) {
         }
         "4" {
             Clear-Host
-            Write-Host ">>> A executar Limpeza de Caches de Shaders e Temporários..." -ForegroundColor Cyan
+            Write-Host ">>> Limpeza de diagnóstico de shaders..." -ForegroundColor Cyan
             Clear-ShaderCache
             Read-Host "`nPressione ENTER para regressar ao menu principal..."
         }
@@ -3935,12 +3889,27 @@ while ($true) {
             Read-Host "`nPressione ENTER para regressar ao menu principal..."
         }
         "7" {
-            Write-Host "`nA sair do SkyOptimizer. Nenhuma alteração foi realizada." -ForegroundColor Gray
+            Write-Host "`nA sair do SkyOptimizer." -ForegroundColor Gray
             Start-Sleep -Seconds 1
             exit 0
         }
+        "8" {
+            Write-Host 'Balanced: Game Mode. Performance: acrescenta desativação de capturas e tarefas de browsers em fundo.'
+            Write-Host 'Extreme: acrescenta apenas IDs escolhidos para laboratório. Alterações sem migração continuam bloqueadas.'
+            Write-Host 'Nenhum perfil garante ganhos; Performance desativa funcionalidades de gravação/background.' -ForegroundColor Yellow
+            $candidate = Read-Host 'Perfil (Balanced/Performance/Extreme)'
+            if ($candidate -in @('Balanced', 'Performance', 'Extreme')) {
+                $requested = if ($candidate -eq 'Extreme') { Read-Host 'IDs adicionais separados por vírgula (vazio = nenhum)' } else { '' }
+                try {
+                    if ($requested -notmatch '^(\d{1,2}(,\d{1,2})*)?$') { throw 'Lista de IDs inválida.' }
+                    $ids = if ($requested) { [int[]]$requested.Split(',') } else { @() }
+                    $null = Get-SkyProfileActionIds -Profile $candidate -Experiments $ids
+                    $Profile = $candidate; $ExperimentalActions = $requested
+                } catch { Write-Host $_.Exception.Message -ForegroundColor Red; Start-Sleep -Seconds 2 }
+            }
+        }
         Default {
-            Write-Host "`nOpção inválida! Escolha de 1 a 7." -ForegroundColor Red
+            Write-Host "`nOpção inválida! Escolha de 1 a 8." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
