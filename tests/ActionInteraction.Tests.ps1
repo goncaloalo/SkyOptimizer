@@ -5,6 +5,7 @@ Describe 'Shared resource ownership without Windows changes' {
         $Global:SkyBackupDir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $null = [IO.Directory]::CreateDirectory($Global:SkyBackupDir)
         $script:values=@{}; $script:writes=0; $script:failSave=$false; $script:failAfterWrite=$false
+        $script:saves=0; $script:failSaveAt=0
         $script:resource=ConvertTo-SkyRegistryResource 'HKCU:\Software\SkyInteraction' 'Shared'
         $script:desired=ConvertTo-SkyRegistryState -Exists $true -Kind DWord -Value 1
         $script:other=ConvertTo-SkyRegistryResource 'HKCU:\Software\SkyInteraction' 'Independent'
@@ -22,7 +23,8 @@ Describe 'Shared resource ownership without Windows changes' {
         if ($script:failAfterWrite) { throw 'failure after mutation' }
     }
     Mock Save-SkyMutationState {
-        if ($script:failSave) { throw 'disk unavailable' }
+        $script:saves++
+        if ($script:failSave -or $script:saves -eq $script:failSaveAt) { throw 'disk unavailable' }
         Write-SkyAtomicFile (Join-Path $BackupDirectory 'mutation_state.json') ($State | ConvertTo-Json -Depth 15)
     }
     It 'shares one immutable baseline in either action order and undoes only after the last release' {
@@ -108,6 +110,22 @@ Describe 'Shared resource ownership without Windows changes' {
         @($results | Where-Object Status -eq 'Failed').Count | Should Be 1
         (Get-SkyResourceState $script:other).Exists | Should Be $false
         (Test-SkyStateEqual (Get-SkyResourceState $script:resource) $external) | Should Be $true
+    }
+    It 'does not persist a failed owner release through a later independent journal save' {
+        $null=Invoke-SkyTrackedChange $script:other $script:desired -OwnerActionId 58
+        $null=Invoke-SkyTrackedChange $script:resource $script:desired -OwnerActionId 58
+        $null=Invoke-SkyTrackedChange $script:resource $script:desired -OwnerActionId 84
+        $script:failSaveAt=$script:saves+1
+        $results=@(Restore-SkyTrackedChanges $Global:SkyBackupDir -OwnerActionId 58)
+        @($results | Where-Object Status -eq 'Failed').Count | Should Be 1
+        (Get-SkyResourceState $script:other).Exists | Should Be $false
+        $entry=@((Read-SkyMutationState $Global:SkyBackupDir).Entries | Where-Object Status -ne 'Restored')[0]
+        (@($entry.OwnerIds) -join ',') | Should Be '58,84'
+        $before=$script:writes
+        $null=Restore-SkyTrackedChanges $Global:SkyBackupDir -OwnerActionId 58
+        $script:writes | Should Be $before
+        $entry=@((Read-SkyMutationState $Global:SkyBackupDir).Entries | Where-Object Status -ne 'Restored')[0]
+        (@($entry.OwnerIds) -join ',') | Should Be '84'
     }
     It 'retries a partial mutation and retains the first baseline across action releases' {
         $script:failAfterWrite=$true

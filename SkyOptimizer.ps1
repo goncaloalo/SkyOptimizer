@@ -855,8 +855,14 @@ function Restore-SkyTrackedChanges {
                 if (-not ($currentOriginal -or $expected -or $pendingBefore)) { throw 'Conflito externo; recurso preservado para revisao.' }
                 if ($OwnerActionId -gt 0 -and @($entry.OwnerIds).Count -gt 1) {
                     if ($entry.Status -eq 'Restoring') { throw 'Concluir o Undo interrompido antes de libertar ownership parcial.' }
+                    $previousOwners = @($entry.OwnerIds)
                     $entry.OwnerIds = @($entry.OwnerIds | Where-Object { $_ -ne $OwnerActionId })
-                    Save-SkyMutationState $journal $BackupDirectory
+                    try { Save-SkyMutationState $journal $BackupDirectory }
+                    catch {
+                        # Another resource may save this journal later. Do not commit a failed release through it.
+                        $entry.OwnerIds = $previousOwners
+                        throw
+                    }
                     New-SkyActionResult -Status AlreadyCompliant -Reason "Acao $OwnerActionId libertada; recurso partilhado preservado para os restantes proprietarios." -RestartRequired No
                     continue
                 }
