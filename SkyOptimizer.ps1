@@ -471,7 +471,7 @@ function Read-SkyMutationState {
         return [pscustomobject]@{ SchemaVersion = 1; MachineId = $machineId; UserSid = $userSid; Entries = @() }
     }
     $state = [IO.File]::ReadAllText($path) | ConvertFrom-Json -ErrorAction Stop
-    if ($state.SchemaVersion -ne 1 -or $state.MachineId -ne $machineId -or
+    if ($state.SchemaVersion -notin @(1,2) -or $state.MachineId -ne $machineId -or
         $state.UserSid -ne $userSid -or $null -eq $state.Entries) {
         throw 'Diário inválido ou pertencente a outra máquina/utilizador. Nenhuma baseline será substituída.'
     }
@@ -485,8 +485,14 @@ function Read-SkyMutationState {
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Original
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Before
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Desired
+        if ($entry.PSObject.Properties.Name -contains 'OwnerIds') {
+            $owners = @($entry.OwnerIds)
+            if ($state.SchemaVersion -ne 2 -or -not $owners.Count -or
+                @($owners | Where-Object { ($_ -isnot [int] -and $_ -isnot [long]) -or $_ -lt 0 -or $_ -gt [int]::MaxValue }).Count -or
+                @($owners | Select-Object -Unique).Count -ne $owners.Count) { throw 'Ownership invalido no diario.' }
+        }
         if ($entry.Status -ne 'Restored') {
-            $identity = $entry.Resource | ConvertTo-Json -Compress
+            $identity = Get-SkyResourceIdentity $entry.Resource
             if ($activeResources.ContainsKey($identity)) { throw 'Mais de uma baseline ativa para o recurso. Diario preservado para revisao.' }
             $activeResources[$identity] = $true
         }
@@ -497,6 +503,22 @@ function Read-SkyMutationState {
 function Save-SkyMutationState {
     param($State, [string]$BackupDirectory)
     Write-SkyAtomicFile -Path (Join-Path $BackupDirectory 'mutation_state.json') -Content ($State | ConvertTo-Json -Depth 15)
+}
+
+function Get-SkyResourceIdentity {
+    param($Resource)
+    switch ($Resource.Type) {
+        'Registry' {
+            $identity = [ordered]@{ Type='Registry'; Hive=$Resource.Hive.ToUpperInvariant(); View=$Resource.View.ToUpperInvariant()
+                Key=$Resource.Key.TrimEnd('\').ToUpperInvariant(); Name=$Resource.Name.ToUpperInvariant() }
+        }
+        'ServiceStartup' { $identity = [ordered]@{ Type='ServiceStartup'; Name=$Resource.Name.ToUpperInvariant() } }
+        'ServiceRuntime' { $identity = [ordered]@{ Type='ServiceRuntime'; Name=$Resource.Name.ToUpperInvariant() } }
+        'NicRegistry' { $identity = [ordered]@{ Type='NicRegistry'; InterfaceGuid=([guid]$Resource.InterfaceGuid).ToString(); Keyword=$Resource.Keyword.ToUpperInvariant() } }
+        'ScheduledTaskEnabled' { $identity = [ordered]@{ Type='ScheduledTaskEnabled'; Path=$Resource.Path.ToUpperInvariant(); Name=$Resource.Name.ToUpperInvariant() } }
+        default { throw 'Tipo de recurso sem identidade suportada.' }
+    }
+    $identity | ConvertTo-Json -Compress
 }
 
 function ConvertTo-SkyRegistryResource {
@@ -646,7 +668,8 @@ function Test-SkyStateEqual {
 
 function Invoke-SkyTrackedChange {
     [CmdletBinding()]
-    param($Resource, $Desired, [string]$BackupDirectory = $Global:SkyBackupDir, $ExpectedBefore)
+    param($Resource, $Desired, [string]$BackupDirectory = $Global:SkyBackupDir, $ExpectedBefore,
+        [ValidateRange(0,2147483647)][int]$OwnerActionId = 0)
     Assert-SkyResourceState -Resource $Resource -State $Desired
     $lock = Enter-SkyMutationLock $BackupDirectory
     try {
@@ -657,25 +680,47 @@ function Invoke-SkyTrackedChange {
         if ($PSBoundParameters.ContainsKey('ExpectedBefore') -and -not (Test-SkyStateEqual $current $ExpectedBefore)) {
             throw 'Estado mudou desde a preparação; alteração composta cancelada.'
         }
-        $identity = ($Resource | ConvertTo-Json -Compress)
-        $entries = @($journal.Entries | Where-Object { $_.Status -ne 'Restored' -and ($_.Resource | ConvertTo-Json -Compress) -ieq $identity })
+        $identity = Get-SkyResourceIdentity $Resource
+        $entries = @($journal.Entries | Where-Object { $_.Status -ne 'Restored' -and (Get-SkyResourceIdentity $_.Resource) -ceq $identity })
         if ($entries.Count -gt 1) { throw 'Mais de uma baseline ativa para o recurso.' }
         $entry = $entries | Select-Object -First 1
         if ($entry) {
+            # Identity excludes mutable driver/definition metadata; never silently adopt a replacement.
+            if ($Resource.Type -in @('NicRegistry','ScheduledTaskEnabled') -and
+                ($entry.Resource | ConvertTo-Json -Compress) -ine ($Resource | ConvertTo-Json -Compress)) {
+                throw 'Contrato/identidade do dispositivo ou tarefa mudou; concluir a revisao antes de aplicar.'
+            }
             if ($entry.Status -eq 'Restoring') { throw 'Undo interrompido: concluir a reversão antes de aplicar.' }
             $expected = Test-SkyStateEqual $current $entry.Desired
             $pendingBefore = $entry.Status -eq 'Pending' -and (Test-SkyStateEqual $current $entry.Before)
             if (-not ($expected -or $pendingBefore)) { throw 'Conflito: recurso alterado fora do SkyOptimizer. Estado preservado.' }
         }
+        $ownerAdded = $false
+        if ($entry -and ($OwnerActionId -gt 0 -or $entry.PSObject.Properties.Name -contains 'OwnerIds')) {
+            $owners = @(if ($entry.PSObject.Properties.Name -contains 'OwnerIds') { $entry.OwnerIds } else { 0 })
+            if (-not (Test-SkyStateEqual $Desired $entry.Desired) -and @($owners | Where-Object { $_ -ne $OwnerActionId }).Count) {
+                throw 'Conflito entre acoes: outro proprietario exige um estado diferente. Baseline e configuracao preservadas.'
+            }
+            if ($OwnerActionId -gt 0 -and $owners -notcontains $OwnerActionId) {
+                $entry | Add-Member NoteProperty OwnerIds @($owners + $OwnerActionId) -Force
+                $journal.SchemaVersion = 2; $ownerAdded = $true
+            }
+        }
         if (Test-SkyStateEqual $current $Desired) {
             if ($entry -and $entry.Status -eq 'Pending') {
                 $entry.Status = 'Applied'; Save-SkyMutationState $journal $BackupDirectory
+            } elseif ($ownerAdded) {
+                Save-SkyMutationState $journal $BackupDirectory
             }
             return New-SkyActionResult -Status AlreadyCompliant -Reason 'Estado configurado já conforme; baseline preservada.'
         }
         if (-not $entry) {
             $entry = [pscustomobject]@{ Id = [guid]::NewGuid().ToString(); Resource = $Resource
                 Original = $current; Before = $current; Desired = $Desired; Status = 'Pending' }
+            if ($OwnerActionId -gt 0) {
+                $entry | Add-Member NoteProperty OwnerIds @($OwnerActionId)
+                $journal.SchemaVersion = 2
+            }
             $journal.Entries = @($journal.Entries) + $entry
         } else { $entry.Before = $current; $entry.Desired = $Desired; $entry.Status = 'Pending' }
         # Durable intent precedes the first system write; a crash can leave only Before or Desired.
@@ -689,7 +734,7 @@ function Invoke-SkyTrackedChange {
 }
 
 function Restore-SkyTrackedChanges {
-    param([string]$BackupDirectory, [string]$ServiceName)
+    param([string]$BackupDirectory, [string]$ServiceName, [ValidateRange(0,2147483647)][int]$OwnerActionId = 0)
     if (-not [IO.File]::Exists((Join-Path $BackupDirectory 'mutation_state.json'))) { return }
     $lock = Enter-SkyMutationLock $BackupDirectory
     try {
@@ -698,9 +743,21 @@ function Restore-SkyTrackedChanges {
         foreach ($entry in $entries) {
             if ($entry.Status -eq 'Restored') { continue }
             if ($ServiceName -and ($entry.Resource.Type -notin @('ServiceRuntime', 'ServiceStartup') -or $entry.Resource.Name -ne $ServiceName)) { continue }
+            if ($OwnerActionId -gt 0 -and ($entry.PSObject.Properties.Name -notcontains 'OwnerIds' -or @($entry.OwnerIds) -notcontains $OwnerActionId)) { continue }
             try {
                 $didRestore = $false
                 $current = Get-SkyResourceState $entry.Resource
+                $currentOriginal = Test-SkyStateEqual $current $entry.Original
+                $expected = Test-SkyStateEqual $current $entry.Desired
+                $pendingBefore = $entry.Status -in @('Pending', 'Restoring') -and (Test-SkyStateEqual $current $entry.Before)
+                if (-not ($currentOriginal -or $expected -or $pendingBefore)) { throw 'Conflito externo; recurso preservado para revisao.' }
+                if ($OwnerActionId -gt 0 -and @($entry.OwnerIds).Count -gt 1) {
+                    if ($entry.Status -eq 'Restoring') { throw 'Concluir o Undo interrompido antes de libertar ownership parcial.' }
+                    $entry.OwnerIds = @($entry.OwnerIds | Where-Object { $_ -ne $OwnerActionId })
+                    Save-SkyMutationState $journal $BackupDirectory
+                    New-SkyActionResult -Status AlreadyCompliant -Reason "Acao $OwnerActionId libertada; recurso partilhado preservado para os restantes proprietarios." -RestartRequired No
+                    continue
+                }
                 if (-not (Test-SkyStateEqual $current $entry.Original)) {
                     $expected = Test-SkyStateEqual $current $entry.Desired
                     $pendingBefore = $entry.Status -in @('Pending', 'Restoring') -and (Test-SkyStateEqual $current $entry.Before)
@@ -723,10 +780,11 @@ function Restore-SkyTrackedChanges {
 function Set-SkyRegistryValue {
     [CmdletBinding()]
     param([string]$Path, [AllowEmptyString()][string]$Name, [AllowNull()]$Value,
-        [ValidateSet('String', 'ExpandString', 'MultiString', 'Binary', 'DWord', 'QWord', 'None')][string]$Type = 'DWord', [switch]$Force)
+        [ValidateSet('String', 'ExpandString', 'MultiString', 'Binary', 'DWord', 'QWord', 'None')][string]$Type = 'DWord', [switch]$Force,
+        [ValidateRange(0,2147483647)][int]$OwnerActionId = 0)
     $resource = ConvertTo-SkyRegistryResource $Path $Name
     $desired = ConvertTo-SkyRegistryState -Exists $true -Kind $Type -Value $Value
-    Invoke-SkyTrackedChange -Resource $resource -Desired $desired
+    Invoke-SkyTrackedChange -Resource $resource -Desired $desired -OwnerActionId $OwnerActionId
 }
 
 function Remove-SkyRegistryValue {
@@ -883,7 +941,7 @@ function Get-SkyPowerRestoreSource {
         'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope', 'Invoke-SkyVerifiedUndo',
         'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
         'ConvertTo-SkyRegistryState', 'ConvertFrom-SkyRegistryState', 'Open-SkyRegistryBase',
-        'ConvertTo-SkyRegistryResource', 'Get-SkyService', 'Set-SkyServiceStartTypeNative', 'Get-SkyNicBinding',
+        'ConvertTo-SkyRegistryResource', 'Get-SkyResourceIdentity', 'Get-SkyService', 'Set-SkyServiceStartTypeNative', 'Get-SkyNicBinding',
         'Get-SkyResourceState', 'Set-SkyResourceState', 'Assert-SkyResourceState', 'Test-SkyStateEqual', 'Restore-SkyTrackedChanges',
         'Invoke-SkyTrackedChange', 'Disable-SkyService', 'Switch-SkyPanelService')
     ($names | ForEach-Object { "function $_ {`r`n$((Get-Command $_ -CommandType Function).Definition)`r`n}" }) -join "`r`n"
