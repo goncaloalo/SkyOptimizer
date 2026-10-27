@@ -51,3 +51,22 @@ O writer comum `Set-SkyAcPowerSettings` passa a recusar alimentação não confi
 As escritas MMCSS 36 foram isoladas numa função sem mutações: não se deixam campos documentados como não utilizados nem se afirma prioridade de todo o jogo. A hipótese de medir threads inscritas permanece na auditoria. A ação 87 também permanece bloqueada sem mutações, retirando a falsa ligação entre deployment AppX em perfis especiais e pré-arranque MMAgent. Não se perdeu a proposta de investigar prelaunch com estado próprio.
 
 Validação focada: **sete testes aprovados** de retirada, consistência do catálogo e cobertura da auditoria. Os testes impedem chamadas a registo, processos externos e Disable-MMAgent. Nenhuma alteração real aplicada.
+
+## 5. Quatro migrações de software
+
+| ID | Implementação mínima | Compatibilidade conservadora | Limites/tradeoffs |
+|---:|---|---|---|
+| 16 | AllowNewsAndInterests=0 | Windows 11 cliente >=22000, Pro/N, Enterprise/N/LTSC e Education/N | Preserva TaskbarDa e Feeds Win10. Perde Widgets; não garante terminar processos WebView nem reduzir FPS/frametimes. |
+| 59 | LongPathsEnabled=1 | Cliente Windows 10/11 >=14393, mesmas edições e Home/N/Single Language/China conhecidas | Apenas APIs/apps longPathAware. Reiniciar Windows para validar processos com cache. Não ultrapassa limites de shell/cloud ou todas as aplicações. |
+| 88 | AllowStorageSenseGlobal=0 | Cliente >=18362 e edições de política conhecidas; Home recusada | Preserva 01/cadências/preferências. Não apaga ficheiros. Limpeza manual necessária para evitar disco cheio. |
+| 90 | AllowCrossDeviceClipboard=0 | Cliente >=17763 e edições de política conhecidas; Home recusada | Preserva AllowClipboardHistory e conteúdo do histórico. Perde sincronização entre dispositivos; sem alegação de FPS. |
+
+Reutilizam o diário existente: intenção antes da escrita, pós-verificação por valor, baseline estável, Undo de existência/tipo/conteúdo e deteção de conflito externo. A matriz de cliente é parametrizada por build mínima; a função antiga de compatibilidade de Update permanece como wrapper para preservar os percursos anteriores. Edições desconhecidas, Server, versão desconhecida e falha de deteção não originam escritas.
+
+São opções explícitas em Extreme; Balanced/Performance conservam 79 e 9/41/79. A elegibilidade confirma a implementação da configuração, não consumo pelo Windows, integração funcional ou ganho medido. Não houve promoção de ações dependentes de drivers/hardware. O catálogo distingue validação automatizada e validação real.
+
+Os testes verificam ausência original, tipos inesperados, Apply repetido, Undo, preferência de histórico/Feeds/Storage Sense intacta, falha após escrita e falha ao persistir intenção. Validação de migrações/compatibilidade/diário: **42 testes focados aprovados**. Nova prova estrutural e de resultados: **27 testes focados aprovados**; estas suites sobrepõem testes, não se somam como contagem final.
+
+### Correção adicional de resultados
+
+Reproduzido: `Invoke-SkyAction` convertia um resultado Deferred em AlreadyCompliant e descartava o reinício necessário quando havia um child Unverified/Failed. Corrigido para preservar estados de não execução, detalhes de falhas e requisitos de reinício. Aplicação parcial com child Deferred/NotSelected fica Unverified. A suite acrescenta três regressões; não apresenta uma operação bloqueada como sucesso.

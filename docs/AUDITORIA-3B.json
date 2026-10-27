@@ -248,7 +248,7 @@
       "Fontes": [
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-newsandinterests"
       ],
-      "Implementacao3B": "Por executar",
+      "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
       "TestesAutomatizados3B": "Nao executados nesta auditoria",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
@@ -1086,7 +1086,7 @@
       "Fontes": [
         "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
       ],
-      "Implementacao3B": "Por executar",
+      "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
       "TestesAutomatizados3B": "Nao executados nesta auditoria",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
@@ -1643,7 +1643,7 @@
       "Fontes": [
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-storage#allowstoragesenseglobal"
       ],
-      "Implementacao3B": "Por executar",
+      "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
       "TestesAutomatizados3B": "Nao executados nesta auditoria",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
@@ -1694,7 +1694,7 @@
       "Fontes": [
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy#allowcrossdeviceclipboard"
       ],
-      "Implementacao3B": "Por executar",
+      "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
       "TestesAutomatizados3B": "Nao executados nesta auditoria",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,

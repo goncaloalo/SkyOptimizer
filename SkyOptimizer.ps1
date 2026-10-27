@@ -913,12 +913,18 @@ function Invoke-SkyAction {
         if ($script:SkyActionContext.ErrorLogged) { throw 'A ação registou um erro; consultar o log.' }
         $verified = @($output | Where-Object { $_ -and $_.PSTypeNames -contains 'SkyOptimizer.ActionResult' })
         if ($verified.Count -gt 0) {
-            if (@($verified | Where-Object Status -eq 'Failed').Count) { throw 'Uma alteração falhou; consultar os resultados.' }
-            if (@($verified | Where-Object Status -eq 'Unverified').Count) { return New-SkyActionResult -Status Unverified -Reason 'Verificação incompleta.' }
-            $status = if (@($verified | Where-Object Status -eq 'Applied').Count) { 'Applied' }
-                elseif (@($verified | Where-Object Status -eq 'Incompatible').Count) { 'Incompatible' } else { 'AlreadyCompliant' }
             $restart = if (@($verified | Where-Object RestartRequired -eq 'Yes').Count) { 'Yes' }
                 elseif (@($verified | Where-Object RestartRequired -eq 'Unknown').Count) { 'Unknown' } else { 'No' }
+            $applied = @($verified | Where-Object Status -eq 'Applied').Count
+            $deferred = @($verified | Where-Object Status -eq 'Deferred').Count
+            $notSelected = @($verified | Where-Object Status -eq 'NotSelected').Count
+            $status = if (@($verified | Where-Object Status -eq 'Failed').Count) { 'Failed' }
+                elseif (@($verified | Where-Object Status -eq 'Unverified').Count -or ($applied -and ($deferred -or $notSelected))) { 'Unverified' }
+                elseif ($deferred) { 'Deferred' }
+                elseif ($applied) { 'Applied' }
+                elseif (@($verified | Where-Object Status -eq 'Incompatible').Count) { 'Incompatible' }
+                elseif (@($verified | Where-Object Status -eq 'AlreadyCompliant').Count) { 'AlreadyCompliant' }
+                else { 'NotSelected' }
             return New-SkyActionResult -Status $status -Reason (($verified.Reason | Select-Object -Unique) -join ' ') -RestartRequired $restart
         }
         return New-SkyActionResult -Status Unverified -Reason 'Implementação legada sem verificação completa do estado; não contabilizada como sucesso.'
@@ -1483,28 +1489,12 @@ function Disable-SearchAndSpotlight {
 function Disable-TaskbarWidgets {
     [CmdletBinding()]
     param()
-
-    $dshKey = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
-    Ensure-RegistryPath -KeyPath $dshKey
-    Backup-RegistryKey -KeyPath $dshKey -BackupName "16_Widgets_DshPolicy"
-    Set-ItemProperty -Path $dshKey -Name "AllowNewsAndInterests" -Value 0 -Type DWord -Force
-
-    $advKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-    Ensure-RegistryPath -KeyPath $advKey
-    Backup-RegistryKey -KeyPath $advKey -BackupName "16_TaskbarWidgets_User"
-    try {
-        Set-ItemProperty -Path $advKey -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    } catch {}
-
-    $feedsKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
-    Ensure-RegistryPath -KeyPath $feedsKey
-    Backup-RegistryKey -KeyPath $feedsKey -BackupName "16_Feeds_Win10"
-    try {
-        Set-ItemProperty -Path $feedsKey -Name "ShellFeedsTaskbarViewMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
-    } catch {}
-
-    Write-SkyLog -Message "Widgets e Feeds de Notícias da barra de tarefas desativados." -Level "Success"
-    return $true
+    if (-not (Test-SkyClientPolicySupport -MinimumBuild 22000)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Widgets requer Windows 11 e edicao cliente suportada pela politica; flags de Feeds/Taskbar preservadas.' -RestartRequired No
+    }
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh' -Name AllowNewsAndInterests -Type DWord -Value 0
+    $result.Reason += ' Politica de Widgets configurada; TaskbarDa e Feeds intactos. Nao desinstala pacotes nem prova que processos terminaram. Perde Widgets; validar consumo efetivo e carga concorrente.'
+    $result
 }
 
 # --- CATEGORIA 5: EXPLORADOR DE FICHEIROS & QOL BASE ---
@@ -1537,18 +1527,25 @@ function Disable-AppArchival {
 
 # --- CATEGORIA 6: CONTROLO INTELIGENTE DE WINDOWS UPDATE ---
 
-function Test-SkyUpdatePolicySupport {
+function Test-SkyClientPolicySupport {
     [CmdletBinding()]
-    param()
+    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [switch]$AllowHome)
     $systems = @(Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, BuildNumber, ProductType, OperatingSystemSKU -ErrorAction Stop)
     if ($systems.Count -ne 1) { return $false }
     $os = $systems[0]
     $build = 0
     if (-not [int]::TryParse([string]$os.BuildNumber, [ref]$build)) { return $false }
-    # Conservative client matrix: Pro/N, Enterprise/N/LTSC and Education/N.
-    # Unknown editions, Home and Server are not assumed to support these policies.
-    return ($os.Version -match '^10\.0\.' -and $build -ge 15063 -and $os.ProductType -eq 1 -and
-        $os.OperatingSystemSKU -in @(4, 27, 48, 49, 121, 122, 125, 126))
+    # Conservative client matrix. Home is allowed only for an explicitly documented feature.
+    $skus = @(4,27,48,49,121,122,125,126)
+    if ($AllowHome) { $skus += @(98,99,100,101) }
+    return ($os.Version -match '^10\.0\.' -and $build -ge $MinimumBuild -and $os.ProductType -eq 1 -and
+        $os.OperatingSystemSKU -in $skus)
+}
+
+function Test-SkyUpdatePolicySupport {
+    [CmdletBinding()]
+    param()
+    Test-SkyClientPolicySupport -MinimumBuild 15063
 }
 
 function Block-AutomaticDriverUpdates {
@@ -2269,14 +2266,13 @@ function Disable-SilentAppInstallation {
 function Enable-LongFilePaths {
     [CmdletBinding()]
     param()
-
-    $fsKey = "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem"
-    Backup-RegistryKey -KeyPath $fsKey -BackupName "59_FileSystem_LongPaths"
-    Ensure-RegistryPath -KeyPath $fsKey
-
-    Set-ItemProperty -Path $fsKey -Name "LongPathsEnabled" -Value 1 -Type DWord -Force
-    Write-SkyLog -Message "Suporte para caminhos longos de ficheiro Win32 (>260 caracteres) ativado (protege mods de FiveM e jogos)." -Level "Success"
-    return $true
+    if (-not (Test-SkyClientPolicySupport -MinimumBuild 14393 -AllowHome)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Long paths requer cliente Windows 10 1607+ com identificacao conhecida; nenhuma alteracao.' -RestartRequired No
+    }
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Type DWord -Value 1
+    $result.RestartRequired = 'Yes'
+    $result.Reason += ' Compatibilidade, nao FPS: apenas APIs/apps opt-in longPathAware. Processos fazem cache; reiniciar Windows para validar todos. Nao remove limites de shell, cloud ou de todas as apps.'
+    $result
 }
 
 function Disable-NetworkDmaCoalescing {
@@ -2731,19 +2727,12 @@ function Disable-ApplicationPreLaunch {
 function Disable-StorageSenseBackgroundScans {
     [CmdletBinding()]
     param()
-
-    $ssUserKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
-    Ensure-RegistryPath -KeyPath $ssUserKey
-    Backup-RegistryKey -KeyPath $ssUserKey -BackupName "88_StorageSense_User"
-    Set-ItemProperty -Path $ssUserKey -Name "01" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    $ssPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense"
-    Ensure-RegistryPath -KeyPath $ssPolKey
-    Backup-RegistryKey -KeyPath $ssPolKey -BackupName "88_StorageSense_Policy"
-    Set-ItemProperty -Path $ssPolKey -Name "AllowStorageSenseGlobal" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    Write-SkyLog -Message "Varreduras automáticas do Sensor de Armazenamento em background desativadas (zero picos de I/O em SSDs)." -Level "Success"
-    return $true
+    if (-not (Test-SkyClientPolicySupport -MinimumBuild 18362)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Politica Storage Sense requer cliente Windows 10 1903+ e edicao suportada; preferencias intactas.' -RestartRequired No
+    }
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense' -Name AllowStorageSenseGlobal -Type DWord -Value 0
+    $result.Reason += ' Limpeza automatica Storage Sense bloqueada por politica; nao elimina ficheiros nem muda cadencias/preferencias. Risco de disco cheio: gerir espaco manualmente. Nao prova menos stuttering.'
+    $result
 }
 
 function Disable-NetBiosOverTcpip {
@@ -2770,18 +2759,13 @@ function Disable-NetBiosOverTcpip {
 function Disable-CloudClipboardSync {
     [CmdletBinding()]
     param()
-
-    $sysPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
-    Ensure-RegistryPath -KeyPath $sysPolKey
-    Backup-RegistryKey -KeyPath $sysPolKey -BackupName "90_System_CloudClipboard"
-
-    # AllowCrossDeviceClipboard = 0: Impede envio de dados copiados (texto/imagens) para a cloud da Microsoft
-    Set-ItemProperty -Path $sysPolKey -Name "AllowCrossDeviceClipboard" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    # AllowClipboardHistory = 1: Preserva a funcionalidade local do histórico Win+V para o utilizador
-    Set-ItemProperty -Path $sysPolKey -Name "AllowClipboardHistory" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    Write-SkyLog -Message "Sincronização do Clipboard na Cloud desativada (histórico Win+V local protegido sem telemetria)." -Level "Success"
-    return $true
+    if (-not (Test-SkyClientPolicySupport -MinimumBuild 17763)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Politica de clipboard requer cliente Windows 10 1809+ e edicao suportada; nenhuma alteracao.' -RestartRequired No
+    }
+    $result = Set-SkyRegistryValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name AllowCrossDeviceClipboard -Type DWord -Value 0
+    $result.RestartRequired = 'No'
+    $result.Reason += ' Sincronizacao entre dispositivos bloqueada por politica; AllowClipboardHistory e historico existentes preservados. Preferencia de privacidade, sem ganho de FPS demonstrado.'
+    $result
 }
 
 # ==============================================================================
@@ -3125,7 +3109,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 13; Category = "Privacidade & Telemetria"; Name = "Telemetria no Nível Básico/Necessário (Seguro)"; Action = { Set-TelemetryBasic } },
         [ordered]@{ Id = 14; Category = "Privacidade & Telemetria"; Name = "Desativação de Sugestões e Anúncios no Menu Iniciar"; Action = { Disable-StartMenuSuggestions } },
         [ordered]@{ Id = 15; Category = "Privacidade & Telemetria"; Name = "Desativação de Pesquisa Web Bing e Dicas do Spotlight"; Action = { Disable-SearchAndSpotlight } },
-        [ordered]@{ Id = 16; Category = "Privacidade & Telemetria"; Name = "Desativação de Widgets e Feeds da Barra de Tarefas"; Action = { Disable-TaskbarWidgets } },
+        [ordered]@{ Id = 16; Category = "Privacidade & Telemetria"; Name = "Widgets Windows 11: politica documentada (sem flags Win10)"; Action = { Disable-TaskbarWidgets } },
 
         # Categoria 5: Explorador de Ficheiros
         [ordered]@{ Id = 17; Category = "Explorador & QoL"; Name = "Exibição de Extensões de Ficheiros Conhecidos"; Action = { Show-FileExtensions } },
@@ -3192,7 +3176,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 56; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Tarefas Agendadas de Telemetria e Diagnóstico de Disco"; Action = { Disable-MaintenanceScheduledTasks } },
         [ordered]@{ Id = 57; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Histórico de Atividades e Tracing de Diagnóstico Contínuo"; Action = { Disable-ActivityHistoryAndDiagnosticTracing } },
         [ordered]@{ Id = 58; Category = "Agendador & Telemetria Avançada"; Name = "Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)"; Action = { Disable-SilentAppInstallation } },
-        [ordered]@{ Id = 59; Category = "Agendador & Telemetria Avançada"; Name = "Ativação de Caminhos Longos de Ficheiro Win32 (>260 Chars para FiveM/Mods)"; Action = { Enable-LongFilePaths } },
+        [ordered]@{ Id = 59; Category = "Agendador & Telemetria Avançada"; Name = "Long paths: compatibilidade de apps opt-in"; Action = { Enable-LongFilePaths } },
         [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "DMA Coalescing: experiência por adaptador Ethernet suportado"; Action = { Disable-NetworkDmaCoalescing } },
 
         # Categoria 17: Interface, Janelas & Multimédia
@@ -3233,9 +3217,9 @@ function Invoke-SkyOptimize {
         # Categoria 22: Latência Extrema & Resposta de Fundo
         [ordered]@{ Id = 86; Category = "Privacidade & Telemetria"; Name = "Desativação de Telemetria de Localização e Sensores (Serviço lfsvc Off)"; Action = { Disable-LocationAndSensors } },
         [ordered]@{ Id = 87; Category = "Processos em Segundo Plano"; Name = "Desativação de Aplicações Pré-Lançadas Especulativamente (ApplicationPreLaunch Off)"; Action = { Disable-ApplicationPreLaunch } },
-        [ordered]@{ Id = 88; Category = "Armazenamento & I/O"; Name = "Desativação de Varreduras em Segundo Plano do Storage Sense (StoragePolicy Off)"; Action = { Disable-StorageSenseBackgroundScans } },
+        [ordered]@{ Id = 88; Category = "Armazenamento & I/O"; Name = "Storage Sense: suspender limpeza automatica por politica"; Action = { Disable-StorageSenseBackgroundScans } },
         [ordered]@{ Id = 89; Category = "Rede & Latência"; Name = "Desativação de Broadcasts Legados NetBIOS sobre TCP/IP (NetBT Off)"; Action = { Disable-NetBiosOverTcpip } },
-        [ordered]@{ Id = 90; Category = "Privacidade & Telemetria"; Name = "Desativação de Sincronização da Área de Transferência na Cloud (Clipboard Local)"; Action = { Disable-CloudClipboardSync } }
+        [ordered]@{ Id = 90; Category = "Privacidade & Telemetria"; Name = "Clipboard: impedir sync entre dispositivos, preservar historico"; Action = { Disable-CloudClipboardSync } }
     )
 
     $currentCategory = ""
@@ -3473,7 +3457,7 @@ function Get-SkyProfileActionIds {
 }
 
 function Get-SkyMigratedActionIds {
-    @(1, 3, 6, 8, 9, 13, 17, 19, 20, 25, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79, 86)
+    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 59, 60, 71, 74, 75, 76, 79, 86, 88, 90)
 }
 
 function Get-SkyRetiredActionIds {
@@ -3503,7 +3487,8 @@ function Invoke-SkyEligibleAction {
     if ($Id -notin (Get-SkyMigratedActionIds)) {
         return New-SkyActionResult -Status Deferred -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.' -RestartRequired No
     }
-    if ((Get-SkyWindowsBuild) -lt 15063) {
+    $minimumBuild = if ($Id -eq 59) { 14393 } else { 15063 }
+    if ((Get-SkyWindowsBuild) -lt $minimumBuild) {
         return New-SkyActionResult -Status Incompatible -Reason 'Build anterior ao mínimo deste conjunto; nenhuma alteração aplicada.' -RestartRequired No
     }
     Invoke-SkyAction -Action $Action

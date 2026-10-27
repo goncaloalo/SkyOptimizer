@@ -22,6 +22,7 @@ Describe 'Tracked registry lifecycle without Windows writes' {
     Mock Get-SkyWindowsBuild { 22631 }
     Mock Get-SkyBrowserMajorVersion { 130 }
     Mock Test-SkyUpdatePolicySupport { $true }
+    Mock Test-SkyClientPolicySupport { $true }
     Mock Open-SkyRegistryBase { throw 'Real registry access forbidden.' }
     Mock Invoke-SkyNativeProcess { throw 'Real native process forbidden.' }
     Mock Get-SkyResourceState {
@@ -203,6 +204,55 @@ Describe 'Tracked registry lifecycle without Windows writes' {
         (Test-SkyStateEqual $script:values[$identity] $original) | Should Be $true
         @($script:values.Values | Where-Object Exists).Count | Should Be 1
         $script:writes | Should Be 2
+    }
+    It 'applies the four software options twice and restores absence without managing unrelated preferences' {
+        $untouchedResources = @(
+            (ConvertTo-SkyRegistryResource 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' 'TaskbarDa'),
+            (ConvertTo-SkyRegistryResource 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds' 'ShellFeedsTaskbarViewMode'),
+            (ConvertTo-SkyRegistryResource 'HKCU:\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy' '01'),
+            (ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' 'AllowClipboardHistory')
+        )
+        $original = ConvertTo-SkyRegistryState -Exists $true -Kind DWord -Value 7
+        foreach ($resource in $untouchedResources) { $script:values[($resource | ConvertTo-Json -Compress)] = $original }
+        foreach ($name in @('Disable-TaskbarWidgets','Enable-LongFilePaths','Disable-StorageSenseBackgroundScans','Disable-CloudClipboardSync')) {
+            (Invoke-SkyAction { & $name }).Status | Should Be Applied
+            (Invoke-SkyAction { & $name }).Status | Should Be AlreadyCompliant
+        }
+        @((Read-SkyMutationState $Global:SkyBackupDir).Entries).Count | Should Be 4
+        $null = Restore-SkyTrackedChanges $Global:SkyBackupDir
+        $script:writes | Should Be 8
+        @($script:values.Values | Where-Object Exists).Count | Should Be 4
+        foreach ($resource in $untouchedResources) { (Test-SkyStateEqual (Get-SkyResourceState $resource) $original) | Should Be $true }
+    }
+    It 'restores unexpected original types for every migrated software policy' {
+        $resources = @(
+            (ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh' 'AllowNewsAndInterests'),
+            (ConvertTo-SkyRegistryResource 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' 'LongPathsEnabled'),
+            (ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\StorageSense' 'AllowStorageSenseGlobal'),
+            (ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' 'AllowCrossDeviceClipboard')
+        )
+        $original = ConvertTo-SkyRegistryState -Exists $true -Kind ExpandString -Value '%SystemRoot%\literal-original'
+        foreach ($resource in $resources) { $script:values[($resource | ConvertTo-Json -Compress)] = $original }
+        foreach ($name in @('Disable-TaskbarWidgets','Enable-LongFilePaths','Disable-StorageSenseBackgroundScans','Disable-CloudClipboardSync')) { $null = Invoke-SkyAction { & $name } }
+        $null = Restore-SkyTrackedChanges $Global:SkyBackupDir
+        foreach ($resource in $resources) { (Test-SkyStateEqual (Get-SkyResourceState $resource) $original) | Should Be $true }
+    }
+    It 'recovers an after-write failure in each software option without inventing defaults' {
+        foreach ($name in @('Disable-TaskbarWidgets','Enable-LongFilePaths','Disable-StorageSenseBackgroundScans','Disable-CloudClipboardSync')) {
+            $script:writeMode = 'AfterFailure'
+            (Invoke-SkyAction { & $name }).Status | Should Be Failed
+            @((Read-SkyMutationState $Global:SkyBackupDir).Entries | Where-Object Status -eq 'Pending').Count | Should Be 1
+            $script:writeMode = 'Normal'
+            $null = Restore-SkyTrackedChanges $Global:SkyBackupDir
+            @($script:values.Values | Where-Object Exists).Count | Should Be 0
+        }
+    }
+    It 'never writes any software option if the initial journal persistence fails' {
+        $script:saveFailure = $true
+        foreach ($name in @('Disable-TaskbarWidgets','Enable-LongFilePaths','Disable-StorageSenseBackgroundScans','Disable-CloudClipboardSync')) {
+            (Invoke-SkyAction { & $name }).Status | Should Be Failed
+        }
+        $script:writes | Should Be 0
     }
     It 'restores update policies after repeated Apply without touching other driver and peer settings' {
         $peer = ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' 'DOMinDiskSizeAllowedToPeer'

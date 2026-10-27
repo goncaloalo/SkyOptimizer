@@ -13,7 +13,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 2,
@@ -27,7 +29,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 3,
@@ -43,7 +47,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 4,
@@ -57,7 +63,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 5,
@@ -71,7 +79,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 6,
@@ -87,7 +97,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 7,
@@ -101,7 +113,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 8,
@@ -117,7 +131,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 9,
@@ -134,7 +150,9 @@
       "Performance",
       "Extreme"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 10,
@@ -148,7 +166,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 11,
@@ -162,7 +182,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 12,
@@ -176,7 +198,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": true
+    "Retirada": true,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 13,
@@ -192,7 +216,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 14,
@@ -206,7 +232,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 15,
@@ -220,21 +248,27 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 16,
-    "Nome": "Desativação de Widgets e Feeds da Barra de Tarefas",
+    "Nome": "Widgets Windows 11: politica documentada (sem flags Win10)",
     "Funcao": "Disable-TaskbarWidgets",
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Útil quando elimina carga de fundo observada; respeitar utilização; consolidar políticas suportadas.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "Windows 11 >=22000, cliente Pro/N, Enterprise/N/LTSC ou Education/N. Apenas AllowNewsAndInterests; preservar TaskbarDa e Feeds. Perda de Widgets; nao prova paragem de WebView/FPS.",
+    "EstadoImplementacao": "Migrada offline 3B: deteccao, baseline tipada, Apply verificado e Undo; consumo da politica nao validado em Windows real",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
-    "Retirada": false
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
   },
   {
     "Id": 17,
@@ -250,7 +284,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 18,
@@ -264,7 +300,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 19,
@@ -280,7 +318,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 20,
@@ -296,7 +336,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 21,
@@ -310,7 +352,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 22,
@@ -324,7 +368,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 23,
@@ -338,7 +384,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 24,
@@ -352,7 +400,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 25,
@@ -368,7 +418,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 26,
@@ -382,7 +434,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 27,
@@ -396,7 +450,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 28,
@@ -410,7 +466,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 29,
@@ -424,7 +482,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 30,
@@ -438,7 +498,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": true
+    "Retirada": true,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 31,
@@ -452,7 +514,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 32,
@@ -466,7 +530,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 33,
@@ -480,7 +546,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 34,
@@ -494,7 +562,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 35,
@@ -508,7 +578,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 36,
@@ -522,7 +594,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 37,
@@ -536,7 +610,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 38,
@@ -552,7 +628,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 39,
@@ -566,7 +644,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": true
+    "Retirada": true,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 40,
@@ -580,7 +660,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 41,
@@ -597,7 +679,9 @@
       "Performance",
       "Extreme"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 42,
@@ -613,7 +697,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 43,
@@ -627,7 +713,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 44,
@@ -641,7 +729,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 45,
@@ -655,7 +745,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 46,
@@ -669,7 +761,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 47,
@@ -683,7 +777,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 48,
@@ -699,7 +795,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 49,
@@ -713,7 +811,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 50,
@@ -727,7 +827,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 51,
@@ -741,7 +843,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 52,
@@ -755,7 +859,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 53,
@@ -769,7 +875,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 54,
@@ -783,7 +891,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": true
+    "Retirada": true,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 55,
@@ -797,7 +907,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 56,
@@ -811,7 +923,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 57,
@@ -825,7 +939,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 58,
@@ -839,21 +955,27 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 59,
-    "Nome": "Ativação de Caminhos Longos de Ficheiro Win32 (>260 Chars para FiveM/Mods)",
+    "Nome": "Long paths: compatibilidade de apps opt-in",
     "Funcao": "Enable-LongFilePaths",
-    "FinalidadeProposta": "Otimização condicional",
+    "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Útil em aplicações compatíveis e caminhos problemáticos; não remove todos os limites de todas as apps.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "Cliente Windows 10/11 >=14393, edicoes conhecidas incluindo Home. Apenas apps/APIs longPathAware; processos fazem cache. Reiniciar para validar; nao remove limites de todas as apps/cloud.",
+    "EstadoImplementacao": "Migrada offline 3B: deteccao, baseline tipada, Apply verificado e Undo; consumo da politica nao validado em Windows real",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
-    "Retirada": false
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
   },
   {
     "Id": 60,
@@ -869,7 +991,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 61,
@@ -883,7 +1007,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 62,
@@ -897,7 +1023,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 63,
@@ -911,7 +1039,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 64,
@@ -925,7 +1055,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 65,
@@ -939,7 +1071,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 66,
@@ -953,7 +1087,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 67,
@@ -967,7 +1103,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 68,
@@ -981,7 +1119,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 69,
@@ -995,7 +1135,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 70,
@@ -1009,7 +1151,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 71,
@@ -1025,7 +1169,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 72,
@@ -1039,7 +1185,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 73,
@@ -1053,7 +1201,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 74,
@@ -1069,7 +1219,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 75,
@@ -1085,7 +1237,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 76,
@@ -1101,7 +1255,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 77,
@@ -1115,7 +1271,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 78,
@@ -1129,7 +1287,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 79,
@@ -1147,7 +1307,9 @@
       "Performance",
       "Extreme"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 80,
@@ -1161,7 +1323,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 81,
@@ -1175,7 +1339,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 82,
@@ -1189,7 +1355,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 83,
@@ -1203,7 +1371,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 84,
@@ -1217,7 +1387,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 85,
@@ -1231,7 +1403,9 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 86,
@@ -1247,7 +1421,9 @@
     "PerfisAtuais": [
       "Extreme: selecao explicita"
     ],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
   },
   {
     "Id": 87,
@@ -1261,21 +1437,27 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 88,
-    "Nome": "Desativação de Varreduras em Segundo Plano do Storage Sense (StoragePolicy Off)",
+    "Nome": "Storage Sense: suspender limpeza automatica por politica",
     "Funcao": "Disable-StorageSenseBackgroundScans",
     "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Preferência",
-    "RequisitosRiscosValidacao": "Agendar manutenção fora do jogo se houver contenção; preservar proteção contra disco cheio.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "Cliente >=18362 e edicao de politica conhecida. Apenas AllowStorageSenseGlobal; preservar 01, cadencias e preferencias. Nao apaga ficheiros; risco de disco cheio; gerir espaco manualmente.",
+    "EstadoImplementacao": "Migrada offline 3B: deteccao, baseline tipada, Apply verificado e Undo; consumo da politica nao validado em Windows real",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
-    "Retirada": false
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
   },
   {
     "Id": 89,
@@ -1289,20 +1471,26 @@
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
   },
   {
     "Id": 90,
-    "Nome": "Desativação de Sincronização da Área de Transferência na Cloud (Clipboard Local)",
+    "Nome": "Clipboard: impedir sync entre dispositivos, preservar historico",
     "Funcao": "Disable-CloudClipboardSync",
     "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Preferência",
-    "RequisitosRiscosValidacao": "Escolha de privacidade e funcionalidade; não vender como ganho mensurável de FPS.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "RequisitosRiscosValidacao": "Cliente >=17763 e edicao de politica conhecida. Apenas AllowCrossDeviceClipboard; manter AllowClipboardHistory e historico. Preferencia de privacidade, nao FPS.",
+    "EstadoImplementacao": "Migrada offline 3B: deteccao, baseline tipada, Apply verificado e Undo; consumo da politica nao validado em Windows real",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
-    "Retirada": false
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
   }
 ]

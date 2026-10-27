@@ -55,6 +55,31 @@ Describe 'Action reporting' {
         $script:SkyActionContext.Marker | Should Be 42
         $script:SkyActionContext = $null
     }
+    It 'preserves Deferred and NotSelected instead of misreporting conformity' {
+        foreach ($status in @('Deferred','NotSelected')) {
+            (Invoke-SkyAction { New-SkyActionResult -Status $status -Reason 'not executed' -RestartRequired No }).Status | Should Be $status
+        }
+    }
+    It 'reports partial application and keeps the restart requirement when a child remains unverified or skipped' {
+        foreach ($status in @('Deferred','Unverified','NotSelected')) {
+            $result = Invoke-SkyAction {
+                New-SkyActionResult Applied 'changed resource' Yes
+                New-SkyActionResult -Status $status -Reason 'incomplete child' -RestartRequired No
+            }
+            $result.Status | Should Be Unverified
+            $result.RestartRequired | Should Be Yes
+            $result.Reason.Contains('incomplete child') | Should Be $true
+        }
+    }
+    It 'retains failed child details and restart requirements after partial mutation' {
+        $result = Invoke-SkyAction {
+            New-SkyActionResult Applied 'NIC persisted' Yes
+            New-SkyActionResult Failed 'second resource rejected' No
+        }
+        $result.Status | Should Be Failed
+        $result.RestartRequired | Should Be Yes
+        $result.Reason.Contains('second resource rejected') | Should Be $true
+    }
 }
 
 Describe 'Atomic files and registry export barriers' {

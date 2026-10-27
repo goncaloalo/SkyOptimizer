@@ -6,10 +6,10 @@ O SkyOptimizer mantém o programa PowerShell existente, destinado a instalaçõe
 
 ## Estado atual
 
-- O catálogo conserva **90 IDs históricos**: 21 elegíveis para Apply, 67 bloqueados, manutenção 24 separada e ação 39 retirada. Migradas: **1, 3, 6, 8, 9, 13, 17, 19, 20, 25, 38, 41, 42, 48, 60, 71, 74, 75, 76, 79 e 86**.
+- O catálogo conserva **90 IDs históricos**: 25 elegíveis para Apply, 60 bloqueados, manutenção 24 separada e quatro retirados (12/30/39/54). Migradas: **1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 59, 60, 71, 74, 75, 76, 79, 86, 88 e 90**.
 - As restantes ações ficam bloqueadas no dispatcher enquanto faltam baseline, reversão ou compatibilidade. As escritas indiscriminadas USB/HAGS/MSI foram retiradas; o catálogo regista as decisões.
 - A ação 24 é manutenção de diagnóstico separada, com confirmação explícita. Não existe limpeza automática de shaders nos perfis.
-- [Estado das 90 ações](docs/ACOES-ESTADO.json), [Fase 3A](docs/FASE3A.md), [entrega anterior](docs/FASE2-CONTINUACAO.md), [perfis](docs/PERFIS.md), [benchmarks](docs/BENCHMARKS.md) e [oportunidades](docs/OPORTUNIDADES.md).
+- [Auditoria/desenvolvimento offline 3B](docs/FASE3B.md), [estado das ações](docs/ACOES-ESTADO.json), [Fase 3A](docs/FASE3A.md), [perfis](docs/PERFIS.md), [benchmarks](docs/BENCHMARKS.md) e [oportunidades](docs/OPORTUNIDADES.md).
 
 ## Perfis de desenvolvimento
 
