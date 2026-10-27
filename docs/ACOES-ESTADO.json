@@ -200,7 +200,7 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
   },
   {
     "Id": 13,
@@ -500,7 +500,7 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
   },
   {
     "Id": 31,
@@ -589,7 +589,7 @@
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Laboratório",
     "RequisitosRiscosValidacao": "Remover campos documentados como não usados; explicar threads abrangidas e prioridade efetiva; medir.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "EstadoImplementacao": "Bloqueada 3B: removidas escritas nao justificadas; hipotese requer estado observavel e ensaio especifico",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
@@ -646,7 +646,7 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
   },
   {
     "Id": 40,
@@ -893,7 +893,7 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
   },
   {
     "Id": 55,
@@ -1432,7 +1432,7 @@
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "Verificar suporte/efeito; remover associação indevida a AllowDeploymentInSpecialProfiles; medir arranque/CPU.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "EstadoImplementacao": "Bloqueada 3B: removidas escritas nao justificadas; hipotese requer estado observavel e ensaio especifico",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,

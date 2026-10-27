@@ -1,6 +1,6 @@
 # SkyOptimizer
 
-**Branch de desenvolvimento — Fase 2 em curso. Não distribuir como versão validada para clientes.**
+**Branch de desenvolvimento — Fase 3B offline. Não distribuir como versão validada para clientes.**
 
 O SkyOptimizer mantém o programa PowerShell existente, destinado a instalações Windows já em uso. O objetivo é melhorar desempenho real em jogos; ainda não foram medidos ganhos de FPS, 1% lows ou latência.
 
@@ -70,6 +70,8 @@ python -B -m unittest discover -s benchmarks/tests -v
 ```
 
 Os testes PowerShell carregam declarações por AST e usam mocks/ficheiros temporários. Os testes Python usam intervalos sintéticos. O [analisador offline](benchmarks/analyze.py) lê CSV recolhido em laboratório; não executa tweaks nem captura jogos. Integração em Windows descartável e benchmarks físicos continuam necessários.
+
+Última suite offline: **155 testes Pester e 11 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
 
 O [protocolo de VM](docs/INTEGRACAO-VM.md) inclui o harness de registo com reinícios manuais, falhas intermédias e conflitos externos. O harness está preparado e testado com mocks; ainda não foi executado num guest real. Só o utilizar num Windows descartável com snapshot confirmado e autorização para alterações.
 

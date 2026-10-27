@@ -19,7 +19,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/api/timeapi/nf-timeapi-timebeginperiod"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-TimerResolution",
@@ -45,7 +45,7 @@
         "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-Hibernation",
@@ -61,7 +61,7 @@
     {
       "Id": 5,
       "Mecanismo": "Desativa FTH globalmente com Enabled=0",
-      "Fundamento": "Mecanismo de mitigação documentado; uso genérico injustificado",
+      "Fundamento": "Documentacao historica de Windows 7 confirma o mecanismo; suporte/efeito na build atual precisa de diagnostico",
       "ImpactoEsperado": "Possível custo apenas em app realmente abrangida por FTH",
       "Riscos": "Pode expor heap corruption e crashes antes mitigados",
       "Dependencias": "Diagnóstico por executável; confirmar FTH aplicado e causa",
@@ -71,7 +71,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/win7appqual/fault-tolerant-heap"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-FaultTolerantHeap",
@@ -97,7 +97,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/inputdev/about-raw-input"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-MouseAcceleration",
@@ -122,7 +122,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-NetworkLatency",
@@ -149,7 +149,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-NetworkThrottling",
@@ -174,7 +174,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-qos"
       ],
       "Implementacao3B": "Retirada: dispatcher e funcao direta sem mutacoes",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "RetiredActions.Tests: dispatcher e funcao direta sem mutacoes",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-QoSBandwidthLimit",
@@ -199,7 +199,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-StartMenuSuggestions",
@@ -221,10 +221,10 @@
       "Reversibilidade": "Usar apenas política aplicável e guardar valores; remover flags sem suporte",
       "DecisaoOffline": "IntegracaoSoftware",
       "Fontes": [
-        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-search"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-SearchAndSpotlight",
@@ -249,7 +249,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-newsandinterests"
       ],
       "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "SoftwarePolicies.Tests e Journal.Tests: compatibilidade e ciclo exacto com mocks; sem politica consumida validada",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-TaskbarWidgets",
@@ -274,7 +274,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-AppArchival",
@@ -299,7 +299,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-update"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-ManualWindowsUpdate",
@@ -324,7 +324,7 @@
         "https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/dism-storage-reserve"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-ReservedStorage",
@@ -349,7 +349,7 @@
         "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-behavior"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-NTFS",
@@ -376,7 +376,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-SleepStudyLogging",
@@ -400,7 +400,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/wer/wer-settings"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-WindowsErrorReporting",
@@ -425,7 +425,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-InterfaceDelays",
@@ -450,7 +450,7 @@
         "https://learn.microsoft.com/en-us/windows-hardware/test/wpt/optimizing-performance-and-responsiveness"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-StartupDelay",
@@ -475,7 +475,7 @@
         "https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/dfsr-event-2212-restart-server"
       ],
       "Implementacao3B": "Retirada: dispatcher e funcao direta sem mutacoes",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "RetiredActions.Tests: dispatcher e funcao direta sem mutacoes",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-FastShutdown",
@@ -503,7 +503,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-AltTabFilter",
@@ -528,7 +528,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Enable-TaskbarEndTask",
@@ -553,7 +553,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/manage-windows-copilot"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-Copilot",
@@ -578,7 +578,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-StickyKeysPopup",
@@ -603,7 +603,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-CpuScheduling",
@@ -628,7 +628,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service"
       ],
       "Implementacao3B": "Limpeza implementada: funcao bloqueada sem campos obsoletos/alheios; hipotese conservada na auditoria",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "RetiredActions.Tests: dispatcher e funcao direta sem mutacoes",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-MMCSSTasksGames",
@@ -653,7 +653,7 @@
         "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmdt/ns-d3dkmdt-d3dkmt_wddm_2_7_caps"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "HardwareSafety.Tests: bloqueio direto e no dispatcher; sem capacidade/hardware validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Enable-HAGSConditional",
@@ -675,7 +675,7 @@
         "https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/enabling-message-signaled-interrupts-in-the-registry"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "HardwareSafety.Tests: bloqueio direto e no dispatcher; sem capacidade/hardware validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Enable-GpuMsiMode",
@@ -697,7 +697,7 @@
         "https://learn.microsoft.com/en-us/powershell/module/storage/optimize-volume"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Invoke-SsdReTrim",
@@ -728,7 +728,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-LLMNRProtocol",
@@ -753,7 +753,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-AutoFolderDiscovery",
@@ -779,7 +779,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-MaintenanceWakeUp",
@@ -804,7 +804,7 @@
         "https://learn.microsoft.com/en-us/windows/application-management/svchost-service-refactoring"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-SvcHostProcessGrouping",
@@ -832,7 +832,7 @@
         "https://learn.microsoft.com/en-us/powershell/module/appx/remove-appxpackage"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Remove-BloatwareAppX",
@@ -859,7 +859,7 @@
         "https://learn.microsoft.com/en-us/powershell/module/mmagent/get-mmagent"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-KernelMemoryPaging",
@@ -881,10 +881,10 @@
       "Reversibilidade": "Diário possível apenas após semântica; fallback não pode contornar falhas",
       "DecisaoOffline": "Laboratorio",
       "Fontes": [
-        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-search"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-SearchIndexerPower",
@@ -910,7 +910,7 @@
         "https://learn.microsoft.com/en-us/windows-server/administration/performance-tuning/role/file-server/"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-SmbBandwidthThrottling",
@@ -935,7 +935,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-AeroShake",
@@ -960,7 +960,7 @@
         "https://support.microsoft.com/en-us/windows/experience/storage-filemanagement/manage-drive-space-with-storage-sense"
       ],
       "Implementacao3B": "Retirada: dispatcher e funcao direta sem mutacoes",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "RetiredActions.Tests: dispatcher e funcao direta sem mutacoes",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-LowDiskSpaceChecks",
@@ -975,17 +975,17 @@
     {
       "Id": 55,
       "Mecanismo": "AutoReboot=0 e DisplayParameters=1 em CrashControl",
-      "Fundamento": "Diagnóstico de crash, não otimização de rendering",
+      "Fundamento": "Parcial: recuperacao e dumps documentados; contrato de DisplayParameters na build atual nao confirmado",
       "ImpactoEsperado": "Ajuda suporte; não melhora FPS",
       "Riscos": "Muda comportamento após BSOD e exposição de informações",
       "Dependencias": "Política de suporte/privacidade e dump configurado",
       "Reversibilidade": "Valores tipados possíveis; confirmar comportamento numa VM com crash controlado",
       "DecisaoOffline": "IntegracaoSoftware",
       "Fontes": [
-        "https://learn.microsoft.com/en-us/troubleshoot/windows-client/performance/configure-system-failure-recovery-options"
+        "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/enabling-a-kernel-mode-dump-file"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-CrashControlQuality",
@@ -1010,7 +1010,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-MaintenanceScheduledTasks",
@@ -1036,7 +1036,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/wes/windows-event-log"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-ActivityHistoryAndDiagnosticTracing",
@@ -1062,7 +1062,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-SilentAppInstallation",
@@ -1087,7 +1087,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
       ],
       "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "SoftwarePolicies.Tests e Journal.Tests: compatibilidade e ciclo exacto com mocks; sem politica consumida validada",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Enable-LongFilePaths",
@@ -1112,7 +1112,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-ExplorerIconCache",
@@ -1137,7 +1137,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/coreaudio/stream-attenuation"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-AudioDucking",
@@ -1162,7 +1162,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-ClassicContextMenuWin11",
@@ -1187,7 +1187,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-WindowMinimizeAnimations",
@@ -1212,7 +1212,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Set-MaxWallpaperQuality",
@@ -1237,7 +1237,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-EdgeScreenGestures",
@@ -1259,10 +1259,10 @@
       "Reversibilidade": "Valor reversível não prova recuperação de software instalado; exige hardware",
       "DecisaoOffline": "Laboratorio",
       "Fontes": [
-        "https://learn.microsoft.com/en-us/windows-hardware/drivers/bringup/windows-platform-binary-table"
+        "https://uefi.org/acpi"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-WpbtExecution",
@@ -1287,7 +1287,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-NvidiaTelemetry",
@@ -1317,7 +1317,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-WindowsFeedbackRequests",
@@ -1342,7 +1342,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-SettingsOnlineTips",
@@ -1367,7 +1367,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement#allowgamedvr"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-GameBarPresenceWriter",
@@ -1394,7 +1394,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/inputdev/about-raw-input"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-KeyboardRepeatResponse",
@@ -1419,7 +1419,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-TcpSocketsAndPorts",
@@ -1444,7 +1444,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-NetshTcpGlobal",
@@ -1466,7 +1466,7 @@
         "https://devblogs.microsoft.com/directx/demystifying-fullscreen-optimizations/"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-FullscreenOptimizations",
@@ -1491,7 +1491,7 @@
         "https://learn.microsoft.com/en-us/windows/win32/procthread/quality-of-service"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-PowerThrottling",
@@ -1506,17 +1506,17 @@
     {
       "Id": 82,
       "Mecanismo": "PreventIndexingArchives=1",
-      "Fundamento": "Política de Search; disponibilidade/edições e indexador devem ser confirmados",
+      "Fundamento": "Suporte especifico por confirmar: a pagina Search consultada nao estabelece o contrato de PreventIndexingArchives na build atual",
       "ImpactoEsperado": "Só evita custo se indexação de arquivos for carga real",
       "Riscos": "Perda de pesquisa de conteúdo dentro de arquivos",
       "Dependencias": "Windows Search ativo, formato de arquivo e política consumida",
       "Reversibilidade": "Um valor reversível; candidato futuro após confirmar matriz e funcionalidade",
       "DecisaoOffline": "IntegracaoSoftware",
       "Fontes": [
-        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-search"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-ZipIndexing",
@@ -1542,7 +1542,7 @@
         "https://devblogs.microsoft.com/directx/demystifying-fullscreen-optimizations/"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-DwmVisualEffects",
@@ -1567,7 +1567,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-WindowsSpotlightDownloads",
@@ -1592,7 +1592,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Optimize-QuickAccessHistory",
@@ -1618,7 +1618,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-appxpackagemanager"
       ],
       "Implementacao3B": "Limpeza implementada: funcao bloqueada sem campos obsoletos/alheios; hipotese conservada na auditoria",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "RetiredActions.Tests: dispatcher e funcao direta sem mutacoes",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-ApplicationPreLaunch",
@@ -1644,7 +1644,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-storage#allowstoragesenseglobal"
       ],
       "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "SoftwarePolicies.Tests e Journal.Tests: compatibilidade e ciclo exacto com mocks; sem politica consumida validada",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-StorageSenseBackgroundScans",
@@ -1669,7 +1669,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient"
       ],
       "Implementacao3B": "Por executar",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "Audit3B.Tests e Catalogue.Tests: auditoria/estrutura e bloqueio; corpo legado nao validado",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-NetBiosOverTcpip",
@@ -1695,7 +1695,7 @@
         "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy#allowcrossdeviceclipboard"
       ],
       "Implementacao3B": "Migrada offline: politica minima com baseline tipada; validacao real nao executada",
-      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "TestesAutomatizados3B": "SoftwarePolicies.Tests e Journal.Tests: compatibilidade e ciclo exacto com mocks; sem politica consumida validada",
       "ValidacaoReal": "Nao executada",
       "GanhoMedido": false,
       "Funcao": "Disable-CloudClipboardSync",

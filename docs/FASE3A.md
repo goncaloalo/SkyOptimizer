@@ -1,5 +1,7 @@
 # Fase 3A — validação estrutural e migração progressiva
 
+> Entrega histórica. Auditoria das ações bloqueadas e desenvolvimento offline seguinte: [FASE3B.md](FASE3B.md).
+
 Branch preservada: `dev/phase2-execution-power-safety`. Base desta fase: `8983f60`, 19 ações elegíveis, 109 testes Pester e 11 Python. Não foram executados Apply, Undo, comandos de reparação ou alterações reais ao Windows de desenvolvimento. Sem push; SkyOS e SkyOptimizer-Packs fora do âmbito.
 
 **Resultado desta entrega:** 21 ações elegíveis, 67 bloqueadas/por migrar, manutenção 24 separada e ação 39 retirada. Catálogo com 90 IDs históricos; isto não significa 90 opções ativas. **135 testes Pester e 11 testes Python aprovados.** Integração real e benchmarks físicos continuam por executar.

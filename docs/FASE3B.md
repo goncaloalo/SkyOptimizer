@@ -2,6 +2,8 @@
 
 Data: 27 de outubro de 2026. Base preservada: `22def57`, branch `dev/phase2-execution-power-safety`, working tree inicialmente limpa. Apenas SkyOptimizer. Não existe VM ou máquina física disponível para testes; esta fase não executa Apply/Undo no Windows de desenvolvimento.
 
+**Resultado do lote:** 67 ações auditadas individualmente; quatro migradas offline (16/59/88/90); três novas retiradas (12/30/54). Estado atual: **25 elegíveis, 60 bloqueadas, quatro retiradas (incluindo 39) e manutenção 24 separada**. Suite final: **155 testes Pester e 11 Python aprovados**, zero falhas. Não existem benchmarks ou validação real em VM/hardware.
+
 ## 1. Auditoria das 67 ações inicialmente bloqueadas
 
 [AUDITORIA-3B.json](AUDITORIA-3B.json) contém uma entrada individual para cada uma das 67 ações, com mecanismo observado no código, fundamento, impacto esperado, riscos, dependências, requisitos de reversão, decisão offline e referências primárias. A linha/comandos pertencem ao source da base `22def57`; não são referências às linhas após migração. Uma referência geral de mecanismo não valida flags marcadas como internas ou sem contrato confirmado.
@@ -78,3 +80,30 @@ O harness acrescenta BackupWriteFailure: um handle real bloqueia a substituiçã
 ExternalConflict passa a confirmar a restauração dos restantes recursos apesar do conflito no primeiro. Falhas depois de abrir o run produzem JSON `Passed=false` quando possível. A falha de guardar a própria evidência não substitui a exceção original nem avança o cenário. Estão preparados procedimentos específicos de Widgets, long paths, Storage Sense e clipboard em [INTEGRACAO-VM.md](INTEGRACAO-VM.md).
 
 A falta de VM não bloqueou estes desenvolvimentos. Continuam pendentes execução do harness em Windows descartável, reinícios reais, verificação das políticas na shell/apps e ensaios de hardware. O harness não contém reboot nem aprovação automática de desempenho.
+
+## 7. Verificação final e ficheiros
+
+`Invoke-Pester -Script .\tests -PassThru`: **155 Passed, 0 Failed, 0 Skipped, 0 Pending** em Windows PowerShell 5.1/Pester 3.4.0. `python -B -m unittest discover -s benchmarks/tests -v`: **11 aprovados**, Python 3.14.5. `git diff --check` sem erros. O aviso no teste que simula indisponibilidade do volume de evidência é esperado e verifica a preservação do erro original.
+
+Parsing do produto/painel/harness e compilações C# decorrem sem executar os APIs de alteração do sistema. O teste de partilha de ficheiro usa um ficheiro temporário real, com registo simulado. Isto testa persistência; não é uma execução de integração no Windows configurado para clientes. Hashes do source e indicadores `WindowsChangesApplied=false`, `IntegrationVmExecuted=false`, `PhysicalBenchmarksPerformed=false` estão em [TESTES-RESULTADO.json](TESTES-RESULTADO.json).
+
+Ficheiros funcionais: `SkyOptimizer.ps1` e `integration/SkyVmHarness.ps1`. Testes alterados/adicionados: `Audit3B.Tests.ps1`, `Power.Tests.ps1`, `HardwareSafety.Tests.ps1`, `RetiredActions.Tests.ps1`, `Journal.Tests.ps1`, `SoftwarePolicies.Tests.ps1`, `Safety.Tests.ps1` e `VmHarness.Tests.ps1`, na pasta `tests`. Documentação/catálogos: `README.md`, `docs/FASE3B.md`, `docs/AUDITORIA-3B.json`, `docs/ACOES-ESTADO.json`, `docs/PERFIS.md`, `docs/INTEGRACAO-VM.md`, `docs/TESTES-RESULTADO.json` e apontador histórico em `docs/FASE3A.md`.
+
+## 8. Limitações e próximo desenvolvimento offline
+
+- As 60 ações bloqueadas correspondem às 21 hipóteses de laboratório e 39 ações que ainda precisam de contrato, estado runtime, semântica/ownership ou integração funcional. Não são todas candidatas a desbloqueio imediato. A análise por ID identifica o bloqueio concreto.
+- Próximo grupo offline: consolidar ContentDeliveryManager/CloudContent 14/58/70/84 e confirmar políticas por edição; desenhar recursos reversíveis de tarefa/canal antes de 26/56/68. Não usar flags internas ou wildcard como substituto de deteção.
+- Preferências SPI/acessibilidade precisam de preservar o estado completo da sessão, não só valores do registo. Não foi introduzido motor genérico novo para as migrar prematuramente.
+- HAGS/MSI, scheduling/quantum/MMCSS, tuning TCP/NIC e memória continuam sem promoção. A auditoria não substitui benchmark nem prova compatibilidade física.
+- Persistir/restaurar um valor não invalida caches de processos nem garante consumo de política. Para long paths, reiniciar também após Undo ao validar o estado efetivo. GPO/MDM pode sobrepor-se às opções; conflitos observados ficam preservados.
+- A reversão de backups legados continua limitada pela informação histórica disponível. Nenhum default inverso foi aplicado ao retirar código. Não se apagam dados de utilizadores para “limpar” testes.
+
+Commits funcionais/documentais deste lote:
+
+- `c92d8a4` — auditoria individual das 67 bloqueadas e triagem offline.
+- `808a071` — alimentação AC/DC/Unknown e guardas por escrita.
+- `3492822` — retirada de 12/30/54 e isolamento MMCSS/prelaunch.
+- `397ba94` — quatro políticas reversíveis, compatibilidade e resultados honestos.
+- `4e0584c` — diário bloqueado, conflitos independentes e evidência de falhas do harness.
+
+O commit de fecho regista metadados/documentação e a prova final. Branch preservada, sem push; SkyOS e SkyOptimizer-Packs não foram alterados. Esta entrega não está aprovada para distribuição comercial.
