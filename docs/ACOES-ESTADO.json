@@ -222,19 +222,20 @@
   },
   {
     "Id": 14,
-    "Nome": "Desativação de Sugestões e Anúncios no Menu Iniciar",
+    "Nome": "Consolidada em 58: experiencias de consumidor (sem flags CDM)",
     "Funcao": "Disable-StartMenuSuggestions",
     "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Preferência",
     "RequisitosRiscosValidacao": "Consolidar com 58/69/70/84 onde partilham recursos; não duplicar backups da chave.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "EstadoImplementacao": "Consolidada em 58 na Fase 3C; sem repetir flags internas ContentDeliveryManager",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false,
+    "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "ConsolidadaEm": 58
   },
   {
     "Id": 15,
@@ -945,19 +946,21 @@
   },
   {
     "Id": 58,
-    "Nome": "Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)",
+    "Nome": "Consumer experiences: politica HKLM Enterprise/Education",
     "Funcao": "Disable-SilentAppInstallation",
     "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Preferência",
     "RequisitosRiscosValidacao": "Consolidar ContentDeliveryManager; guardar apenas os valores geridos.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "EstadoImplementacao": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado"
   },
   {
     "Id": 59,
@@ -1141,19 +1144,21 @@
   },
   {
     "Id": 70,
-    "Nome": "Desativação de Dicas Online e Promoções Cloud nas Definições",
+    "Nome": "Definicoes: impedir obtencao de dicas online",
     "Funcao": "Disable-SettingsOnlineTips",
     "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Preferência",
     "RequisitosRiscosValidacao": "Interface/privacidade; não contabilizar como FPS.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "EstadoImplementacao": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado"
   },
   {
     "Id": 71,
@@ -1377,19 +1382,21 @@
   },
   {
     "Id": 84,
-    "Nome": "Bloqueio de Downloads em Segundo Plano do Windows Spotlight no LockScreen",
+    "Nome": "Spotlight: politica HKCU Enterprise/Education",
     "Funcao": "Disable-WindowsSpotlightDownloads",
     "FinalidadeProposta": "Preferências",
     "DecisaoAuditoria": "Preferência",
     "RequisitosRiscosValidacao": "Consolidar com 14/15/58; medir tráfego real antes de alegar efeito em ping.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
-    "PerfilImplementado": false,
+    "EstadoImplementacao": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
+    "PerfilImplementado": true,
     "GanhoMedido": false,
-    "ElegivelApply": false,
-    "PerfisAtuais": [],
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Extreme: selecao explicita"
+    ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado"
   },
   {
     "Id": 85,

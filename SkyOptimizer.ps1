@@ -1503,26 +1503,7 @@ function Set-TelemetryBasic {
 function Disable-StartMenuSuggestions {
     [CmdletBinding()]
     param()
-
-    $cdmKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-    Ensure-RegistryPath -KeyPath $cdmKey
-    Backup-RegistryKey -KeyPath $cdmKey -BackupName "14_ContentDeliveryManager_Suggestions"
-
-    $settings = @{
-        "SystemPaneSuggestionsEnabled"        = 0
-        "SubscribedContent-338388Enabled"      = 0
-        "SubscribedContent-338389Enabled"      = 0
-        "SubscribedContent-353694Enabled"      = 0
-        "SubscribedContent-353696Enabled"      = 0
-        "RotatingLockScreenOverlayEnabled"     = 0
-    }
-
-    foreach ($name in $settings.Keys) {
-        Set-ItemProperty -Path $cdmKey -Name $name -Value $settings[$name] -Type DWord -Force
-    }
-
-    Write-SkyLog -Message "Sugestões automáticas e apps promovidas no Menu Iniciar desativadas." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason (Get-SkyRetiredActionReason 14) -RestartRequired No
 }
 
 function Disable-SearchAndSpotlight {
@@ -1587,14 +1568,15 @@ function Disable-AppArchival {
 
 function Test-SkyClientPolicySupport {
     [CmdletBinding()]
-    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [switch]$AllowHome)
+    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [switch]$AllowHome, [switch]$EnterpriseOnly)
     $systems = @(Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, BuildNumber, ProductType, OperatingSystemSKU -ErrorAction Stop)
     if ($systems.Count -ne 1) { return $false }
     $os = $systems[0]
     $build = 0
     if (-not [int]::TryParse([string]$os.BuildNumber, [ref]$build)) { return $false }
     # Conservative client matrix. Home is allowed only for an explicitly documented feature.
-    $skus = @(4,27,48,49,121,122,125,126)
+    if ($EnterpriseOnly -and $AllowHome) { throw 'Requisitos de edicao contraditorios.' }
+    $skus = if ($EnterpriseOnly) { @(4,27,121,122,125,126) } else { @(4,27,48,49,121,122,125,126) }
     if ($AllowHome) { $skus += @(98,99,100,101) }
     return ($os.Version -match '^10\.0\.' -and $build -ge $MinimumBuild -and $os.ProductType -eq 1 -and
         $os.OperatingSystemSKU -in $skus)
@@ -2296,29 +2278,35 @@ function Disable-ActivityHistoryAndDiagnosticTracing {
 function Disable-SilentAppInstallation {
     [CmdletBinding()]
     param()
+    Set-SkyCloudPolicy -ActionId 58
+}
 
-    $cdmKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-    Backup-RegistryKey -KeyPath $cdmKey -BackupName "58_ContentDeliveryManager_SilentApps"
-    Ensure-RegistryPath -KeyPath $cdmKey
-
-    $cdmSettings = [ordered]@{
-        "ContentDeliveryAllowed"          = 0
-        "OemPreInstalledAppsEnabled"      = 0
-        "PreInstalledAppsEnabled"         = 0
-        "PreInstalledAppsEverEnabled"     = 0
-        "SilentInstalledAppsEnabled"      = 0
-        "SubscribedContent-338388Enabled" = 0
-        "SubscribedContent-338389Enabled" = 0
-        "SoftLandingEnabled"              = 0
-        "FeatureManagementEnabled"        = 0
+function Get-SkyCloudPolicySpec {
+    param([ValidateSet('58','70','84')][int]$ActionId)
+    switch ($ActionId) {
+        58 { [pscustomobject]@{ Id=58; MinimumBuild=17134; EnterpriseOnly=$true
+            Path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent'; Name='DisableWindowsConsumerFeatures'
+            Note='Politica de experiencias de consumidor: sugestoes/promocoes e instalacoes pos-OOBE abrangidas pelo Windows. Nao desinstala apps nem controla todas as sugestoes. Escopo de maquina; Pro nao suportado nesta matriz.' } }
+        70 { [pscustomobject]@{ Id=70; MinimumBuild=16299; EnterpriseOnly=$false
+            Path='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name='AllowOnlineTips'
+            Note='Apenas obtencao de dicas/ajuda online nas Definicoes. DisableSoftLanding e outras preferencias intactas.' } }
+        84 { [pscustomobject]@{ Id=84; MinimumBuild=15063; EnterpriseOnly=$true
+            Path='HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent'; Name='DisableWindowsSpotlightFeatures'
+            Note='Politica Spotlight da conta elevada. Abrange funcionalidades relacionadas nessa conta; nao substitui a politica de consumidor HKLM para outras contas. Sem alterar flags ContentDeliveryManager ou preferencias de wallpaper.' } }
     }
+}
 
-    foreach ($k in $cdmSettings.Keys) {
-        Set-ItemProperty -Path $cdmKey -Name $k -Value $cdmSettings[$k] -Type DWord -Force
+function Set-SkyCloudPolicy {
+    [CmdletBinding()]
+    param([ValidateSet('58','70','84')][int]$ActionId)
+    $spec=Get-SkyCloudPolicySpec $ActionId
+    if (-not (Test-SkyClientPolicySupport -MinimumBuild $spec.MinimumBuild -EnterpriseOnly:$spec.EnterpriseOnly)) {
+        return New-SkyActionResult -Status Incompatible -Reason "Politica $ActionId fora da matriz cliente/build/edicao documentada. Nenhuma flag alternativa foi criada." -RestartRequired No
     }
-
-    Write-SkyLog -Message "Instalação silenciosa de aplicações patrocinadas e sugestões do ContentDeliveryManager desativadas." -Level "Success"
-    return $true
+    $value=if ($ActionId -eq 70) { 0 } else { 1 }
+    $result=Set-SkyRegistryValue -Path $spec.Path -Name $spec.Name -Value $value -Type DWord -OwnerActionId $ActionId
+    $result.Reason += " $($spec.Note) Estado persistido nao prova consumo da politica, trafego evitado ou FPS."
+    $result
 }
 
 function Enable-LongFilePaths {
@@ -2510,19 +2498,7 @@ function Disable-WindowsFeedbackRequests {
 function Disable-SettingsOnlineTips {
     [CmdletBinding()]
     param()
-
-    $polKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-    Backup-RegistryKey -KeyPath $polKey -BackupName "70_Policies_OnlineTips"
-    Ensure-RegistryPath -KeyPath $polKey
-    Set-ItemProperty -Path $polKey -Name "AllowOnlineTips" -Value 0 -Type DWord -Force
-
-    $cloudKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
-    Backup-RegistryKey -KeyPath $cloudKey -BackupName "70_CloudContent_SoftLanding"
-    Ensure-RegistryPath -KeyPath $cloudKey
-    Set-ItemProperty -Path $cloudKey -Name "DisableSoftLanding" -Value 1 -Type DWord -Force
-
-    Write-SkyLog -Message "Dicas online e conteúdos de ajuda remota nas Definições do Windows desativados." -Level "Success"
-    return $true
+    Set-SkyCloudPolicy -ActionId 70
 }
 
 function Disable-SilentDiagnosticServices {
@@ -2714,24 +2690,7 @@ function Optimize-DwmVisualEffects {
 function Disable-WindowsSpotlightDownloads {
     [CmdletBinding()]
     param()
-
-    $cdmKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
-    Ensure-RegistryPath -KeyPath $cdmKey
-    Backup-RegistryKey -KeyPath $cdmKey -BackupName "84_Spotlight_ContentDelivery"
-
-    Set-ItemProperty -Path $cdmKey -Name "RotatingLockScreenEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cdmKey -Name "RotatingLockScreenOverlayEnabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cdmKey -Name "SubscribedContent-338387Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cdmKey -Name "SubscribedContent-338388Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path $cdmKey -Name "SubscribedContent-338389Enabled" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    $cloudKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
-    Ensure-RegistryPath -KeyPath $cloudKey
-    Backup-RegistryKey -KeyPath $cloudKey -BackupName "84_CloudContent_Spotlight"
-    Set-ItemProperty -Path $cloudKey -Name "DisableWindowsSpotlightFeatures" -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    Write-SkyLog -Message "Downloads em segundo plano e publicidade do Windows Spotlight no LockScreen desativados com sucesso." -Level "Success"
-    return $true
+    Set-SkyCloudPolicy -ActionId 84
 }
 
 function Optimize-QuickAccessHistory {
@@ -3165,7 +3124,7 @@ function Invoke-SkyOptimize {
 
         # Categoria 4: Privacidade e Telemetria
         [ordered]@{ Id = 13; Category = "Privacidade & Telemetria"; Name = "Telemetria no Nível Básico/Necessário (Seguro)"; Action = { Set-TelemetryBasic } },
-        [ordered]@{ Id = 14; Category = "Privacidade & Telemetria"; Name = "Desativação de Sugestões e Anúncios no Menu Iniciar"; Action = { Disable-StartMenuSuggestions } },
+        [ordered]@{ Id = 14; Category = "Privacidade & Telemetria"; Name = "Consolidada em 58: experiencias de consumidor (sem flags CDM)"; Action = { Disable-StartMenuSuggestions } },
         [ordered]@{ Id = 15; Category = "Privacidade & Telemetria"; Name = "Desativação de Pesquisa Web Bing e Dicas do Spotlight"; Action = { Disable-SearchAndSpotlight } },
         [ordered]@{ Id = 16; Category = "Privacidade & Telemetria"; Name = "Widgets Windows 11: politica documentada (sem flags Win10)"; Action = { Disable-TaskbarWidgets } },
 
@@ -3233,7 +3192,7 @@ function Invoke-SkyOptimize {
         # Categoria 16: Telemetria Silenciosa, Agendador & Caminhos Longos (Atlas Engine)
         [ordered]@{ Id = 56; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Tarefas Agendadas de Telemetria e Diagnóstico de Disco"; Action = { Disable-MaintenanceScheduledTasks } },
         [ordered]@{ Id = 57; Category = "Agendador & Telemetria Avançada"; Name = "Desativação de Histórico de Atividades e Tracing de Diagnóstico Contínuo"; Action = { Disable-ActivityHistoryAndDiagnosticTracing } },
-        [ordered]@{ Id = 58; Category = "Agendador & Telemetria Avançada"; Name = "Bloqueio de Instalação Silenciosa de Apps (ContentDeliveryManager)"; Action = { Disable-SilentAppInstallation } },
+        [ordered]@{ Id = 58; Category = "Agendador & Telemetria Avançada"; Name = "Consumer experiences: politica HKLM Enterprise/Education"; Action = { Disable-SilentAppInstallation } },
         [ordered]@{ Id = 59; Category = "Agendador & Telemetria Avançada"; Name = "Long paths: compatibilidade de apps opt-in"; Action = { Enable-LongFilePaths } },
         [ordered]@{ Id = 60; Category = "Agendador & Telemetria Avançada"; Name = "DMA Coalescing: experiência por adaptador Ethernet suportado"; Action = { Disable-NetworkDmaCoalescing } },
 
@@ -3249,7 +3208,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 67; Category = "Firmware & Diagnóstico"; Name = "Bloqueio de Injeção de Bloatware de Firmware/BIOS no Boot (WPBT)"; Action = { Disable-WpbtExecution } },
         [ordered]@{ Id = 68; Category = "Firmware & Diagnóstico"; Name = "Desativação de Telemetria e Relatórios em Fundo da NVIDIA"; Action = { Disable-NvidiaTelemetry } },
         [ordered]@{ Id = 69; Category = "Firmware & Diagnóstico"; Name = "Desativação de Inquéritos e Pedidos de Feedback do Windows (SIUF)"; Action = { Disable-WindowsFeedbackRequests } },
-        [ordered]@{ Id = 70; Category = "Firmware & Diagnóstico"; Name = "Desativação de Dicas Online e Promoções Cloud nas Definições"; Action = { Disable-SettingsOnlineTips } },
+        [ordered]@{ Id = 70; Category = "Firmware & Diagnóstico"; Name = "Definicoes: impedir obtencao de dicas online"; Action = { Disable-SettingsOnlineTips } },
         [ordered]@{ Id = 71; Category = "Firmware & Diagnóstico"; Name = "Desativação de Serviços de Diagnóstico Silencioso (Hub, WerCpl, Sync)"; Action = { Disable-SilentDiagnosticServices } },
         [ordered]@{ Id = 72; Category = "Firmware & Diagnóstico"; Name = "Desativação de GameBarPresenceWriter em Fundo (Anti-Stutter no Arranque)"; Action = { Disable-GameBarPresenceWriter } },
 
@@ -3269,7 +3228,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 81; Category = "Estabilidade & Frametimes"; Name = "Desativação de Power Throttling do Windows (Prioridade Contínua no Discord/OBS)"; Action = { Disable-PowerThrottling } },
         [ordered]@{ Id = 82; Category = "Armazenamento & I/O"; Name = "Desativação de Indexação de Ficheiros Comprimidos (.zip/mods no Windows Search)"; Action = { Disable-ZipIndexing } },
         [ordered]@{ Id = 83; Category = "Interface & Multimédia"; Name = "Otimização de Sombras do DWM e Compositor Gráfico (Sem Sombras / Texto Nítido)"; Action = { Optimize-DwmVisualEffects } },
-        [ordered]@{ Id = 84; Category = "Privacidade & Telemetria"; Name = "Bloqueio de Downloads em Segundo Plano do Windows Spotlight no LockScreen"; Action = { Disable-WindowsSpotlightDownloads } },
+        [ordered]@{ Id = 84; Category = "Privacidade & Telemetria"; Name = "Spotlight: politica HKCU Enterprise/Education"; Action = { Disable-WindowsSpotlightDownloads } },
         [ordered]@{ Id = 85; Category = "Explorador & QoL"; Name = "Acesso Rápido Limpo sem Histórico Contínuo no SSD (Menos Escritas)"; Action = { Optimize-QuickAccessHistory } },
 
         # Categoria 22: Latência Extrema & Resposta de Fundo
@@ -3515,17 +3474,18 @@ function Get-SkyProfileActionIds {
 }
 
 function Get-SkyMigratedActionIds {
-    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 59, 60, 71, 74, 75, 76, 79, 86, 88, 90)
+    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 58, 59, 60, 70, 71, 74, 75, 76, 79, 84, 86, 88, 90)
 }
 
 function Get-SkyRetiredActionIds {
     # Historical IDs remain traceable; this implementation is no longer a tuning option.
-    @(12, 30, 39, 54)
+    @(12, 14, 30, 39, 54)
 }
 
 function Get-SkyRetiredActionReason {
     param([int]$Id)
     switch ($Id) {
+        14 { return 'Acao 14 consolidada em 58: usar a politica documentada de experiencias de consumidor quando suportada. Nao se repetem flags internas CDM nem se prometem todas as sugestoes removidas.' }
         12 { return 'Acao 12 retirada: limitar reservas QoS nao recupera uma percentagem de banda permanentemente perdida. Sem alteracao de NonBestEffortLimit.' }
         30 { return 'Acao 30 retirada: timeouts de encerramento forcado nao melhoram jogos em execucao e podem interromper trabalho por guardar. Nenhum timeout ou AutoEndTasks alterado.' }
         39 { return 'Acao 39 retirada: escritas indiscriminadas em hubs WDF nao constituem um contrato suportado. Nenhum dispositivo alterado.' }
