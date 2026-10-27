@@ -485,6 +485,7 @@ function Read-SkyMutationState {
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Original
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Before
         Assert-SkyResourceState -Resource $entry.Resource -State $entry.Desired
+        if ($entry.Resource.Type -eq 'ScheduledTaskEnabled' -and $state.SchemaVersion -ne 2) { throw 'Tarefas exigem diario de formato 2.' }
         if ($entry.PSObject.Properties.Name -contains 'OwnerIds') {
             $owners = @($entry.OwnerIds)
             if ($state.SchemaVersion -ne 2 -or -not $owners.Count -or
@@ -566,8 +567,99 @@ function Open-SkyRegistryBase {
     [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]$hive, [Microsoft.Win32.RegistryView]$Resource.View)
 }
 
+function Assert-SkyTaskResource {
+    param($Resource)
+    # This phase deliberately has no production task allowlist. Only operator-created fixtures.
+    if ($Resource.Type -ne 'ScheduledTaskEnabled' -or
+        $Resource.Path -notmatch '^\\SkyOptimizer-Lab\\[0-9a-f]{32}\\$' -or
+        $Resource.Name -notmatch '^Fixture(?:[ _.-][a-z0-9_\[\] .-]+)?$' -or
+        $Resource.DefinitionHash -notmatch '^[0-9a-f]{64}$') {
+        throw 'Tarefa fora do namespace de laboratorio ou identidade/fingerprint invalida. Nenhuma tarefa de sistema/terceiros permitida.'
+    }
+}
+
+function Get-SkyTaskDefinitionFingerprint {
+    param([string]$Xml, [string]$SecurityDescriptor, [bool]$Enabled)
+    if ([string]::IsNullOrWhiteSpace($SecurityDescriptor) -or $Xml.Length -gt 1048576) { throw 'Definicao/seguranca da tarefa indisponivel ou demasiado grande.' }
+    $settings=New-Object Xml.XmlReaderSettings
+    $settings.DtdProcessing=[Xml.DtdProcessing]::Prohibit; $settings.XmlResolver=$null
+    $textReader=New-Object IO.StringReader($Xml)
+    $reader=[Xml.XmlReader]::Create($textReader,$settings)
+    $document=New-Object Xml.XmlDocument
+    $document.PreserveWhitespace=$false; $document.XmlResolver=$null
+    try { $document.Load($reader) } finally { $reader.Dispose(); $textReader.Dispose() }
+    $ns=New-Object Xml.XmlNamespaceManager($document.NameTable)
+    $ns.AddNamespace('t','http://schemas.microsoft.com/windows/2004/02/mit/task')
+    $nodes=$document.SelectNodes('/t:Task/t:Settings/t:Enabled',$ns)
+    if ($document.SelectNodes('/t:Task/t:Settings',$ns).Count -ne 1 -or $nodes.Count -ne 1) { throw 'Definicao de tarefa sem Enabled explicito e inequivoco.' }
+    if ([Xml.XmlConvert]::ToBoolean($nodes[0].InnerText.Trim()) -ne $Enabled) { throw 'Estado XML difere da propriedade Enabled.' }
+    $null=$nodes[0].ParentNode.RemoveChild($nodes[0])
+    Add-Type -AssemblyName System.Security -ErrorAction Stop
+    $canonical=New-Object Security.Cryptography.Xml.XmlDsigC14NTransform
+    $canonical.LoadInput($document)
+    $stream=$canonical.GetOutput([IO.Stream])
+    $memory=New-Object IO.MemoryStream
+    try { $stream.CopyTo($memory); $bytes=$memory.ToArray() } finally { $stream.Dispose(); $memory.Dispose() }
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try {
+        $payload=[Convert]::ToBase64String($bytes)+"`n"+$SecurityDescriptor
+        ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($payload)))).Replace('-','')
+    } finally { $sha.Dispose() }
+}
+
+function Invoke-SkyTaskBackend {
+    [CmdletBinding()]
+    param($Resource, [ValidateSet('Read','Write')][string]$Operation='Read', [bool]$Enabled)
+    Assert-SkyTaskResource $Resource
+    $service=$null; $folder=$null; $task=$null
+    try {
+        $service=New-Object -ComObject 'Schedule.Service' -ErrorAction Stop
+        $service.Connect()
+        $folder=$service.GetFolder($Resource.Path.TrimEnd('\'))
+        $task=$folder.GetTask($Resource.Name)
+        if ($task.Path -ine ($Resource.Path+$Resource.Name) -or $task.Name -ine $Resource.Name -or $task.Enabled -isnot [bool]) {
+            throw 'A tarefa devolvida nao corresponde a identidade literal pedida.'
+        }
+        $hash=Get-SkyTaskDefinitionFingerprint -Xml $task.Xml -SecurityDescriptor ($task.GetSecurityDescriptor(7)) -Enabled $task.Enabled
+        if ($Operation -eq 'Read') {
+            return [pscustomobject]@{ DefinitionHash=$hash; Enabled=[bool]$task.Enabled; RuntimeState=[int]$task.State }
+        }
+        if ($hash -ine $Resource.DefinitionHash) { throw 'Definicao, principal, triggers, acoes ou seguranca da tarefa mudou. Escrita recusada.' }
+        if (-not $Enabled -and [int]$task.State -notin @(1,3)) { throw 'Tarefa ativa/em fila/desconhecida; nao sera parada para alterar Enabled.' }
+        # Only this property changes. No registration, deletion, start/stop or security writes.
+        $task.Enabled=$Enabled
+    } finally {
+        foreach ($handle in @($task,$folder,$service)) {
+            if ($null -ne $handle -and [Runtime.InteropServices.Marshal]::IsComObject($handle)) {
+                $null=[Runtime.InteropServices.Marshal]::FinalReleaseComObject($handle)
+            }
+        }
+    }
+}
+
+function Disable-SkyScheduledTask {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$TaskPath, [Parameter(Mandatory)][string]$TaskName,
+        [Parameter(Mandatory)][string]$ExpectedDefinitionHash, [Parameter(Mandatory)][string]$BackupDirectory)
+    $resource=[pscustomobject]@{ Type='ScheduledTaskEnabled'; Path=$TaskPath; Name=$TaskName; DefinitionHash=$ExpectedDefinitionHash }
+    Assert-SkyTaskResource $resource
+    $snapshot=Invoke-SkyTaskBackend $resource
+    if ($snapshot.DefinitionHash -ine $ExpectedDefinitionHash -or $snapshot.RuntimeState -notin @(1,3)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Fingerprint/estado da fixture diferente do autorizado; nenhuma alteracao.' -RestartRequired No
+    }
+    $result=Invoke-SkyTrackedChange -Resource $resource -Desired ([pscustomobject]@{Enabled=$false}) -BackupDirectory $BackupDirectory
+    $result.RestartRequired='No'
+    $result.Reason+=' Apenas Enabled da fixture alterado; nao termina execucoes, nao re-regista XML nem demonstra desempenho.'
+    $result
+}
+
 function Get-SkyResourceState {
     param($Resource)
+    if ($Resource.Type -eq 'ScheduledTaskEnabled') {
+        $snapshot=Invoke-SkyTaskBackend $Resource
+        if ($snapshot.DefinitionHash -ine $Resource.DefinitionHash) { throw 'Tarefa substituida/alterada; baseline preservada para revisao.' }
+        return [pscustomobject]@{Enabled=[bool]$snapshot.Enabled}
+    }
     if ($Resource.Type -eq 'ServiceStartup') {
         $svc = Get-SkyService -Name $Resource.Name
         return [pscustomobject]@{ Value = $svc.StartType.ToString(); Delayed = Get-SkyResourceState $Resource.DelayedResource }
@@ -594,6 +686,10 @@ function Get-SkyResourceState {
 
 function Set-SkyResourceState {
     param($Resource, $State)
+    if ($Resource.Type -eq 'ScheduledTaskEnabled') {
+        $null=Invoke-SkyTaskBackend -Resource $Resource -Operation Write -Enabled $State.Enabled
+        return
+    }
     if ($Resource.Type -eq 'ServiceStartup') {
         Set-SkyServiceStartTypeNative -Name $Resource.Name -StartupType $State.Value
         return
@@ -635,6 +731,11 @@ function Set-SkyResourceState {
 
 function Assert-SkyResourceState {
     param($Resource, $State)
+    if ($Resource.Type -eq 'ScheduledTaskEnabled') {
+        Assert-SkyTaskResource $Resource
+        if ($State.Enabled -isnot [bool]) { throw 'Estado Enabled da tarefa invalido.' }
+        return
+    }
     if ($Resource.Type -in @('ServiceStartup', 'ServiceRuntime')) {
         if ($Resource.Name -notmatch '^[a-zA-Z0-9_.-]+$') { throw 'Identidade de serviço inválida.' }
         $allowed = if ($Resource.Type -eq 'ServiceStartup') { @('Automatic', 'Manual', 'Disabled') } else { @('Running', 'Stopped') }
@@ -721,6 +822,7 @@ function Invoke-SkyTrackedChange {
                 $entry | Add-Member NoteProperty OwnerIds @($OwnerActionId)
                 $journal.SchemaVersion = 2
             }
+            if ($Resource.Type -eq 'ScheduledTaskEnabled') { $journal.SchemaVersion=2 }
             $journal.Entries = @($journal.Entries) + $entry
         } else { $entry.Before = $current; $entry.Desired = $Desired; $entry.Status = 'Pending' }
         # Durable intent precedes the first system write; a crash can leave only Before or Desired.
@@ -769,7 +871,7 @@ function Restore-SkyTrackedChanges {
                     $didRestore = $true
                 }
                 $entry.Status = 'Restored'; Save-SkyMutationState $journal $BackupDirectory
-                $restart = if ($entry.Resource.Type -eq 'NicRegistry') { 'Yes' } else { 'Unknown' }
+                $restart = if ($entry.Resource.Type -eq 'NicRegistry') { 'Yes' } elseif ($entry.Resource.Type -eq 'ScheduledTaskEnabled') { 'No' } else { 'Unknown' }
                 $status = if ($didRestore) { 'Applied' } else { 'AlreadyCompliant' }
                 New-SkyActionResult -Status $status -Reason "Baseline confirmada: $($entry.Id)." -RestartRequired $restart
             } catch { New-SkyActionResult -Status Failed -Reason "$($entry.Id): $($_.Exception.Message)" }
@@ -942,6 +1044,7 @@ function Get-SkyPowerRestoreSource {
         'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
         'ConvertTo-SkyRegistryState', 'ConvertFrom-SkyRegistryState', 'Open-SkyRegistryBase',
         'ConvertTo-SkyRegistryResource', 'Get-SkyResourceIdentity', 'Get-SkyService', 'Set-SkyServiceStartTypeNative', 'Get-SkyNicBinding',
+        'Assert-SkyTaskResource', 'Get-SkyTaskDefinitionFingerprint', 'Invoke-SkyTaskBackend',
         'Get-SkyResourceState', 'Set-SkyResourceState', 'Assert-SkyResourceState', 'Test-SkyStateEqual', 'Restore-SkyTrackedChanges',
         'Invoke-SkyTrackedChange', 'Disable-SkyService', 'Switch-SkyPanelService')
     ($names | ForEach-Object { "function $_ {`r`n$((Get-Command $_ -CommandType Function).Definition)`r`n}" }) -join "`r`n"
@@ -1730,14 +1833,7 @@ function Disable-BackgroundUWPApps {
 function Disable-SleepStudyLogging {
     [CmdletBinding()]
     param()
-
-    $null = wevtutil.exe set-log "Microsoft-Windows-SleepStudy/Diagnostic" /e:false 2>&1
-    $null = wevtutil.exe set-log "Microsoft-Windows-Kernel-Processor-Power/Diagnostic" /e:false 2>&1
-    $null = wevtutil.exe set-log "Microsoft-Windows-UserModePowerService/Diagnostic" /e:false 2>&1
-    $null = schtasks /Change /TN "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem" /Disable 2>&1
-
-    Write-SkyLog -Message "Registo contínuo de diagnóstico SleepStudy desativado (escritas e I/O de disco poupados)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'Acao 26 bloqueada: canais de diagnostico nao tem baseline/estado efetivo migrados. AnalyzeSystem nao sera alterada pelo mecanismo de fixtures.' -RestartRequired No
 }
 
 function Disable-WindowsErrorReporting {
@@ -2210,33 +2306,7 @@ function Set-CrashControlQuality {
 function Disable-MaintenanceScheduledTasks {
     [CmdletBinding()]
     param()
-
-    $tasks = @(
-        "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
-        "\Microsoft\Windows\Application Experience\ProgramDataUpdater",
-        "\Microsoft\Windows\Application Experience\PcaPatchDbTask",
-        "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
-        "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
-        "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector",
-        "\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting",
-        "\Microsoft\Windows\Maintenance\WinSAT",
-        "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem",
-        "\Microsoft\Windows\DiskFootprint\Diagnostics"
-    )
-
-    $disabledCount = 0
-    foreach ($t in $tasks) {
-        $null = schtasks /Change /TN $t /Disable 2>&1
-        if ($LASTEXITCODE -eq 0) { $disabledCount++ }
-    }
-
-    $ubpmKey = "HKLM:\System\CurrentControlSet\Control\Ubpm"
-    if (Test-Path $ubpmKey) {
-        Remove-ItemProperty -Path $ubpmKey -Name "CriticalMaintenance_UsageDataReporting" -Force -ErrorAction SilentlyContinue
-    }
-
-    Write-SkyLog -Message "Tarefas agendadas de telemetria e diagnóstico em segundo plano desativadas ($disabledCount tarefas)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'Acao 56 bloqueada: sem allowlist de tarefas reais por definicao/build e validacao Windows. Nao se desativa manutencao/diagnostico em massa nem se remove valor privado Ubpm.' -RestartRequired No
 }
 
 function Disable-ActivityHistoryAndDiagnosticTracing {
@@ -2444,37 +2514,7 @@ function Disable-WpbtExecution {
 function Disable-NvidiaTelemetry {
     [CmdletBinding()]
     param()
-
-    $isNvidia = $false
-    try {
-        $gpuItem = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000*' -ErrorAction SilentlyContinue | Where-Object { $_.DriverDesc -match 'NVIDIA' }
-        if ($gpuItem) { $isNvidia = $true }
-    } catch {}
-
-    $nvKey = "HKCU:\Software\NVIDIA Corporation\NVControlPanel2\Client"
-    if ((Test-Path "HKCU:\Software\NVIDIA Corporation") -or $isNvidia) {
-        Backup-RegistryKey -KeyPath $nvKey -BackupName "68_Nvidia_Telemetry"
-        Ensure-RegistryPath -KeyPath $nvKey
-        Set-ItemProperty -Path $nvKey -Name "OptInOrOutPreference" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-    }
-
-    # Desativação de tarefas agendadas de telemetria da NVIDIA (se instaladas)
-    $nvTasks = @("\NvTmMon", "\NvTmRep", "\NvTmRepOnLogon")
-    $tasksDisabled = 0
-    foreach ($tName in $nvTasks) {
-        $matching = Get-ScheduledTask -TaskPath "\" -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like "$($tName.TrimStart('\'))*" }
-        foreach ($t in $matching) {
-            $null = schtasks /Change /TN "$($t.TaskName)" /Disable 2>&1
-            $tasksDisabled++
-        }
-    }
-
-    if ($isNvidia) {
-        Write-SkyLog -Message "Telemetria e relatórios em background da NVIDIA desativados com sucesso ($tasksDisabled tarefa(s) suspensa(s))." -Level "Success"
-    } else {
-        Write-SkyLog -Message "Configuração de telemetria NVIDIA concluída (GPU não-NVIDIA ou componentes não instalados)." -Level "Info"
-    }
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'Acao 68 bloqueada: fabricante nao identifica tarefa/versao atual. Sem wildcard NvTm, sem politica privada NVControlPanel2; nenhuma tarefa de terceiros alterada.' -RestartRequired No
 }
 
 function Disable-WindowsFeedbackRequests {

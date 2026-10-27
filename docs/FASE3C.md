@@ -32,3 +32,19 @@ As políticas têm sobreposição semântica: desligar Spotlight abrange funcion
 Fontes: [consumer features e Spotlight, edições/escopos](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience), [AllowOnlineTips](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-settings#allowonlinetips). Nenhuma flag SubscribedContent ou FeatureManagementEnabled é agora usada por 14/58/70/84.
 
 Testes específicos: seis ordens de aplicação, repetição, Undo parcial/completo, preferências alheias preservadas, valores inicialmente conformes, builds/edições e falha de persistência numa ação intermédia. Testes de interação e política são simulações, sem integração Windows executada.
+
+## 3. Tarefas: mecanismo preparado, sem tarefas reais elegíveis
+
+O recurso `ScheduledTaskEnabled` usa o mesmo diário, lock, intenção persistida, pós-verificação e Undo. Só altera a propriedade Enabled de uma tarefa já registada. Não regista XML, não altera triggers, ações, principal, condições, privilégios ou segurança; não inicia, termina ou elimina tarefas.
+
+Nesta fase, a única allowlist é de fixtures criadas pelo operador: `\SkyOptimizer-Lab\<GUID de 32 caracteres>\`, com nomes Fixture/Fixture [...]. `Disable-SkyScheduledTask` exige pasta/nome literais, fingerprint esperado e diretório de backup explícito. Não existe allowlist de tarefas de Windows/NVIDIA/terceiros. 26/56/68 mantêm o bloqueio e as funções diretas já não executam as antigas operações amplas.
+
+A identificação inclui pasta/nome e hash SHA-256 da definição XML canonicalizada, excluindo apenas Settings/Enabled, mais owner/group/DACL obtidos por GetSecurityDescriptor(7). DTD/entidades externas, Enabled ausente/ambíguo ou inconsistência com a propriedade COM são recusados. Nome com parênteses retos é literal, nunca wildcard. Definição, principal, triggers, ações ou segurança diferentes impedem Apply/Undo automáticos. Recriação absolutamente idêntica não é distinguível por este fingerprint; SACL não é consultada nem modificada.
+
+Ready/Disabled são os únicos estados aceites para iniciar a desativação; Running/Queued/Unknown são recusados. Não se tenta restaurar um instante de execução passado nem repetir uma execução para simular Undo. O estado restaurado é o Enabled configurado, não LastRunTime/resultado ou XML byte a byte. Mudanças externas depois da verificação continuam possíveis; não há compare-and-swap atómico no API.
+
+O formato 2 é obrigatório para tarefas; o painel novo inclui os mesmos readers/writers e helpers de identidade. O formato 1 de registo/serviços continua legível. Não são abertas tarefas nem criados objetos COM reais nos testes: o adapter COM recebe objetos falsos e a lógica de diário usa um backend simulado.
+
+Provas: Apply→Apply→Undo→Undo, originalmente Disabled sem autoria, recusa de tarefa substituída, estados em execução/fila, falha de backup, falha após escrita, sucesso sem efeito, retry de Undo e parsing do source standalone. Os testes de fingerprint incluem Enabled, comando, principal, segurança e XML inválido. Falta confirmar o comportamento de serialização do Task Scheduler real antes de permitir tarefas de produção.
+
+Referências: [RegisteredTask.Enabled](https://learn.microsoft.com/en-us/windows/win32/taskschd/registeredtask-enabled), [XML](https://learn.microsoft.com/en-us/windows/win32/taskschd/registeredtask-xml), [segurança](https://learn.microsoft.com/en-us/windows/win32/taskschd/registeredtask-getsecuritydescriptor), [lookup literal](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskfolder-gettask), [Enabled no schema](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-enabled-settingstype-element).
