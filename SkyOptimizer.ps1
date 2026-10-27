@@ -1419,15 +1419,7 @@ function Optimize-NetworkThrottling {
 function Disable-QoSBandwidthLimit {
     [CmdletBinding()]
     param()
-
-    $pschedKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Psched"
-    Ensure-RegistryPath -KeyPath $pschedKey
-    Backup-RegistryKey -KeyPath $pschedKey -BackupName "12_QoS_Psched"
-
-    Set-ItemProperty -Path $pschedKey -Name "NonBestEffortLimit" -Value 0 -Type DWord -Force
-
-    Write-SkyLog -Message "Limite de 20% de largura de banda reservada por QoS desativado (NonBestEffortLimit=0)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason (Get-SkyRetiredActionReason 12) -RestartRequired No
 }
 
 # --- CATEGORIA 4: PRIVACIDADE E TELEMETRIA ---
@@ -1763,28 +1755,7 @@ function Disable-StartupDelay {
 function Set-FastShutdown {
     [CmdletBinding()]
     param()
-
-    $deskKey = "HKCU:\Control Panel\Desktop"
-    Ensure-RegistryPath -KeyPath $deskKey
-    Backup-RegistryKey -KeyPath $deskKey -BackupName "30_FastShutdown_User"
-    Set-ItemProperty -Path $deskKey -Name "HungAppTimeout" -Value "2000" -Type String -Force
-    Set-ItemProperty -Path $deskKey -Name "WaitToKillAppTimeOut" -Value "2000" -Type String -Force
-    Set-ItemProperty -Path $deskKey -Name "AutoEndTasks" -Value "1" -Type String -Force
-
-    $sysCtrlKey = "HKLM:\SYSTEM\CurrentControlSet\Control"
-    $origTimeout = (Get-ItemProperty -Path $sysCtrlKey -Name "WaitToKillServiceTimeout" -ErrorAction SilentlyContinue).WaitToKillServiceTimeout
-    if (-not $origTimeout) { $origTimeout = "5000" }
-
-    $backupFile = Join-Path -Path $Global:SkyBackupDir -ChildPath "30_FastShutdown_System.reg"
-    if (-not (Test-Path $backupFile)) {
-        $regContent = "Windows Registry Editor Version 5.00`r`n`r`n[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control]`r`n`"WaitToKillServiceTimeout`"=`"$origTimeout`"`r`n"
-        [System.IO.File]::WriteAllText($backupFile, $regContent, [System.Text.Encoding]::ASCII)
-    }
-
-    Set-ItemProperty -Path $sysCtrlKey -Name "WaitToKillServiceTimeout" -Value "2000" -Type String -Force
-
-    Write-SkyLog -Message "Tempo de espera de encerramento do Windows otimizado para 2 segundos." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason (Get-SkyRetiredActionReason 30) -RestartRequired No
 }
 
 function Set-AltTabFilter {
@@ -1879,22 +1850,7 @@ function Set-CpuScheduling {
 function Set-MMCSSTasksGames {
     [CmdletBinding()]
     param()
-
-    # MMCSS (Multimedia Class Scheduler Service) - Perfil de Jogos
-    $gamesKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games"
-    Ensure-RegistryPath -KeyPath $gamesKey
-    Backup-RegistryKey -KeyPath $gamesKey -BackupName "36_MMCSS_Games"
-
-    Set-ItemProperty -Path $gamesKey -Name "Affinity" -Value 0 -Type DWord -Force
-    Set-ItemProperty -Path $gamesKey -Name "Background Only" -Value "False" -Type String -Force
-    Set-ItemProperty -Path $gamesKey -Name "Clock Rate" -Value 10000 -Type DWord -Force
-    Set-ItemProperty -Path $gamesKey -Name "GPU Priority" -Value 8 -Type DWord -Force
-    Set-ItemProperty -Path $gamesKey -Name "Priority" -Value 6 -Type DWord -Force
-    Set-ItemProperty -Path $gamesKey -Name "Scheduling Category" -Value "High" -Type String -Force
-    Set-ItemProperty -Path $gamesKey -Name "SFIO Priority" -Value "High" -Type String -Force
-
-    Write-SkyLog -Message "Prioridade MMCSS para Jogos configurada para High (áudio e renderização sem perdas)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'MMCSS bloqueado: GPU Priority/SFIO Priority nao usados e garantia antiga de Clock Rate nao justificam escritas. Hipotese de prioridades exige threads inscritas, estado efetivo e ensaios de audio/frametimes.' -RestartRequired No
 }
 
 function Enable-HAGSConditional {
@@ -2193,16 +2149,7 @@ function Disable-AeroShake {
 function Disable-LowDiskSpaceChecks {
     [CmdletBinding()]
     param()
-
-    $polExpKey = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-    Backup-RegistryKey -KeyPath $polExpKey -BackupName "54_NoLowDiskSpaceChecks"
-    Ensure-RegistryPath -KeyPath $polExpKey
-
-    # NoLowDiskSpaceChecks: Elimina o thread de sondagem periódica de espaço em disco e popups invasivos
-    Set-ItemProperty -Path $polExpKey -Name "NoLowDiskSpaceChecks" -Value 1 -Type DWord -Force
-
-    Write-SkyLog -Message "Verificações periódicas de pouco espaço em disco desativadas (poupança de I/O de disco)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason (Get-SkyRetiredActionReason 54) -RestartRequired No
 }
 
 function Set-CrashControlQuality {
@@ -2778,19 +2725,7 @@ function Disable-LocationAndSensors {
 function Disable-ApplicationPreLaunch {
     [CmdletBinding()]
     param()
-
-    # Desativação do pré-arranque especulativo de aplicações UWP/Store em segundo plano
-    try {
-        Disable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue
-    } catch {}
-
-    $appxPolKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Appx"
-    Ensure-RegistryPath -KeyPath $appxPolKey
-    Backup-RegistryKey -KeyPath $appxPolKey -BackupName "87_Appx_PreLaunchPolicy"
-    Set-ItemProperty -Path $appxPolKey -Name "AllowDeploymentInSpecialProfiles" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
-
-    Write-SkyLog -Message "Pré-arranque especulativo de aplicações desativado (ApplicationPreLaunch Off / RAM e CPU poupados em idle)." -Level "Success"
-    return $true
+    New-SkyActionResult -Status Deferred -Reason 'ApplicationPreLaunch bloqueado ate guardar e verificar estado MMAgent. AllowDeploymentInSpecialProfiles controla deployment em perfis especiais, nao prelaunch; nenhuma destas configuracoes foi alterada.' -RestartRequired No
 }
 
 function Disable-StorageSenseBackgroundScans {
@@ -3184,7 +3119,7 @@ function Invoke-SkyOptimize {
         # Categoria 3: Otimizações de Rede
         [ordered]@{ Id = 10; Category = "Rede & Latência"; Name = "Algoritmo de Nagle (TCPNoDelay & TCPAckFrequency)"; Action = { Optimize-NetworkLatency } },
         [ordered]@{ Id = 11; Category = "Rede & Latência"; Name = "Network Throttling Index & SystemResponsiveness"; Action = { Optimize-NetworkThrottling } },
-        [ordered]@{ Id = 12; Category = "Rede & Latência"; Name = "Remoção de Limite de Banda Reservada QoS (Psched)"; Action = { Disable-QoSBandwidthLimit } },
+        [ordered]@{ Id = 12; Category = "Rede & Latência"; Name = "Retirada: suposta recuperacao generica de banda QoS"; Action = { Disable-QoSBandwidthLimit } },
 
         # Categoria 4: Privacidade e Telemetria
         [ordered]@{ Id = 13; Category = "Privacidade & Telemetria"; Name = "Telemetria no Nível Básico/Necessário (Seguro)"; Action = { Set-TelemetryBasic } },
@@ -3214,7 +3149,7 @@ function Invoke-SkyOptimize {
         # Categoria 9: Agilidade do Sistema & QoL
         [ordered]@{ Id = 28; Category = "Agilidade & QoL"; Name = "Eliminação de Delays de Interface e Menus (0 ms Instantâneo)"; Action = { Set-InterfaceDelays } },
         [ordered]@{ Id = 29; Category = "Agilidade & QoL"; Name = "Arranque Imediato de Aplicações Pós-Login (StartupDelay 0 ms)"; Action = { Disable-StartupDelay } },
-        [ordered]@{ Id = 30; Category = "Agilidade & QoL"; Name = "Encerramento e Reinício Rápido do Sistema (Timeout 2s)"; Action = { Set-FastShutdown } },
+        [ordered]@{ Id = 30; Category = "Agilidade & QoL"; Name = "Retirada: encerramento forcado com timeouts de 2 segundos"; Action = { Set-FastShutdown } },
         [ordered]@{ Id = 31; Category = "Agilidade & QoL"; Name = "Alt-Tab Limpo (Apenas Janelas Abertas, sem Separadores do Edge)"; Action = { Set-AltTabFilter } },
         [ordered]@{ Id = 32; Category = "Agilidade & QoL"; Name = "Atalho 'Terminar Tarefa' na Barra de Tarefas (Windows 11)"; Action = { Enable-TaskbarEndTask } },
         [ordered]@{ Id = 33; Category = "Agilidade & QoL"; Name = "Desativação de Processos em Fundo do Microsoft Copilot"; Action = { Disable-Copilot } },
@@ -3250,7 +3185,7 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 51; Category = "Kernel, Memória & I/O"; Name = "Indexação Windows Search Sensível a Planos de Energia (RespectPowerModes)"; Action = { Optimize-SearchIndexerPower } },
         [ordered]@{ Id = 52; Category = "Kernel, Memória & I/O"; Name = "Remoção de Estrangulamento de Largura de Banda SMB (LanmanWorkstation)"; Action = { Disable-SmbBandwidthThrottling } },
         [ordered]@{ Id = 53; Category = "Kernel, Memória & I/O"; Name = "Desativação de Gesto Aero Shake (Proteção contra Minimização no Gaming)"; Action = { Disable-AeroShake } },
-        [ordered]@{ Id = 54; Category = "Kernel, Memória & I/O"; Name = "Desativação de Verificação Periódica de Pouco Espaço em Disco"; Action = { Disable-LowDiskSpaceChecks } },
+        [ordered]@{ Id = 54; Category = "Kernel, Memória & I/O"; Name = "Retirada: ocultacao de alertas de disco cheio"; Action = { Disable-LowDiskSpaceChecks } },
         [ordered]@{ Id = 55; Category = "Kernel, Memória & I/O"; Name = "Controlo de Falhas BSOD (Sem Reinício Instantâneo, Diagnóstico Visível)"; Action = { Set-CrashControlQuality } },
 
         # Categoria 16: Telemetria Silenciosa, Agendador & Caminhos Longos (Atlas Engine)
@@ -3543,7 +3478,18 @@ function Get-SkyMigratedActionIds {
 
 function Get-SkyRetiredActionIds {
     # Historical IDs remain traceable; this implementation is no longer a tuning option.
-    @(39)
+    @(12, 30, 39, 54)
+}
+
+function Get-SkyRetiredActionReason {
+    param([int]$Id)
+    switch ($Id) {
+        12 { return 'Acao 12 retirada: limitar reservas QoS nao recupera uma percentagem de banda permanentemente perdida. Sem alteracao de NonBestEffortLimit.' }
+        30 { return 'Acao 30 retirada: timeouts de encerramento forcado nao melhoram jogos em execucao e podem interromper trabalho por guardar. Nenhum timeout ou AutoEndTasks alterado.' }
+        39 { return 'Acao 39 retirada: escritas indiscriminadas em hubs WDF nao constituem um contrato suportado. Nenhum dispositivo alterado.' }
+        54 { return 'Acao 54 retirada: ocultar alertas de disco cheio nao liberta espaco nem resolve a sua causa. Nenhuma preferencia de alertas alterada.' }
+        default { throw 'ID sem decisao de retirada.' }
+    }
 }
 
 function Invoke-SkyEligibleAction {
@@ -3552,7 +3498,7 @@ function Invoke-SkyEligibleAction {
         return New-SkyActionResult -Status NotSelected -Reason 'Fora do perfil/experiência selecionado; não executada.' -RestartRequired No
     }
     if ($Id -in (Get-SkyRetiredActionIds)) {
-        return New-SkyActionResult -Status Deferred -Reason 'Acao retirada: escritas privadas e indiscriminadas em hubs USB nao constituem um contrato suportado. ID conservado apenas para rastreabilidade.' -RestartRequired No
+        return New-SkyActionResult -Status Deferred -Reason (Get-SkyRetiredActionReason $Id) -RestartRequired No
     }
     if ($Id -notin (Get-SkyMigratedActionIds)) {
         return New-SkyActionResult -Status Deferred -Reason 'Não executada: migração da baseline/Undo ou compatibilidade ainda pendente.' -RestartRequired No

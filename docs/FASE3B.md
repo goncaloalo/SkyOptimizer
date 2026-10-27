@@ -41,3 +41,13 @@ A Fase 3A já tinha corrigido o fallback antigo que devolvia AC em falha de CIM.
 O writer comum `Set-SkyAcPowerSettings` passa a recusar alimentação não confirmada antes de abrir backups e a verificar de novo antes de cada escrita e reativação. Assim, core parking também fica abrangido. Se a alimentação mudar a meio de um grupo, comunica falha e conserva a cópia/baseline para Undo; nunca escreve DC nem o plano original. Não existe atomicidade física entre observar AC e enviar o comando, pelo que transições reais continuam por testar.
 
 `Test-IsOnBattery` distingue DC de Unknown e não é usado como prova inversa de AC. Os percursos ativos consultam a condição afirmativa de AC. Validação focada: **39 testes aprovados**, incluindo resultado desconhecido/malformado, core parking sem AC e perda de AC após a primeira escrita com Undo posterior. Nenhum API de leitura de alimentação real foi chamado pelos testes.
+
+## 4. Retiradas e correções de fundamento
+
+12, 30 e 54 deixam de ter implementações que alteram Windows; o dispatcher e as funções diretas comunicam a decisão por ID. Somando 39, existem quatro ações retiradas. Não se apagam valores ou backups legados: a retirada do código não prova o estado anterior de uma máquina.
+
+12 retirava uma suposta reserva fixa de 20% sem demonstrar carga QoS. A política controla o limite das reservas agregadas; não certifica banda perdida nem autoriza prometer recuperação genérica. 30 forçava AutoEndTasks e timeouts de dois segundos, além de inventar baseline 5000 quando ausente. Isto não melhora um jogo em execução e pode interromper encerramento de apps/serviços. 54 escondia disco cheio, sem libertar espaço nem resolver pressão de armazenamento.
+
+As escritas MMCSS 36 foram isoladas numa função sem mutações: não se deixam campos documentados como não utilizados nem se afirma prioridade de todo o jogo. A hipótese de medir threads inscritas permanece na auditoria. A ação 87 também permanece bloqueada sem mutações, retirando a falsa ligação entre deployment AppX em perfis especiais e pré-arranque MMAgent. Não se perdeu a proposta de investigar prelaunch com estado próprio.
+
+Validação focada: **sete testes aprovados** de retirada, consistência do catálogo e cobertura da auditoria. Os testes impedem chamadas a registo, processos externos e Disable-MMAgent. Nenhuma alteração real aplicada.

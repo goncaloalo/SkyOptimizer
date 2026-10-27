@@ -166,17 +166,17 @@
   },
   {
     "Id": 12,
-    "Nome": "Remoção de Limite de Banda Reservada QoS (Psched)",
+    "Nome": "Retirada: suposta recuperacao generica de banda QoS",
     "Funcao": "Disable-QoSBandwidthLimit",
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Retirar do perfil geral",
     "RequisitosRiscosValidacao": "Corrigir narrativa de banda perdida; só alterar reservas para um requisito de QoS identificado.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "EstadoImplementacao": "Retirada na Fase 3B: sem alteracoes ao Windows; decisao documentada por ID",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": true
   },
   {
     "Id": 13,
@@ -428,17 +428,17 @@
   },
   {
     "Id": 30,
-    "Nome": "Encerramento e Reinício Rápido do Sistema (Timeout 2s)",
+    "Nome": "Retirada: encerramento forcado com timeouts de 2 segundos",
     "Funcao": "Set-FastShutdown",
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Retirar do perfil geral",
     "RequisitosRiscosValidacao": "Não melhora jogo em execução e pode encerrar trabalho sem guardar; manter tempos originais.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "EstadoImplementacao": "Retirada na Fase 3B: sem alteracoes ao Windows; decisao documentada por ID",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": true
   },
   {
     "Id": 31,
@@ -773,17 +773,17 @@
   },
   {
     "Id": 54,
-    "Nome": "Desativação de Verificação Periódica de Pouco Espaço em Disco",
+    "Nome": "Retirada: ocultacao de alertas de disco cheio",
     "Funcao": "Disable-LowDiskSpaceChecks",
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Retirar do perfil geral",
     "RequisitosRiscosValidacao": "Oculta um problema operacional; preferir diagnóstico de espaço disponível, sem pressupor overhead significativo.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "EstadoImplementacao": "Retirada na Fase 3B: sem alteracoes ao Windows; decisao documentada por ID",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
-    "Retirada": false
+    "Retirada": true
   },
   {
     "Id": 55,

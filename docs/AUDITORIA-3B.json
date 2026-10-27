@@ -1,1711 +1,1711 @@
 {
-    "SchemaVersion":  1,
-    "Data":  "2026-10-27",
-    "BaseCommit":  "22def57",
-    "QuantidadeBloqueadasInicial":  67,
-    "NotaFontes":  "Referencias primarias documentam mecanismos/contexto. Campos marcados internos/sem contrato nao se tornam suportados por citar uma pagina geral. Auditoria de codigo; sem integracao ou benchmarks.",
-    "Acoes":  [
-                  {
-                      "Id":  2,
-                      "Mecanismo":  "GlobalTimerResolutionRequests e BCD disabledynamictick",
-                      "Fundamento":  "Parcial: BCD documentado; chave kernel sem contrato confirmado",
-                      "ImpactoEsperado":  "Só hipótese de jitter; não garante resolução de 0,5 ms",
-                      "Riscos":  "Boot, energia e temporizadores de outros processos",
-                      "Dependencias":  "Build, pedidos reais de timer e jogo; separar duas operações",
-                      "Reversibilidade":  "Guardar existência do elemento BCD e do valor, não texto localizado",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/bcdedit--set",
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/timeapi/nf-timeapi-timebeginperiod"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-TimerResolution",
-                      "LinhaBase":  1211,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "bcdedit",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  4,
-                      "Mecanismo":  "powercfg -h off elimina hiberfil e altera hibernação/Fast Startup",
-                      "Fundamento":  "Documentado, mas implementação captura apenas HibernateEnabled",
-                      "ImpactoEsperado":  "Espaço/energia; nenhum ganho esperado durante jogo",
-                      "Riscos":  "Perda de hibernação e fast startup; tamanho/tipo de hiberfile",
-                      "Dependencias":  "Capacidade powercfg /a, tipo full/reduced e políticas OEM",
-                      "Reversibilidade":  "Necessário estado completo e confirmação powercfg; ficheiro de texto é insuficiente",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-Hibernation",
-                      "LinhaBase":  1251,
-                      "EvidenciaComandos":  [
-                                                "Get-ItemProperty",
-                                                "Join-Path",
-                                                "Out-File",
-                                                "powercfg",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  5,
-                      "Mecanismo":  "Desativa FTH globalmente com Enabled=0",
-                      "Fundamento":  "Mecanismo de mitigação documentado; uso genérico injustificado",
-                      "ImpactoEsperado":  "Possível custo apenas em app realmente abrangida por FTH",
-                      "Riscos":  "Pode expor heap corruption e crashes antes mitigados",
-                      "Dependencias":  "Diagnóstico por executável; confirmar FTH aplicado e causa",
-                      "Reversibilidade":  "Diário tipado possível; validar estabilidade específica antes de permitir",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/win7appqual/fault-tolerant-heap"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-FaultTolerantHeap",
-                      "LinhaBase":  1270,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  7,
-                      "Mecanismo":  "Sensibilidade, thresholds e curvas MarkC de ponteiro",
-                      "Fundamento":  "Parcial: ponteiro tem API SPI; curvas fixas não demonstram Raw Input",
-                      "ImpactoEsperado":  "Preferência do cursor; não altera necessariamente input do jogo",
-                      "Riscos":  "Muda sensibilidade/acessibilidade e comportamento diário",
-                      "Dependencias":  "DPI, scaling, sessão e caminho de input do jogo; pack comercial fora de âmbito",
-                      "Reversibilidade":  "Restaurar registo e estado SPI da sessão, sem impor 6/11",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow",
-                                     "https://learn.microsoft.com/en-us/windows/win32/inputdev/about-raw-input"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-MouseAcceleration",
-                      "LinhaBase":  1291,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  10,
-                      "Mecanismo":  "Escreve ACK/Nagle/delayed ACK em todas as interfaces com IP",
-                      "Fundamento":  "Parcial: TCP_NODELAY por socket é documentado; flags genéricas não justificadas",
-                      "ImpactoEsperado":  "Pode afetar TCP específico; não generaliza para UDP/hitreg",
-                      "Riscos":  "Mais pacotes/CPU e interferência em VPN/interfaces antigas",
-                      "Dependencias":  "Interface utilizada, protocolo e driver; diagnóstico de ACK",
-                      "Reversibilidade":  "Identidade por interface, valores tipados e estado efetivo de sockets",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-NetworkLatency",
-                      "LinhaBase":  1363,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Get-ChildItem",
-                                                "Get-ItemProperty",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  11,
-                      "Mecanismo":  "NetworkThrottlingIndex e SystemResponsiveness=10",
-                      "Fundamento":  "MMCSS parcialmente documentado; não é prioridade universal do jogo",
-                      "ImpactoEsperado":  "Só potencial sob concorrência multimédia identificada",
-                      "Riscos":  "Compromissos CPU/rede/áudio e possível valor já conforme",
-                      "Dependencias":  "Threads registadas em MMCSS, carga concorrente e build",
-                      "Reversibilidade":  "Separar recursos; registo reversível não prova benefício",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-NetworkThrottling",
-                      "LinhaBase":  1388,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  12,
-                      "Mecanismo":  "NonBestEffortLimit=0 apresentado como recuperação de 20% de banda",
-                      "Fundamento":  "Política limita reservas, não demonstra banda permanentemente perdida",
-                      "ImpactoEsperado":  "Não há mecanismo que prove aceleração geral ou ping inferior",
-                      "Riscos":  "Pode impedir reservas úteis de aplicações QoS",
-                      "Dependencias":  "Só teria contexto numa necessidade explícita de QoS, fora do tweak genérico",
-                      "Reversibilidade":  "Não aplicar nem inventar defaults de clientes antigos",
-                      "DecisaoOffline":  "Retirar",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-qos"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-QoSBandwidthLimit",
-                      "LinhaBase":  1403,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  14,
-                      "Mecanismo":  "Seis flags ContentDeliveryManager para sugestões/lockscreen",
-                      "Fundamento":  "Interno: IDs SubscribedContent não constituem contrato público por build",
-                      "ImpactoEsperado":  "Preferência; só carga de promoção realmente observada seria relevante",
-                      "Riscos":  "Sobreposição com 58/84, shell e experiência do lockscreen",
-                      "Dependencias":  "Inventariar recursos e mapear políticas documentadas/edições",
-                      "Reversibilidade":  "Baseline por valor partilhado; resolver ownership entre ações antes de migrar",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-StartMenuSuggestions",
-                      "LinhaBase":  1431,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  15,
-                      "Mecanismo":  "DisableSearchBoxSuggestions mais BingSearchEnabled/CortanaConsent",
-                      "Fundamento":  "Parcial: política e flags históricas têm alcances diferentes",
-                      "ImpactoEsperado":  "Pesquisa/UI; não torna o jogo mais rápido",
-                      "Riscos":  "Pesquisa e integração shell podem mudar; flags obsoletas",
-                      "Dependencias":  "Build/edição e comportamento da pesquisa local/web",
-                      "Reversibilidade":  "Usar apenas política aplicável e guardar valores; remover flags sem suporte",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-SearchAndSpotlight",
-                      "LinhaBase":  1456,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  16,
-                      "Mecanismo":  "Mistura AllowNewsAndInterests, TaskbarDa e Feeds de Windows 10",
-                      "Fundamento":  "Documentado: AllowNewsAndInterests em Windows 11 \u003e=22000, edições suportadas",
-                      "ImpactoEsperado":  "Reduzir concorrência se Widgets consumir recursos; não há ganho medido",
-                      "Riscos":  "Perda de Widgets, conteúdo e funcionalidades",
-                      "Dependencias":  "Cliente/edição/build conhecida; não inferir suporte de flags Win10",
-                      "Reversibilidade":  "Migrar só política HKLM; preservar flags HKCU e restaurar existência/tipo",
-                      "DecisaoOffline":  "CandidatoOffline",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-newsandinterests"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-TaskbarWidgets",
-                      "LinhaBase":  1475,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  18,
-                      "Mecanismo":  "ArchiveApps em ContentDeliveryManager",
-                      "Fundamento":  "Sem contrato confirmado para este valor/caminho",
-                      "ImpactoEsperado":  "Preferência de armazenamento, sem relação demonstrada com FPS",
-                      "Riscos":  "Pode não produzir efeito ou contrariar gestão de armazenamento",
-                      "Dependencias":  "Determinar API/política e componente que realmente arquiva apps",
-                      "Reversibilidade":  "Possível diário, mas falta semântica de aplicação/pós-verificação",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-AppArchival",
-                      "LinhaBase":  1516,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  21,
-                      "Mecanismo":  "AUOptions=2, NoAutoRebootWithLoggedOnUsers e AUPowerManagement",
-                      "Fundamento":  "Políticas de Update documentadas com restrições e comportamentos legados",
-                      "ImpactoEsperado":  "Evitar contenção/reinício apenas se políticas efetivamente consumidas",
-                      "Riscos":  "Atualizações adiadas; não pode prometer nunca reiniciar",
-                      "Dependencias":  "Edição, build, gestão MDM/GPO, deadlines e active hours",
-                      "Reversibilidade":  "Separar políticas; valores exatos e validação de consumo/reboot",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-update"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-ManualWindowsUpdate",
-                      "LinhaBase":  1571,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  22,
-                      "Mecanismo":  "DISM ReservedStorageState com parsing inglês/português",
-                      "Fundamento":  "Comando documentado; texto e backup existentes não cobrem todas as situações",
-                      "ImpactoEsperado":  "Espaço disponível variável; não é FPS",
-                      "Riscos":  "Servicing, falhas de atualização e operações pendentes",
-                      "Dependencias":  "Build com API suportada, servicing inativo e estado inequívoco",
-                      "Reversibilidade":  "Estado completo verificado; falha não pode comunicar sucesso",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/dism-storage-reserve"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-ReservedStorage",
-                      "LinhaBase":  1591,
-                      "EvidenciaComandos":  [
-                                                "dism.exe",
-                                                "Join-Path",
-                                                "Out-File",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  23,
-                      "Mecanismo":  "fsutil disablelastaccess e disable8dot3 globais",
-                      "Fundamento":  "Comandos documentados com escopos e estados distintos",
-                      "ImpactoEsperado":  "Hipótese de I/O apenas no workload afetado",
-                      "Riscos":  "Instaladores legados/nomes 8.3 e metadados de todos os volumes",
-                      "Dependencias":  "Volumes reais, estado global/per-volume e workload; separar operações",
-                      "Reversibilidade":  "Ler/guardar estados estruturados exatos; texto de dois comandos não basta",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-behavior"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-NTFS",
-                      "LinhaBase":  1615,
-                      "EvidenciaComandos":  [
-                                                "Join-Path",
-                                                "Test-Path",
-                                                "fsutil",
-                                                "Out-File",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  26,
-                      "Mecanismo":  "Desativa três canais de eventos e tarefa AnalyzeSystem",
-                      "Fundamento":  "Canais/tarefas reais, mas disponibilidade varia; overhead não medido",
-                      "ImpactoEsperado":  "Só hipótese de I/O de diagnóstico; sacrifica observabilidade",
-                      "Riscos":  "Perde evidência de energia/retoma e mistura quatro recursos",
-                      "Dependencias":  "Modern Standby, canais existentes e XML/identidade da tarefa",
-                      "Reversibilidade":  "Exige recurso de canal e enabled da tarefa com baseline; não criar canais",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/wes/windows-event-log",
-                                     "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-SleepStudyLogging",
-                      "LinhaBase":  1685,
-                      "EvidenciaComandos":  [
-                                                "wevtutil.exe",
-                                                "schtasks",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  27,
-                      "Mecanismo":  "Desativa WER/UI/logging em máquina e utilizador",
-                      "Fundamento":  "WER tem configuração documentada; suposta eliminação de freezes não demonstrada",
-                      "ImpactoEsperado":  "Privacidade/diagnóstico, sem ganho de jogo demonstrado",
-                      "Riscos":  "Impede suporte de crash e relatórios úteis",
-                      "Dependencias":  "Consentimento funcional, app e políticas efetivas",
-                      "Reversibilidade":  "Consolidar máquina/utilizador e guardar cada valor; não apagar dumps",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/wer/wer-settings"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-WindowsErrorReporting",
-                      "LinhaBase":  1698,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  28,
-                      "Mecanismo":  "MenuShowDelay=0 e MouseHoverTime=20 escritos em Desktop",
-                      "Fundamento":  "SPI documenta preferências; MouseHoverTime em Desktop não demonstra aplicação",
-                      "ImpactoEsperado":  "Perceção de rapidez da UI, não frame latency do jogo",
-                      "Riscos":  "Menus/hover indesejados e estado da sessão divergente",
-                      "Dependencias":  "Sessão interativa e API SPI correta",
-                      "Reversibilidade":  "Baseline de SPI e persistência; evitar defaults e chave errada",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-InterfaceDelays",
-                      "LinhaBase":  1720,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  29,
-                      "Mecanismo":  "StartupDelayInMSec=0 na chave Serialize",
-                      "Fundamento":  "Flag interna sem contrato estável verificado",
-                      "ImpactoEsperado":  "Prontidão de login; pode concentrar I/O/CPU e piorar arranque",
-                      "Riscos":  "Mais concorrência no login; nenhum efeito esperado num jogo já estabilizado",
-                      "Dependencias":  "Build e medição do arranque completo",
-                      "Reversibilidade":  "Valor tipado possível, mas consumo/benefício ainda por provar",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/test/wpt/optimizing-performance-and-responsiveness"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-StartupDelay",
-                      "LinhaBase":  1734,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  30,
-                      "Mecanismo":  "AutoEndTasks=1 e timeouts de apps/serviços de 2 s",
-                      "Fundamento":  "Mecanismo de encerramento; não tem relação técnica com rendering",
-                      "ImpactoEsperado":  "Só tempo de shutdown; sem ganho de jogo em execução",
-                      "Riscos":  "Pode terminar trabalho sem guardar e serviços antes de concluírem",
-                      "Dependencias":  "Não pertence ao percurso de maximizar FPS de instalações existentes",
-                      "Reversibilidade":  "Backup antigo inventa 5000 quando ausente; retirar implementação, sem defaults",
-                      "DecisaoOffline":  "Retirar",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/dfsr-event-2212-restart-server"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-FastShutdown",
-                      "LinhaBase":  1747,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Get-ItemProperty",
-                                                "Join-Path",
-                                                "Test-Path",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  31,
-                      "Mecanismo":  "MultiTaskingAltTabFilter=3",
-                      "Fundamento":  "Preferência interna de shell, dependente de build e integração Edge",
-                      "ImpactoEsperado":  "Alt-Tab/utilização; não demonstra FPS",
-                      "Riscos":  "Pode divergir da preferência por separadores do utilizador",
-                      "Dependencias":  "Windows/Edge e aplicação efetiva do menu",
-                      "Reversibilidade":  "Valor tipado viável; precisa de teste funcional em shell",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-AltTabFilter",
-                      "LinhaBase":  1774,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  32,
-                      "Mecanismo":  "TaskbarEndTask=1 em TaskbarDeveloperSettings",
-                      "Fundamento":  "Opção de UI existe; chave interna não garante contrato estável",
-                      "ImpactoEsperado":  "Facilidade para terminar app; não acelera o jogo",
-                      "Riscos":  "Terminar tarefas pode perder dados; suporte depende de build",
-                      "Dependencias":  "Windows 11 com opção realmente disponível",
-                      "Reversibilidade":  "Guardar valor e confirmar UI; sem matar processos automaticamente",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Enable-TaskbarEndTask",
-                      "LinhaBase":  1787,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  33,
-                      "Mecanismo":  "TurnOffWindowsCopilot em HKCU/HKLM",
-                      "Fundamento":  "Política legada não prova controlo de app Copilot atual",
-                      "ImpactoEsperado":  "Só debloat se componente real consumir recursos",
-                      "Riscos":  "Pode não afetar app atual; pode duplicar políticas sem efeito",
-                      "Dependencias":  "Identificar pacote/versão; não confundir shell antiga com app/WebView",
-                      "Reversibilidade":  "Preferir política válida ou debloat selecionado; reinstalação não garantida",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/manage-windows-copilot"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-Copilot",
-                      "LinhaBase":  1800,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  34,
-                      "Mecanismo":  "Substitui Flags inteiras de StickyKeys/FilterKeys/ToggleKeys",
-                      "Fundamento":  "SPI documentado; bitmasks fixas alteram mais que popup",
-                      "ImpactoEsperado":  "Evitar interrupção de acessibilidade, não input lag inicial",
-                      "Riscos":  "Pode retirar funções de acessibilidade já configuradas",
-                      "Dependencias":  "Conta/sessão; alterar só bits necessários por API",
-                      "Reversibilidade":  "Guardar structs SPI e valores persistidos; restaurar sem máscara arbitrária",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-StickyKeysPopup",
-                      "LinhaBase":  1818,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  35,
-                      "Mecanismo":  "Win32PrioritySeparation=38/0x26",
-                      "Fundamento":  "Política de quantum/foreground não é configuração por jogo",
-                      "ImpactoEsperado":  "Hipótese de scheduling; pode coincidir com baseline",
-                      "Riscos":  "Pode afetar serviços/background e topologias diferentes",
-                      "Dependencias":  "CPU, Windows, carga e estado efetivo; medir ready time/frametimes",
-                      "Reversibilidade":  "Diário de valor simples possível; bloqueio mantém-se até ensaio de workload",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-CpuScheduling",
-                      "LinhaBase":  1845,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  36,
-                      "Mecanismo":  "Sobrescreve sete campos MMCSS Games",
-                      "Fundamento":  "Parcial: GPU Priority/SFIO não usados; garantia Clock Rate removida desde Win7",
-                      "ImpactoEsperado":  "Só threads inscritas no perfil Games; não todo o jogo",
-                      "Riscos":  "Prioridades podem competir com áudio e outros trabalhos",
-                      "Dependencias":  "Aplicação usa MMCSS; confirmar prioridades efetivas e carga",
-                      "Reversibilidade":  "Remover campos sem efeito; guardar apenas recursos cuja hipótese se ensaia",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-MMCSSTasksGames",
-                      "LinhaBase":  1863,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  37,
-                      "Mecanismo":  "HAGS: função já bloqueada sem escritas",
-                      "Fundamento":  "Depende de capacidade/driver; caps documentadas como reservadas",
-                      "ImpactoEsperado":  "Potencial por jogo/GPU, nunca inferido de VRAM",
-                      "Riscos":  "Apresentação/captura e estabilidade do driver",
-                      "Dependencias":  "Adaptador de render correto, driver/WDDM e boot; ver HARDWARE-3A",
-                      "Reversibilidade":  "Falta contrato de aplicação e confirmação; não criar HwSchMode genericamente",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmdt/ns-d3dkmdt-d3dkmt_wddm_2_7_caps"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Enable-HAGSConditional",
-                      "LinhaBase":  1884,
-                      "EvidenciaComandos":  [
-                                                "New-SkyActionResult"
-                                            ]
-                  },
-                  {
-                      "Id":  40,
-                      "Mecanismo":  "MSI: função já bloqueada sem escritas",
-                      "Fundamento":  "MSI/MSI-X exige hardware, INF/driver e recursos atribuídos",
-                      "ImpactoEsperado":  "Só potencial se modo de interrupção realmente relevante",
-                      "Riscos":  "Ecrã preto/crash e recuperação fora de acesso remoto",
-                      "Dependencias":  "InstanceId/driver/INF e recursos ativos; ver HARDWARE-3A",
-                      "Reversibilidade":  "Baseline por dispositivo e restart seguro ainda inexistentes",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/enabling-message-signaled-interrupts-in-the-registry"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Enable-GpuMsiMode",
-                      "LinhaBase":  1909,
-                      "EvidenciaComandos":  [
-                                                "New-SkyActionResult"
-                                            ]
-                  },
-                  {
-                      "Id":  43,
-                      "Mecanismo":  "ReTrim em C: após classificar o primeiro disco ou nome SSD/NVMe",
-                      "Fundamento":  "Optimize-Volume documentado; seleção e timeout existentes não provam conclusão",
-                      "ImpactoEsperado":  "Manutenção de armazenamento, não aumento imediato de FPS",
-                      "Riscos":  "Volume errado; job terminado em 5 s e erros silenciados",
-                      "Dependencias":  "Mapear volume ao disco físico/capacidade e verificar execução completa",
-                      "Reversibilidade":  "TRIM não tem Undo de conteúdo; manter fora de Apply até manutenção explícita",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/powershell/module/storage/optimize-volume"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Invoke-SsdReTrim",
-                      "LinhaBase":  1923,
-                      "EvidenciaComandos":  [
-                                                "Get-PhysicalDisk",
-                                                "Select-Object",
-                                                "Write-SkyLog",
-                                                "Get-CimInstance",
-                                                "Start-Job",
-                                                "Optimize-Volume",
-                                                "Wait-Job",
-                                                "Receive-Job",
-                                                "Remove-Job",
-                                                "Stop-Job"
-                                            ]
-                  },
-                  {
-                      "Id":  44,
-                      "Mecanismo":  "EnableMulticast=0 em política DNSClient",
-                      "Fundamento":  "Política LLMNR documentada; não afeta diretamente ping/UDP de jogos",
-                      "ImpactoEsperado":  "Preferência de descoberta/nome, não throughput garantido",
-                      "Riscos":  "Nomes/partilhas locais podem deixar de resolver",
-                      "Dependencias":  "Rede local e políticas; identificar dependência antes de optar",
-                      "Reversibilidade":  "Valor exato reversível; consumo e resolução precisam de integração",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-LLMNRProtocol",
-                      "LinhaBase":  1997,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  45,
-                      "Mecanismo":  "FolderType=NotSpecified em Bags/AllFolders",
-                      "Fundamento":  "Preferência interna Explorer sem contrato confirmado para todas as builds",
-                      "ImpactoEsperado":  "Navegação de pastas; não reduz stutter do jogo automaticamente",
-                      "Riscos":  "Muda templates e vistas de pastas",
-                      "Dependencias":  "Shell/build e pasta que reproduz lentidão",
-                      "Reversibilidade":  "Diário por valor possível; confirmar efeito funcional antes de promover",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-AutoFolderDiscovery",
-                      "LinhaBase":  2010,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  46,
-                      "Mecanismo":  "WakeUp=0 para manutenção agendada",
-                      "Fundamento":  "Política de acordar, não bloqueio geral de manutenção",
-                      "ImpactoEsperado":  "Energia/suspensão; não reduz contenção de um jogo já ativo",
-                      "Riscos":  "Tarefas podem acumular ou executar mais tarde",
-                      "Dependencias":  "Modelo de sleep e políticas reais de manutenção",
-                      "Reversibilidade":  "Valor exato possível; precisa de confirmação suspend/resume",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options",
-                                     "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-MaintenanceWakeUp",
-                      "LinhaBase":  2023,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  47,
-                      "Mecanismo":  "SvcHostSplitThresholdInKB=0x40000000",
-                      "Fundamento":  "Agrupamento de serviços; menos processos não prova menos trabalho",
-                      "ImpactoEsperado":  "Pode trocar memória por isolamento; não há ganho medido",
-                      "Riscos":  "Falhas partilhadas, diagnóstico e maior contenção entre serviços",
-                      "Dependencias":  "Build/RAM, grupos efetivos e comportamento após reboot",
-                      "Reversibilidade":  "Original tipado; previous_* pode substituir baseline e não basta",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/application-management/svchost-service-refactoring"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-SvcHostProcessGrouping",
-                      "LinhaBase":  2040,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Get-ItemProperty",
-                                                "Join-Path",
-                                                "Out-File",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  49,
-                      "Mecanismo":  "Remove AppX AllUsers e provisionamento com wildcards",
-                      "Fundamento":  "Cmdlets documentados; reversão de pacotes não garantida",
-                      "ImpactoEsperado":  "Debloat se apps consumirem recursos; espaço não equivale a FPS",
-                      "Riscos":  "Perda de apps de outros utilizadores, dependências e provisionamento",
-                      "Dependencias":  "Inventário explícito, requisitos de jogo/Store e fonte de reinstalação",
-                      "Reversibilidade":  "Exige plano de reinstalação/estado multiutilizador, não só valor de registo",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/powershell/module/appx/remove-appxpackage"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Remove-BloatwareAppX",
-                      "LinhaBase":  2066,
-                      "EvidenciaComandos":  [
-                                                "Get-AppxPackage",
-                                                "Remove-AppxPackage",
-                                                "Get-AppxProvisionedPackage",
-                                                "Where-Object",
-                                                "Remove-AppxProvisionedPackage",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  50,
-                      "Mecanismo":  "DisablePagingExecutive e DisablePageCombining no registo",
-                      "Fundamento":  "Parcial: não desativa pagefile; valor não prova estado de memory combining",
-                      "ImpactoEsperado":  "Hipótese dependente de pressão de memória e I/O",
-                      "Riscos":  "Mais RAM comprometida, menos benefício de deduplicação e stutter sob pressão",
-                      "Dependencias":  "RAM/workload/driver e APIs de estado; não desativar pagefile",
-                      "Reversibilidade":  "Separar funções e usar estado observável; benchmark antes de elegibilidade",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/powershell/module/mmagent/get-mmagent"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-KernelMemoryPaging",
-                      "LinhaBase":  2110,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  51,
-                      "Mecanismo":  "RespectPowerModes=1 em Search Gather/SystemIndex e fallback reg.exe",
-                      "Fundamento":  "Sem contrato confirmado; não demonstra pausar indexação em gaming",
-                      "ImpactoEsperado":  "Hipótese de reduzir I/O do indexador",
-                      "Riscos":  "Permissões protegidas e criação de valor ignorado pelo componente",
-                      "Dependencias":  "Provar consumo na build e carga SearchIndexer reproduzida",
-                      "Reversibilidade":  "Diário possível apenas após semântica; fallback não pode contornar falhas",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-SearchIndexerPower",
-                      "LinhaBase":  2128,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "reg.exe",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  52,
-                      "Mecanismo":  "DisableBandwidthThrottling em LanmanWorkstation",
-                      "Fundamento":  "Tuning SMB, não Internet nem todos os jogos",
-                      "ImpactoEsperado":  "Só cenário de leitura remota SMB medido",
-                      "Riscos":  "Consumo/contenda de rede/servidor e impacto noutros clientes",
-                      "Dependencias":  "Jogo/arquivos realmente em SMB e ligação/servidor fixos",
-                      "Reversibilidade":  "Valor tipado e verificação SMB; continua experiência fora dos perfis normais",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-server/administration/performance-tuning/role/file-server/"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-SmbBandwidthThrottling",
-                      "LinhaBase":  2147,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  53,
-                      "Mecanismo":  "DisallowShaking=1 em Explorer Advanced",
-                      "Fundamento":  "Preferência de gesto; política/API alternativa precisa de escolha por build",
-                      "ImpactoEsperado":  "Evita minimizar janelas por gesto, sem ganho de rendering",
-                      "Riscos":  "Perda de gesto utilizado",
-                      "Dependencias":  "Shell/conta e confirmação de gesto",
-                      "Reversibilidade":  "Guardar valor e verificar UI; não promover como FPS",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-AeroShake",
-                      "LinhaBase":  2162,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  54,
-                      "Mecanismo":  "NoLowDiskSpaceChecks=1 oculta alertas",
-                      "Fundamento":  "Não há fundamento de desempenho para ocultar disco cheio",
-                      "ImpactoEsperado":  "Não liberta espaço nem prova menos I/O significativo",
-                      "Riscos":  "Oculta condição que pode piorar jogos e atualizações",
-                      "Dependencias":  "Diagnosticar espaço real em vez de desligar avisos",
-                      "Reversibilidade":  "Retirar escrita; não remover preferência preexistente nem impor valor inverso",
-                      "DecisaoOffline":  "Retirar",
-                      "Fontes":  [
-                                     "https://support.microsoft.com/en-us/windows/experience/storage-filemanagement/manage-drive-space-with-storage-sense"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-LowDiskSpaceChecks",
-                      "LinhaBase":  2177,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  55,
-                      "Mecanismo":  "AutoReboot=0 e DisplayParameters=1 em CrashControl",
-                      "Fundamento":  "Diagnóstico de crash, não otimização de rendering",
-                      "ImpactoEsperado":  "Ajuda suporte; não melhora FPS",
-                      "Riscos":  "Muda comportamento após BSOD e exposição de informações",
-                      "Dependencias":  "Política de suporte/privacidade e dump configurado",
-                      "Reversibilidade":  "Valores tipados possíveis; confirmar comportamento numa VM com crash controlado",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/troubleshoot/windows-client/performance/configure-system-failure-recovery-options"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-CrashControlQuality",
-                      "LinhaBase":  2192,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  56,
-                      "Mecanismo":  "Desativa dez tarefas e remove valor privado Ubpm",
-                      "Fundamento":  "Task Scheduler documentado; lista mistura compatibilidade e diagnóstico",
-                      "ImpactoEsperado":  "Só benefício se tarefas executarem durante sessão problemática",
-                      "Riscos":  "Perde diagnóstico/avaliação e altera manutenção de sistema",
-                      "Dependencias":  "Identidade/XML/versão de cada tarefa; excluir valor privado Ubpm",
-                      "Reversibilidade":  "Novo recurso enabled por tarefa; não parar/deletar definições nem inventar defaults",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-MaintenanceScheduledTasks",
-                      "LinhaBase":  2210,
-                      "EvidenciaComandos":  [
-                                                "schtasks",
-                                                "Test-Path",
-                                                "Remove-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  57,
-                      "Mecanismo":  "ActivityHistory, DisableDiagnosticTracing, SQM e AppV CEIP",
-                      "Fundamento":  "Mistura políticas documentadas e flags/providers sem contrato",
-                      "ImpactoEsperado":  "Privacidade; overhead de tracing não foi demonstrado",
-                      "Riscos":  "Perda de logs e criação de políticas de componentes ausentes",
-                      "Dependencias":  "Separar ActivityHistory/AppV/ETW e builds/edições",
-                      "Reversibilidade":  "Baseline por valor e sessão ETW se aplicável; não tratar como um único toggle",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy",
-                                     "https://learn.microsoft.com/en-us/windows/win32/wes/windows-event-log"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-ActivityHistoryAndDiagnosticTracing",
-                      "LinhaBase":  2242,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "reg.exe",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  58,
-                      "Mecanismo":  "Nove flags ContentDeliveryManager incluindo FeatureManagementEnabled",
-                      "Fundamento":  "Interno; repete SubscribedContent de 14/84 e interfere em campos amplos",
-                      "ImpactoEsperado":  "Debloat/promos; não mede processos ou FPS",
-                      "Riscos":  "Sobreposição de autoria e alteração de gestão de funcionalidades",
-                      "Dependencias":  "Consolidar recursos e preferir política documentada por edição",
-                      "Reversibilidade":  "Um diário por recurso não resolve sozinho conflitos semânticos entre ações",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-SilentAppInstallation",
-                      "LinhaBase":  2278,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  59,
-                      "Mecanismo":  "LongPathsEnabled=1",
-                      "Fundamento":  "Documentado Win10 \u003e=14393; app tem de ser longPathAware",
-                      "ImpactoEsperado":  "Compatibilidade com paths longos, sem ganho de FPS",
-                      "Riscos":  "Não resolve limites de shell/OneDrive/apps; processos fazem cache",
-                      "Dependencias":  "Cliente Windows 10/11 e aplicação opt-in; pode requerer reboot",
-                      "Reversibilidade":  "Baseline tipada exata; preservar outros valores FileSystem",
-                      "DecisaoOffline":  "CandidatoOffline",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Enable-LongFilePaths",
-                      "LinhaBase":  2306,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  61,
-                      "Mecanismo":  "Max Cached Icons=4096 em Explorer",
-                      "Fundamento":  "Flag histórica sem contrato atual verificado",
-                      "ImpactoEsperado":  "Só possível efeito Explorer; não há prova de evitar recarregamentos",
-                      "Riscos":  "Pode ser ignorado e aumenta alterações sem objetivo comprovável",
-                      "Dependencias":  "Confirmar consumidor/build; não confundir cache de ícones com shaders",
-                      "Reversibilidade":  "Valor tipado possível, mas não há motivo para desbloquear sem validação funcional",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-ExplorerIconCache",
-                      "LinhaBase":  2329,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  62,
-                      "Mecanismo":  "UserDuckingPreference=3",
-                      "Fundamento":  "Ducking é preferência de comunicações; contrato de registo não confirmado",
-                      "ImpactoEsperado":  "Volume de som durante chamadas; não input lag",
-                      "Riscos":  "Muda escolha de volume do utilizador",
-                      "Dependencias":  "Sessão de áudio, comunicação e API/definição suportada",
-                      "Reversibilidade":  "Guardar preferência e estado efetivo; testar chamada sem alterar endpoints",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/coreaudio/stream-attenuation"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-AudioDucking",
-                      "LinhaBase":  2343,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  63,
-                      "Mecanismo":  "CLSID InprocServer32 vazio para menu clássico",
-                      "Fundamento":  "Workaround interno dependente da build, não contrato de extensão",
-                      "ImpactoEsperado":  "Usabilidade do menu; sem ganho de jogo",
-                      "Riscos":  "Pode ser ignorado/quebrar comportamento da shell em atualização",
-                      "Dependencias":  "Build concreta e verificação do menu; não aplicar em Win10",
-                      "Reversibilidade":  "Valor sem nome tipado reversível; verificar se chave original existia",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-ClassicContextMenuWin11",
-                      "LinhaBase":  2357,
-                      "EvidenciaComandos":  [
-                                                "Write-SkyLog",
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "reg.exe"
-                                            ]
-                  },
-                  {
-                      "Id":  64,
-                      "Mecanismo":  "MinAnimate=0 e TaskbarAnimations=0",
-                      "Fundamento":  "Parcial: SPI expõe animações; flags de shell precisam de confirmação",
-                      "ImpactoEsperado":  "Perceção de rapidez, não garante latência do jogo",
-                      "Riscos":  "Muda preferências de acessibilidade/animação",
-                      "Dependencias":  "Shell, sessão e SPI; sobrepõe objetivos com 83",
-                      "Reversibilidade":  "Registo mais estado runtime; consolidar sem reiniciar Explorer à força",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-WindowMinimizeAnimations",
-                      "LinhaBase":  2379,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  65,
-                      "Mecanismo":  "JPEGImportQuality=100 para wallpaper",
-                      "Fundamento":  "Preferência cosmética, sem mecanismo demonstrado para jogos",
-                      "ImpactoEsperado":  "Qualidade do fundo, não FPS nem input lag",
-                      "Riscos":  "Pode aumentar tamanho do ficheiro do fundo",
-                      "Dependencias":  "Componente que importa wallpaper e preferências do utilizador",
-                      "Reversibilidade":  "Valor tipado possível; prioridade baixa, mantém bloqueio sem promessa de desempenho",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Set-MaxWallpaperQuality",
-                      "LinhaBase":  2397,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  66,
-                      "Mecanismo":  "AllowEdgeSwipe=0 em EdgeUI",
-                      "Fundamento":  "Política de gestos documentada, suporte depende da edição/build",
-                      "ImpactoEsperado":  "Evita gestos acidentais; não muda render do jogo",
-                      "Riscos":  "Perda de navegação touch/tablet",
-                      "Dependencias":  "Touch/conta e políticas aplicáveis; finalidade é preferência",
-                      "Reversibilidade":  "Baseline tipada; confirmar gesto real antes de considerar compatibilidade",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-EdgeScreenGestures",
-                      "LinhaBase":  2411,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  67,
-                      "Mecanismo":  "DisableWpbtExecution=1",
-                      "Fundamento":  "Interfere no binário OEM carregado via WPBT; sem regra universal de gaming",
-                      "ImpactoEsperado":  "Só reduz carga se software OEM problemático existir",
-                      "Riscos":  "Pode impedir componente OEM necessário",
-                      "Dependencias":  "Firmware/OEM, binário e processo identificados; recuperação de boot",
-                      "Reversibilidade":  "Valor reversível não prova recuperação de software instalado; exige hardware",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows-hardware/drivers/bringup/windows-platform-binary-table"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-WpbtExecution",
-                      "LinhaBase":  2425,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  68,
-                      "Mecanismo":  "OptInOrOutPreference e wildcard de tarefas NvTm*",
-                      "Fundamento":  "Interno/legado dependente de pacote NVIDIA; fabricante não prova tarefas atuais",
-                      "ImpactoEsperado":  "Só se tarefa/processo realmente presente e consumidor",
-                      "Riscos":  "Pode atingir tarefas diferentes e perdeu baseline por tarefa",
-                      "Dependencias":  "Pacote/versão/assinatura e tarefa exata, sem wildcard amplo",
-                      "Reversibilidade":  "Registo e enabled de tarefas separados; não fingir sucesso quando ausentes",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-NvidiaTelemetry",
-                      "LinhaBase":  2439,
-                      "EvidenciaComandos":  [
-                                                "Get-ItemProperty",
-                                                "Where-Object",
-                                                "Test-Path",
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Get-ScheduledTask",
-                                                "schtasks",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  69,
-                      "Mecanismo":  "DoNotShowFeedbackNotifications mais NumberOfSIUFInPeriod",
-                      "Fundamento":  "Parcial: política de feedback e regra interna SIUF distintas",
-                      "ImpactoEsperado":  "Privacidade/notificações, sem ganho de jogo demonstrado",
-                      "Riscos":  "Política no caminho errado ou campo interno pode não funcionar",
-                      "Dependencias":  "Verificar ADMX/edição e remover regra sem consumo demonstrado",
-                      "Reversibilidade":  "Guardar só política suportada; consolidar com privacidade sem apagar tarefas",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-WindowsFeedbackRequests",
-                      "LinhaBase":  2475,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  70,
-                      "Mecanismo":  "AllowOnlineTips=0 e DisableSoftLanding=1",
-                      "Fundamento":  "Políticas com alcances/edições distintos",
-                      "ImpactoEsperado":  "UI/privacidade; tráfego real ainda não medido",
-                      "Riscos":  "Pode ocultar ajuda e duplicar objetivos de 14/58",
-                      "Dependencias":  "Build/edição e mapeamento ADMX correto",
-                      "Reversibilidade":  "Separar valores e consolidar CloudContent; não migrar tudo por ser DWORD",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-SettingsOnlineTips",
-                      "LinhaBase":  2493,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  72,
-                      "Mecanismo":  "ActivationType=0 de PresenceWriter interno com fallback reg.exe",
-                      "Fundamento":  "Registo de ativação WinRT interno, sem contrato de debloat confirmado",
-                      "ImpactoEsperado":  "Sobrepõe finalidade de capturas 9, sem prova de processo poupado",
-                      "Riscos":  "Game Bar/presença/integrações e permissões protegidas",
-                      "Dependencias":  "Game Bar/Windows e significado exato de ActivationType",
-                      "Reversibilidade":  "Evitar alteração de registos de componente; prova/rollback completo ainda faltam",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement#allowgamedvr"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-GameBarPresenceWriter",
-                      "LinhaBase":  2521,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "reg.exe",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  73,
-                      "Mecanismo":  "KeyboardDelay=0 e KeyboardSpeed=31",
-                      "Fundamento":  "API SPI documenta repetição, não latência do primeiro keydown",
-                      "ImpactoEsperado":  "Preferência de texto; não counter-strafe/polling",
-                      "Riscos":  "Muda repetição/acessibilidade e estado runtime pode divergir",
-                      "Dependencias":  "Sessão e API de teclado; pack comercial fora de âmbito",
-                      "Reversibilidade":  "Guardar registo e SPI original, aplicar apenas bits/propriedades geridas",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow",
-                                     "https://learn.microsoft.com/en-us/windows/win32/inputdev/about-raw-input"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-KeyboardRepeatResponse",
-                      "LinhaBase":  2543,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  77,
-                      "Mecanismo":  "MaxUserPort, TcpTimedWaitDelay e DefaultTTL=64 globais",
-                      "Fundamento":  "Tuning/diagnóstico TCP; não acelerador geral de rotas",
-                      "ImpactoEsperado":  "Só exaustão/estado TCP reproduzido; nada demonstrado em UDP",
-                      "Riscos":  "Altera sockets/portas/TTL de todas as apps e pode ser obsoleto",
-                      "Dependencias":  "Diagnóstico de portas dinâmicas e stack atual; separar campos",
-                      "Reversibilidade":  "Recursos globais exatos e validação de tráfego; sem reset global",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-TcpSocketsAndPorts",
-                      "LinhaBase":  2578,
-                      "EvidenciaComandos":  [
-                                                "Backup-RegistryKey",
-                                                "Ensure-RegistryPath",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  78,
-                      "Mecanismo":  "TCP global já isolado sem netsh",
-                      "Fundamento":  "Estado e contratos variam por propriedade/Windows",
-                      "ImpactoEsperado":  "Só experiência de rede controlada; não FPS universal",
-                      "Riscos":  "Débito, congestion control e compatibilidade",
-                      "Dependencias":  "Captura estruturada e teste de cada propriedade, não texto localizado",
-                      "Reversibilidade":  "Reversão de cada parâmetro e configuração suportada ainda faltam",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-NetshTcpGlobal",
-                      "LinhaBase":  2599,
-                      "EvidenciaComandos":  [
-                                                "New-SkyActionResult"
-                                            ]
-                  },
-                  {
-                      "Id":  80,
-                      "Mecanismo":  "Três flags globais GameDVR FSE",
-                      "Fundamento":  "Mecanismo interno e conflito com 42/apresentação por jogo",
-                      "ImpactoEsperado":  "Pode mudar caminho de apresentação; benefício depende do jogo/API",
-                      "Riscos":  "Captura, VRR, overlays e performance podem piorar",
-                      "Dependencias":  "Jogo, API, modo/cap/driver e estado de apresentação observado",
-                      "Reversibilidade":  "Baseline tipada não basta para generalizar; testar por executável",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://devblogs.microsoft.com/directx/demystifying-fullscreen-optimizations/"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-FullscreenOptimizations",
-                      "LinhaBase":  2623,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  81,
-                      "Mecanismo":  "PowerThrottlingOff=1 global",
-                      "Fundamento":  "QoS/power throttling existe; desativação global não é seleção do jogo",
-                      "ImpactoEsperado":  "Pode aumentar concorrência de apps background em vez de ajudar foreground",
-                      "Riscos":  "Energia, temperatura e trabalho concorrente",
-                      "Dependencias":  "CPU/topologia, processos causadores e políticas efetivas",
-                      "Reversibilidade":  "Valor tipado possível; experimentar QoS por processo antes de regra global",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/procthread/quality-of-service"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-PowerThrottling",
-                      "LinhaBase":  2644,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  82,
-                      "Mecanismo":  "PreventIndexingArchives=1",
-                      "Fundamento":  "Política de Search; disponibilidade/edições e indexador devem ser confirmados",
-                      "ImpactoEsperado":  "Só evita custo se indexação de arquivos for carga real",
-                      "Riscos":  "Perda de pesquisa de conteúdo dentro de arquivos",
-                      "Dependencias":  "Windows Search ativo, formato de arquivo e política consumida",
-                      "Reversibilidade":  "Um valor reversível; candidato futuro após confirmar matriz e funcionalidade",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-ZipIndexing",
-                      "LinhaBase":  2659,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  83,
-                      "Mecanismo":  "ListviewShadow=0, DragFullWindows=1 e FontSmoothing=2",
-                      "Fundamento":  "Preferências da shell; não são um mecanismo genérico de DWM/game latency",
-                      "ImpactoEsperado":  "UI visual; arrastar janelas completas pode aumentar trabalho",
-                      "Riscos":  "Sobrepõe 64 e altera escolhas gráficas não relacionadas",
-                      "Dependencias":  "Sessão/SPI e contenção DWM demonstrada",
-                      "Reversibilidade":  "Separar propriedades e preservar estado runtime, sem defaults arbitrários",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow",
-                                     "https://devblogs.microsoft.com/directx/demystifying-fullscreen-optimizations/"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-DwmVisualEffects",
-                      "LinhaBase":  2674,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  84,
-                      "Mecanismo":  "RotatingLockScreen/ContentDelivery mais política Spotlight",
-                      "Fundamento":  "Parcial: política documentada com edições; flags internas repetidas",
-                      "ImpactoEsperado":  "Privacidade/conteúdo de lockscreen, não ping garantido",
-                      "Riscos":  "Repetição com 14/58 e alteração de fundo escolhido",
-                      "Dependencias":  "Build/edição, componente e mapeamento da política",
-                      "Reversibilidade":  "Consolidar só recursos pretendidos; não criar flags por ausência",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-WindowsSpotlightDownloads",
-                      "LinhaBase":  2697,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  85,
-                      "Mecanismo":  "ShowRecent=0 e ShowFrequent=0 no Explorer",
-                      "Fundamento":  "Preferência de histórico; não prova eliminação de journaling contínuo no SSD",
-                      "ImpactoEsperado":  "Privacidade/UI; nenhum ganho esperado de render",
-                      "Riscos":  "Perda de listas úteis e atalhos recentes",
-                      "Dependencias":  "Shell/conta e preferência explícita",
-                      "Reversibilidade":  "Valores tipados possíveis; verificação funcional de Explorer necessária",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Optimize-QuickAccessHistory",
-                      "LinhaBase":  2720,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  87,
-                      "Mecanismo":  "Disable-MMAgent ApplicationPreLaunch com política Appx de perfis especiais",
-                      "Fundamento":  "Parcial: MMAgent documentado; AllowDeploymentInSpecialProfiles não controla prelaunch",
-                      "ImpactoEsperado":  "Hipótese de contenção/arranque; política Appx é tecnicamente alheia",
-                      "Riscos":  "Deployment em perfis especiais e estado MMAgent não guardado",
-                      "Dependencias":  "Get-MMAgent/capacidade e workload; separar funções",
-                      "Reversibilidade":  "Guardar estado MMAgent, verificar API; remover política Appx independente",
-                      "DecisaoOffline":  "IntegracaoSoftware",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/powershell/module/mmagent/disable-mmagent",
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-appxpackagemanager"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-ApplicationPreLaunch",
-                      "LinhaBase":  2762,
-                      "EvidenciaComandos":  [
-                                                "Disable-MMAgent",
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  88,
-                      "Mecanismo":  "Flag user 01 e AllowStorageSenseGlobal=0",
-                      "Fundamento":  "Documentado: política Storage Sense desde Win10 1903 em edições suportadas",
-                      "ImpactoEsperado":  "Evita limpeza automática se provocar I/O concorrente; não é FPS automático",
-                      "Riscos":  "Disco pode encher; utilizador perde limpeza automática",
-                      "Dependencias":  "Cliente/edição/build \u003e=18362 e escolha explícita de manutenção",
-                      "Reversibilidade":  "Migrar só política, preservando preferências/cadências; não apagar ficheiros",
-                      "DecisaoOffline":  "CandidatoOffline",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-storage#allowstoragesenseglobal"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-StorageSenseBackgroundScans",
-                      "LinhaBase":  2780,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  89,
-                      "Mecanismo":  "NetbiosOptions=2 em todas as interfaces NetBT",
-                      "Fundamento":  "Configuração por interface; não justifica iteração indiscriminada",
-                      "ImpactoEsperado":  "Descoberta/nome legado, não latência geral de jogos",
-                      "Riscos":  "Partilhas/redes antigas podem falhar",
-                      "Dependencias":  "Interface real, NetBIOS/DHCP, rede empresarial e baseline por NIC",
-                      "Reversibilidade":  "Recurso por interface e sem reset; confirmar resolução no laboratório",
-                      "DecisaoOffline":  "Laboratorio",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-NetBiosOverTcpip",
-                      "LinhaBase":  2798,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Get-ChildItem",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  },
-                  {
-                      "Id":  90,
-                      "Mecanismo":  "AllowCrossDeviceClipboard=0 e AllowClipboardHistory=1",
-                      "Fundamento":  "Documentado Win10 \u003e=17763; sync e histórico são políticas independentes",
-                      "ImpactoEsperado":  "Privacidade/sincronização, não FPS",
-                      "Riscos":  "A versão antiga força histórico que o utilizador podia ter bloqueado",
-                      "Dependencias":  "Cliente/edição/build conhecidos e política de clipboard efetiva",
-                      "Reversibilidade":  "Migrar só sync; não tocar no histórico; existência/tipo/conteúdo exatos",
-                      "DecisaoOffline":  "CandidatoOffline",
-                      "Fontes":  [
-                                     "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy#allowcrossdeviceclipboard"
-                                 ],
-                      "Implementacao3B":  "Por executar",
-                      "TestesAutomatizados3B":  "Nao executados nesta auditoria",
-                      "ValidacaoReal":  "Nao executada",
-                      "GanhoMedido":  false,
-                      "Funcao":  "Disable-CloudClipboardSync",
-                      "LinhaBase":  2819,
-                      "EvidenciaComandos":  [
-                                                "Ensure-RegistryPath",
-                                                "Backup-RegistryKey",
-                                                "Set-ItemProperty",
-                                                "Write-SkyLog"
-                                            ]
-                  }
-              ]
+  "SchemaVersion": 1,
+  "Data": "2026-10-27",
+  "BaseCommit": "22def57",
+  "QuantidadeBloqueadasInicial": 67,
+  "NotaFontes": "Referencias primarias documentam mecanismos/contexto. Campos marcados internos/sem contrato nao se tornam suportados por citar uma pagina geral. Auditoria de codigo; sem integracao ou benchmarks.",
+  "Acoes": [
+    {
+      "Id": 2,
+      "Mecanismo": "GlobalTimerResolutionRequests e BCD disabledynamictick",
+      "Fundamento": "Parcial: BCD documentado; chave kernel sem contrato confirmado",
+      "ImpactoEsperado": "Só hipótese de jitter; não garante resolução de 0,5 ms",
+      "Riscos": "Boot, energia e temporizadores de outros processos",
+      "Dependencias": "Build, pedidos reais de timer e jogo; separar duas operações",
+      "Reversibilidade": "Guardar existência do elemento BCD e do valor, não texto localizado",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/bcdedit--set",
+        "https://learn.microsoft.com/en-us/windows/win32/api/timeapi/nf-timeapi-timebeginperiod"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-TimerResolution",
+      "LinhaBase": 1211,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "bcdedit",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 4,
+      "Mecanismo": "powercfg -h off elimina hiberfil e altera hibernação/Fast Startup",
+      "Fundamento": "Documentado, mas implementação captura apenas HibernateEnabled",
+      "ImpactoEsperado": "Espaço/energia; nenhum ganho esperado durante jogo",
+      "Riscos": "Perda de hibernação e fast startup; tamanho/tipo de hiberfile",
+      "Dependencias": "Capacidade powercfg /a, tipo full/reduced e políticas OEM",
+      "Reversibilidade": "Necessário estado completo e confirmação powercfg; ficheiro de texto é insuficiente",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-Hibernation",
+      "LinhaBase": 1251,
+      "EvidenciaComandos": [
+        "Get-ItemProperty",
+        "Join-Path",
+        "Out-File",
+        "powercfg",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 5,
+      "Mecanismo": "Desativa FTH globalmente com Enabled=0",
+      "Fundamento": "Mecanismo de mitigação documentado; uso genérico injustificado",
+      "ImpactoEsperado": "Possível custo apenas em app realmente abrangida por FTH",
+      "Riscos": "Pode expor heap corruption e crashes antes mitigados",
+      "Dependencias": "Diagnóstico por executável; confirmar FTH aplicado e causa",
+      "Reversibilidade": "Diário tipado possível; validar estabilidade específica antes de permitir",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/win7appqual/fault-tolerant-heap"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-FaultTolerantHeap",
+      "LinhaBase": 1270,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 7,
+      "Mecanismo": "Sensibilidade, thresholds e curvas MarkC de ponteiro",
+      "Fundamento": "Parcial: ponteiro tem API SPI; curvas fixas não demonstram Raw Input",
+      "ImpactoEsperado": "Preferência do cursor; não altera necessariamente input do jogo",
+      "Riscos": "Muda sensibilidade/acessibilidade e comportamento diário",
+      "Dependencias": "DPI, scaling, sessão e caminho de input do jogo; pack comercial fora de âmbito",
+      "Reversibilidade": "Restaurar registo e estado SPI da sessão, sem impor 6/11",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow",
+        "https://learn.microsoft.com/en-us/windows/win32/inputdev/about-raw-input"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-MouseAcceleration",
+      "LinhaBase": 1291,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 10,
+      "Mecanismo": "Escreve ACK/Nagle/delayed ACK em todas as interfaces com IP",
+      "Fundamento": "Parcial: TCP_NODELAY por socket é documentado; flags genéricas não justificadas",
+      "ImpactoEsperado": "Pode afetar TCP específico; não generaliza para UDP/hitreg",
+      "Riscos": "Mais pacotes/CPU e interferência em VPN/interfaces antigas",
+      "Dependencias": "Interface utilizada, protocolo e driver; diagnóstico de ACK",
+      "Reversibilidade": "Identidade por interface, valores tipados e estado efetivo de sockets",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-NetworkLatency",
+      "LinhaBase": 1363,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Get-ChildItem",
+        "Get-ItemProperty",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 11,
+      "Mecanismo": "NetworkThrottlingIndex e SystemResponsiveness=10",
+      "Fundamento": "MMCSS parcialmente documentado; não é prioridade universal do jogo",
+      "ImpactoEsperado": "Só potencial sob concorrência multimédia identificada",
+      "Riscos": "Compromissos CPU/rede/áudio e possível valor já conforme",
+      "Dependencias": "Threads registadas em MMCSS, carga concorrente e build",
+      "Reversibilidade": "Separar recursos; registo reversível não prova benefício",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-NetworkThrottling",
+      "LinhaBase": 1388,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 12,
+      "Mecanismo": "NonBestEffortLimit=0 apresentado como recuperação de 20% de banda",
+      "Fundamento": "Política limita reservas, não demonstra banda permanentemente perdida",
+      "ImpactoEsperado": "Não há mecanismo que prove aceleração geral ou ping inferior",
+      "Riscos": "Pode impedir reservas úteis de aplicações QoS",
+      "Dependencias": "Só teria contexto numa necessidade explícita de QoS, fora do tweak genérico",
+      "Reversibilidade": "Não aplicar nem inventar defaults de clientes antigos",
+      "DecisaoOffline": "Retirar",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-qos"
+      ],
+      "Implementacao3B": "Retirada: dispatcher e funcao direta sem mutacoes",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-QoSBandwidthLimit",
+      "LinhaBase": 1403,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 14,
+      "Mecanismo": "Seis flags ContentDeliveryManager para sugestões/lockscreen",
+      "Fundamento": "Interno: IDs SubscribedContent não constituem contrato público por build",
+      "ImpactoEsperado": "Preferência; só carga de promoção realmente observada seria relevante",
+      "Riscos": "Sobreposição com 58/84, shell e experiência do lockscreen",
+      "Dependencias": "Inventariar recursos e mapear políticas documentadas/edições",
+      "Reversibilidade": "Baseline por valor partilhado; resolver ownership entre ações antes de migrar",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-StartMenuSuggestions",
+      "LinhaBase": 1431,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 15,
+      "Mecanismo": "DisableSearchBoxSuggestions mais BingSearchEnabled/CortanaConsent",
+      "Fundamento": "Parcial: política e flags históricas têm alcances diferentes",
+      "ImpactoEsperado": "Pesquisa/UI; não torna o jogo mais rápido",
+      "Riscos": "Pesquisa e integração shell podem mudar; flags obsoletas",
+      "Dependencias": "Build/edição e comportamento da pesquisa local/web",
+      "Reversibilidade": "Usar apenas política aplicável e guardar valores; remover flags sem suporte",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-SearchAndSpotlight",
+      "LinhaBase": 1456,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 16,
+      "Mecanismo": "Mistura AllowNewsAndInterests, TaskbarDa e Feeds de Windows 10",
+      "Fundamento": "Documentado: AllowNewsAndInterests em Windows 11 >=22000, edições suportadas",
+      "ImpactoEsperado": "Reduzir concorrência se Widgets consumir recursos; não há ganho medido",
+      "Riscos": "Perda de Widgets, conteúdo e funcionalidades",
+      "Dependencias": "Cliente/edição/build conhecida; não inferir suporte de flags Win10",
+      "Reversibilidade": "Migrar só política HKLM; preservar flags HKCU e restaurar existência/tipo",
+      "DecisaoOffline": "CandidatoOffline",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-newsandinterests"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-TaskbarWidgets",
+      "LinhaBase": 1475,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 18,
+      "Mecanismo": "ArchiveApps em ContentDeliveryManager",
+      "Fundamento": "Sem contrato confirmado para este valor/caminho",
+      "ImpactoEsperado": "Preferência de armazenamento, sem relação demonstrada com FPS",
+      "Riscos": "Pode não produzir efeito ou contrariar gestão de armazenamento",
+      "Dependencias": "Determinar API/política e componente que realmente arquiva apps",
+      "Reversibilidade": "Possível diário, mas falta semântica de aplicação/pós-verificação",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-AppArchival",
+      "LinhaBase": 1516,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 21,
+      "Mecanismo": "AUOptions=2, NoAutoRebootWithLoggedOnUsers e AUPowerManagement",
+      "Fundamento": "Políticas de Update documentadas com restrições e comportamentos legados",
+      "ImpactoEsperado": "Evitar contenção/reinício apenas se políticas efetivamente consumidas",
+      "Riscos": "Atualizações adiadas; não pode prometer nunca reiniciar",
+      "Dependencias": "Edição, build, gestão MDM/GPO, deadlines e active hours",
+      "Reversibilidade": "Separar políticas; valores exatos e validação de consumo/reboot",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-update"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-ManualWindowsUpdate",
+      "LinhaBase": 1571,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 22,
+      "Mecanismo": "DISM ReservedStorageState com parsing inglês/português",
+      "Fundamento": "Comando documentado; texto e backup existentes não cobrem todas as situações",
+      "ImpactoEsperado": "Espaço disponível variável; não é FPS",
+      "Riscos": "Servicing, falhas de atualização e operações pendentes",
+      "Dependencias": "Build com API suportada, servicing inativo e estado inequívoco",
+      "Reversibilidade": "Estado completo verificado; falha não pode comunicar sucesso",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/dism-storage-reserve"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-ReservedStorage",
+      "LinhaBase": 1591,
+      "EvidenciaComandos": [
+        "dism.exe",
+        "Join-Path",
+        "Out-File",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 23,
+      "Mecanismo": "fsutil disablelastaccess e disable8dot3 globais",
+      "Fundamento": "Comandos documentados com escopos e estados distintos",
+      "ImpactoEsperado": "Hipótese de I/O apenas no workload afetado",
+      "Riscos": "Instaladores legados/nomes 8.3 e metadados de todos os volumes",
+      "Dependencias": "Volumes reais, estado global/per-volume e workload; separar operações",
+      "Reversibilidade": "Ler/guardar estados estruturados exatos; texto de dois comandos não basta",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-behavior"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-NTFS",
+      "LinhaBase": 1615,
+      "EvidenciaComandos": [
+        "Join-Path",
+        "Test-Path",
+        "fsutil",
+        "Out-File",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 26,
+      "Mecanismo": "Desativa três canais de eventos e tarefa AnalyzeSystem",
+      "Fundamento": "Canais/tarefas reais, mas disponibilidade varia; overhead não medido",
+      "ImpactoEsperado": "Só hipótese de I/O de diagnóstico; sacrifica observabilidade",
+      "Riscos": "Perde evidência de energia/retoma e mistura quatro recursos",
+      "Dependencias": "Modern Standby, canais existentes e XML/identidade da tarefa",
+      "Reversibilidade": "Exige recurso de canal e enabled da tarefa com baseline; não criar canais",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/wes/windows-event-log",
+        "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-SleepStudyLogging",
+      "LinhaBase": 1685,
+      "EvidenciaComandos": [
+        "wevtutil.exe",
+        "schtasks",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 27,
+      "Mecanismo": "Desativa WER/UI/logging em máquina e utilizador",
+      "Fundamento": "WER tem configuração documentada; suposta eliminação de freezes não demonstrada",
+      "ImpactoEsperado": "Privacidade/diagnóstico, sem ganho de jogo demonstrado",
+      "Riscos": "Impede suporte de crash e relatórios úteis",
+      "Dependencias": "Consentimento funcional, app e políticas efetivas",
+      "Reversibilidade": "Consolidar máquina/utilizador e guardar cada valor; não apagar dumps",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/wer/wer-settings"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-WindowsErrorReporting",
+      "LinhaBase": 1698,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 28,
+      "Mecanismo": "MenuShowDelay=0 e MouseHoverTime=20 escritos em Desktop",
+      "Fundamento": "SPI documenta preferências; MouseHoverTime em Desktop não demonstra aplicação",
+      "ImpactoEsperado": "Perceção de rapidez da UI, não frame latency do jogo",
+      "Riscos": "Menus/hover indesejados e estado da sessão divergente",
+      "Dependencias": "Sessão interativa e API SPI correta",
+      "Reversibilidade": "Baseline de SPI e persistência; evitar defaults e chave errada",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-InterfaceDelays",
+      "LinhaBase": 1720,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 29,
+      "Mecanismo": "StartupDelayInMSec=0 na chave Serialize",
+      "Fundamento": "Flag interna sem contrato estável verificado",
+      "ImpactoEsperado": "Prontidão de login; pode concentrar I/O/CPU e piorar arranque",
+      "Riscos": "Mais concorrência no login; nenhum efeito esperado num jogo já estabilizado",
+      "Dependencias": "Build e medição do arranque completo",
+      "Reversibilidade": "Valor tipado possível, mas consumo/benefício ainda por provar",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/test/wpt/optimizing-performance-and-responsiveness"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-StartupDelay",
+      "LinhaBase": 1734,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 30,
+      "Mecanismo": "AutoEndTasks=1 e timeouts de apps/serviços de 2 s",
+      "Fundamento": "Mecanismo de encerramento; não tem relação técnica com rendering",
+      "ImpactoEsperado": "Só tempo de shutdown; sem ganho de jogo em execução",
+      "Riscos": "Pode terminar trabalho sem guardar e serviços antes de concluírem",
+      "Dependencias": "Não pertence ao percurso de maximizar FPS de instalações existentes",
+      "Reversibilidade": "Backup antigo inventa 5000 quando ausente; retirar implementação, sem defaults",
+      "DecisaoOffline": "Retirar",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/dfsr-event-2212-restart-server"
+      ],
+      "Implementacao3B": "Retirada: dispatcher e funcao direta sem mutacoes",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-FastShutdown",
+      "LinhaBase": 1747,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Get-ItemProperty",
+        "Join-Path",
+        "Test-Path",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 31,
+      "Mecanismo": "MultiTaskingAltTabFilter=3",
+      "Fundamento": "Preferência interna de shell, dependente de build e integração Edge",
+      "ImpactoEsperado": "Alt-Tab/utilização; não demonstra FPS",
+      "Riscos": "Pode divergir da preferência por separadores do utilizador",
+      "Dependencias": "Windows/Edge e aplicação efetiva do menu",
+      "Reversibilidade": "Valor tipado viável; precisa de teste funcional em shell",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-AltTabFilter",
+      "LinhaBase": 1774,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 32,
+      "Mecanismo": "TaskbarEndTask=1 em TaskbarDeveloperSettings",
+      "Fundamento": "Opção de UI existe; chave interna não garante contrato estável",
+      "ImpactoEsperado": "Facilidade para terminar app; não acelera o jogo",
+      "Riscos": "Terminar tarefas pode perder dados; suporte depende de build",
+      "Dependencias": "Windows 11 com opção realmente disponível",
+      "Reversibilidade": "Guardar valor e confirmar UI; sem matar processos automaticamente",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Enable-TaskbarEndTask",
+      "LinhaBase": 1787,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 33,
+      "Mecanismo": "TurnOffWindowsCopilot em HKCU/HKLM",
+      "Fundamento": "Política legada não prova controlo de app Copilot atual",
+      "ImpactoEsperado": "Só debloat se componente real consumir recursos",
+      "Riscos": "Pode não afetar app atual; pode duplicar políticas sem efeito",
+      "Dependencias": "Identificar pacote/versão; não confundir shell antiga com app/WebView",
+      "Reversibilidade": "Preferir política válida ou debloat selecionado; reinstalação não garantida",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/manage-windows-copilot"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-Copilot",
+      "LinhaBase": 1800,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 34,
+      "Mecanismo": "Substitui Flags inteiras de StickyKeys/FilterKeys/ToggleKeys",
+      "Fundamento": "SPI documentado; bitmasks fixas alteram mais que popup",
+      "ImpactoEsperado": "Evitar interrupção de acessibilidade, não input lag inicial",
+      "Riscos": "Pode retirar funções de acessibilidade já configuradas",
+      "Dependencias": "Conta/sessão; alterar só bits necessários por API",
+      "Reversibilidade": "Guardar structs SPI e valores persistidos; restaurar sem máscara arbitrária",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-StickyKeysPopup",
+      "LinhaBase": 1818,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 35,
+      "Mecanismo": "Win32PrioritySeparation=38/0x26",
+      "Fundamento": "Política de quantum/foreground não é configuração por jogo",
+      "ImpactoEsperado": "Hipótese de scheduling; pode coincidir com baseline",
+      "Riscos": "Pode afetar serviços/background e topologias diferentes",
+      "Dependencias": "CPU, Windows, carga e estado efetivo; medir ready time/frametimes",
+      "Reversibilidade": "Diário de valor simples possível; bloqueio mantém-se até ensaio de workload",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-CpuScheduling",
+      "LinhaBase": 1845,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 36,
+      "Mecanismo": "Sobrescreve sete campos MMCSS Games",
+      "Fundamento": "Parcial: GPU Priority/SFIO não usados; garantia Clock Rate removida desde Win7",
+      "ImpactoEsperado": "Só threads inscritas no perfil Games; não todo o jogo",
+      "Riscos": "Prioridades podem competir com áudio e outros trabalhos",
+      "Dependencias": "Aplicação usa MMCSS; confirmar prioridades efetivas e carga",
+      "Reversibilidade": "Remover campos sem efeito; guardar apenas recursos cuja hipótese se ensaia",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/procthread/multimedia-class-scheduler-service"
+      ],
+      "Implementacao3B": "Limpeza implementada: funcao bloqueada sem campos obsoletos/alheios; hipotese conservada na auditoria",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-MMCSSTasksGames",
+      "LinhaBase": 1863,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 37,
+      "Mecanismo": "HAGS: função já bloqueada sem escritas",
+      "Fundamento": "Depende de capacidade/driver; caps documentadas como reservadas",
+      "ImpactoEsperado": "Potencial por jogo/GPU, nunca inferido de VRAM",
+      "Riscos": "Apresentação/captura e estabilidade do driver",
+      "Dependencias": "Adaptador de render correto, driver/WDDM e boot; ver HARDWARE-3A",
+      "Reversibilidade": "Falta contrato de aplicação e confirmação; não criar HwSchMode genericamente",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmdt/ns-d3dkmdt-d3dkmt_wddm_2_7_caps"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Enable-HAGSConditional",
+      "LinhaBase": 1884,
+      "EvidenciaComandos": [
+        "New-SkyActionResult"
+      ]
+    },
+    {
+      "Id": 40,
+      "Mecanismo": "MSI: função já bloqueada sem escritas",
+      "Fundamento": "MSI/MSI-X exige hardware, INF/driver e recursos atribuídos",
+      "ImpactoEsperado": "Só potencial se modo de interrupção realmente relevante",
+      "Riscos": "Ecrã preto/crash e recuperação fora de acesso remoto",
+      "Dependencias": "InstanceId/driver/INF e recursos ativos; ver HARDWARE-3A",
+      "Reversibilidade": "Baseline por dispositivo e restart seguro ainda inexistentes",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/enabling-message-signaled-interrupts-in-the-registry"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Enable-GpuMsiMode",
+      "LinhaBase": 1909,
+      "EvidenciaComandos": [
+        "New-SkyActionResult"
+      ]
+    },
+    {
+      "Id": 43,
+      "Mecanismo": "ReTrim em C: após classificar o primeiro disco ou nome SSD/NVMe",
+      "Fundamento": "Optimize-Volume documentado; seleção e timeout existentes não provam conclusão",
+      "ImpactoEsperado": "Manutenção de armazenamento, não aumento imediato de FPS",
+      "Riscos": "Volume errado; job terminado em 5 s e erros silenciados",
+      "Dependencias": "Mapear volume ao disco físico/capacidade e verificar execução completa",
+      "Reversibilidade": "TRIM não tem Undo de conteúdo; manter fora de Apply até manutenção explícita",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/powershell/module/storage/optimize-volume"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Invoke-SsdReTrim",
+      "LinhaBase": 1923,
+      "EvidenciaComandos": [
+        "Get-PhysicalDisk",
+        "Select-Object",
+        "Write-SkyLog",
+        "Get-CimInstance",
+        "Start-Job",
+        "Optimize-Volume",
+        "Wait-Job",
+        "Receive-Job",
+        "Remove-Job",
+        "Stop-Job"
+      ]
+    },
+    {
+      "Id": 44,
+      "Mecanismo": "EnableMulticast=0 em política DNSClient",
+      "Fundamento": "Política LLMNR documentada; não afeta diretamente ping/UDP de jogos",
+      "ImpactoEsperado": "Preferência de descoberta/nome, não throughput garantido",
+      "Riscos": "Nomes/partilhas locais podem deixar de resolver",
+      "Dependencias": "Rede local e políticas; identificar dependência antes de optar",
+      "Reversibilidade": "Valor exato reversível; consumo e resolução precisam de integração",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-LLMNRProtocol",
+      "LinhaBase": 1997,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 45,
+      "Mecanismo": "FolderType=NotSpecified em Bags/AllFolders",
+      "Fundamento": "Preferência interna Explorer sem contrato confirmado para todas as builds",
+      "ImpactoEsperado": "Navegação de pastas; não reduz stutter do jogo automaticamente",
+      "Riscos": "Muda templates e vistas de pastas",
+      "Dependencias": "Shell/build e pasta que reproduz lentidão",
+      "Reversibilidade": "Diário por valor possível; confirmar efeito funcional antes de promover",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-AutoFolderDiscovery",
+      "LinhaBase": 2010,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 46,
+      "Mecanismo": "WakeUp=0 para manutenção agendada",
+      "Fundamento": "Política de acordar, não bloqueio geral de manutenção",
+      "ImpactoEsperado": "Energia/suspensão; não reduz contenção de um jogo já ativo",
+      "Riscos": "Tarefas podem acumular ou executar mais tarde",
+      "Dependencias": "Modelo de sleep e políticas reais de manutenção",
+      "Reversibilidade": "Valor exato possível; precisa de confirmação suspend/resume",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options",
+        "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-MaintenanceWakeUp",
+      "LinhaBase": 2023,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 47,
+      "Mecanismo": "SvcHostSplitThresholdInKB=0x40000000",
+      "Fundamento": "Agrupamento de serviços; menos processos não prova menos trabalho",
+      "ImpactoEsperado": "Pode trocar memória por isolamento; não há ganho medido",
+      "Riscos": "Falhas partilhadas, diagnóstico e maior contenção entre serviços",
+      "Dependencias": "Build/RAM, grupos efetivos e comportamento após reboot",
+      "Reversibilidade": "Original tipado; previous_* pode substituir baseline e não basta",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/application-management/svchost-service-refactoring"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-SvcHostProcessGrouping",
+      "LinhaBase": 2040,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Get-ItemProperty",
+        "Join-Path",
+        "Out-File",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 49,
+      "Mecanismo": "Remove AppX AllUsers e provisionamento com wildcards",
+      "Fundamento": "Cmdlets documentados; reversão de pacotes não garantida",
+      "ImpactoEsperado": "Debloat se apps consumirem recursos; espaço não equivale a FPS",
+      "Riscos": "Perda de apps de outros utilizadores, dependências e provisionamento",
+      "Dependencias": "Inventário explícito, requisitos de jogo/Store e fonte de reinstalação",
+      "Reversibilidade": "Exige plano de reinstalação/estado multiutilizador, não só valor de registo",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/powershell/module/appx/remove-appxpackage"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Remove-BloatwareAppX",
+      "LinhaBase": 2066,
+      "EvidenciaComandos": [
+        "Get-AppxPackage",
+        "Remove-AppxPackage",
+        "Get-AppxProvisionedPackage",
+        "Where-Object",
+        "Remove-AppxProvisionedPackage",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 50,
+      "Mecanismo": "DisablePagingExecutive e DisablePageCombining no registo",
+      "Fundamento": "Parcial: não desativa pagefile; valor não prova estado de memory combining",
+      "ImpactoEsperado": "Hipótese dependente de pressão de memória e I/O",
+      "Riscos": "Mais RAM comprometida, menos benefício de deduplicação e stutter sob pressão",
+      "Dependencias": "RAM/workload/driver e APIs de estado; não desativar pagefile",
+      "Reversibilidade": "Separar funções e usar estado observável; benchmark antes de elegibilidade",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/powershell/module/mmagent/get-mmagent"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-KernelMemoryPaging",
+      "LinhaBase": 2110,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 51,
+      "Mecanismo": "RespectPowerModes=1 em Search Gather/SystemIndex e fallback reg.exe",
+      "Fundamento": "Sem contrato confirmado; não demonstra pausar indexação em gaming",
+      "ImpactoEsperado": "Hipótese de reduzir I/O do indexador",
+      "Riscos": "Permissões protegidas e criação de valor ignorado pelo componente",
+      "Dependencias": "Provar consumo na build e carga SearchIndexer reproduzida",
+      "Reversibilidade": "Diário possível apenas após semântica; fallback não pode contornar falhas",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-SearchIndexerPower",
+      "LinhaBase": 2128,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "reg.exe",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 52,
+      "Mecanismo": "DisableBandwidthThrottling em LanmanWorkstation",
+      "Fundamento": "Tuning SMB, não Internet nem todos os jogos",
+      "ImpactoEsperado": "Só cenário de leitura remota SMB medido",
+      "Riscos": "Consumo/contenda de rede/servidor e impacto noutros clientes",
+      "Dependencias": "Jogo/arquivos realmente em SMB e ligação/servidor fixos",
+      "Reversibilidade": "Valor tipado e verificação SMB; continua experiência fora dos perfis normais",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-server/administration/performance-tuning/role/file-server/"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-SmbBandwidthThrottling",
+      "LinhaBase": 2147,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 53,
+      "Mecanismo": "DisallowShaking=1 em Explorer Advanced",
+      "Fundamento": "Preferência de gesto; política/API alternativa precisa de escolha por build",
+      "ImpactoEsperado": "Evita minimizar janelas por gesto, sem ganho de rendering",
+      "Riscos": "Perda de gesto utilizado",
+      "Dependencias": "Shell/conta e confirmação de gesto",
+      "Reversibilidade": "Guardar valor e verificar UI; não promover como FPS",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-AeroShake",
+      "LinhaBase": 2162,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 54,
+      "Mecanismo": "NoLowDiskSpaceChecks=1 oculta alertas",
+      "Fundamento": "Não há fundamento de desempenho para ocultar disco cheio",
+      "ImpactoEsperado": "Não liberta espaço nem prova menos I/O significativo",
+      "Riscos": "Oculta condição que pode piorar jogos e atualizações",
+      "Dependencias": "Diagnosticar espaço real em vez de desligar avisos",
+      "Reversibilidade": "Retirar escrita; não remover preferência preexistente nem impor valor inverso",
+      "DecisaoOffline": "Retirar",
+      "Fontes": [
+        "https://support.microsoft.com/en-us/windows/experience/storage-filemanagement/manage-drive-space-with-storage-sense"
+      ],
+      "Implementacao3B": "Retirada: dispatcher e funcao direta sem mutacoes",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-LowDiskSpaceChecks",
+      "LinhaBase": 2177,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 55,
+      "Mecanismo": "AutoReboot=0 e DisplayParameters=1 em CrashControl",
+      "Fundamento": "Diagnóstico de crash, não otimização de rendering",
+      "ImpactoEsperado": "Ajuda suporte; não melhora FPS",
+      "Riscos": "Muda comportamento após BSOD e exposição de informações",
+      "Dependencias": "Política de suporte/privacidade e dump configurado",
+      "Reversibilidade": "Valores tipados possíveis; confirmar comportamento numa VM com crash controlado",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/troubleshoot/windows-client/performance/configure-system-failure-recovery-options"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-CrashControlQuality",
+      "LinhaBase": 2192,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 56,
+      "Mecanismo": "Desativa dez tarefas e remove valor privado Ubpm",
+      "Fundamento": "Task Scheduler documentado; lista mistura compatibilidade e diagnóstico",
+      "ImpactoEsperado": "Só benefício se tarefas executarem durante sessão problemática",
+      "Riscos": "Perde diagnóstico/avaliação e altera manutenção de sistema",
+      "Dependencias": "Identidade/XML/versão de cada tarefa; excluir valor privado Ubpm",
+      "Reversibilidade": "Novo recurso enabled por tarefa; não parar/deletar definições nem inventar defaults",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-MaintenanceScheduledTasks",
+      "LinhaBase": 2210,
+      "EvidenciaComandos": [
+        "schtasks",
+        "Test-Path",
+        "Remove-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 57,
+      "Mecanismo": "ActivityHistory, DisableDiagnosticTracing, SQM e AppV CEIP",
+      "Fundamento": "Mistura políticas documentadas e flags/providers sem contrato",
+      "ImpactoEsperado": "Privacidade; overhead de tracing não foi demonstrado",
+      "Riscos": "Perda de logs e criação de políticas de componentes ausentes",
+      "Dependencias": "Separar ActivityHistory/AppV/ETW e builds/edições",
+      "Reversibilidade": "Baseline por valor e sessão ETW se aplicável; não tratar como um único toggle",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy",
+        "https://learn.microsoft.com/en-us/windows/win32/wes/windows-event-log"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-ActivityHistoryAndDiagnosticTracing",
+      "LinhaBase": 2242,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "reg.exe",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 58,
+      "Mecanismo": "Nove flags ContentDeliveryManager incluindo FeatureManagementEnabled",
+      "Fundamento": "Interno; repete SubscribedContent de 14/84 e interfere em campos amplos",
+      "ImpactoEsperado": "Debloat/promos; não mede processos ou FPS",
+      "Riscos": "Sobreposição de autoria e alteração de gestão de funcionalidades",
+      "Dependencias": "Consolidar recursos e preferir política documentada por edição",
+      "Reversibilidade": "Um diário por recurso não resolve sozinho conflitos semânticos entre ações",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-SilentAppInstallation",
+      "LinhaBase": 2278,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 59,
+      "Mecanismo": "LongPathsEnabled=1",
+      "Fundamento": "Documentado Win10 >=14393; app tem de ser longPathAware",
+      "ImpactoEsperado": "Compatibilidade com paths longos, sem ganho de FPS",
+      "Riscos": "Não resolve limites de shell/OneDrive/apps; processos fazem cache",
+      "Dependencias": "Cliente Windows 10/11 e aplicação opt-in; pode requerer reboot",
+      "Reversibilidade": "Baseline tipada exata; preservar outros valores FileSystem",
+      "DecisaoOffline": "CandidatoOffline",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Enable-LongFilePaths",
+      "LinhaBase": 2306,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 61,
+      "Mecanismo": "Max Cached Icons=4096 em Explorer",
+      "Fundamento": "Flag histórica sem contrato atual verificado",
+      "ImpactoEsperado": "Só possível efeito Explorer; não há prova de evitar recarregamentos",
+      "Riscos": "Pode ser ignorado e aumenta alterações sem objetivo comprovável",
+      "Dependencias": "Confirmar consumidor/build; não confundir cache de ícones com shaders",
+      "Reversibilidade": "Valor tipado possível, mas não há motivo para desbloquear sem validação funcional",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-ExplorerIconCache",
+      "LinhaBase": 2329,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 62,
+      "Mecanismo": "UserDuckingPreference=3",
+      "Fundamento": "Ducking é preferência de comunicações; contrato de registo não confirmado",
+      "ImpactoEsperado": "Volume de som durante chamadas; não input lag",
+      "Riscos": "Muda escolha de volume do utilizador",
+      "Dependencias": "Sessão de áudio, comunicação e API/definição suportada",
+      "Reversibilidade": "Guardar preferência e estado efetivo; testar chamada sem alterar endpoints",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/coreaudio/stream-attenuation"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-AudioDucking",
+      "LinhaBase": 2343,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 63,
+      "Mecanismo": "CLSID InprocServer32 vazio para menu clássico",
+      "Fundamento": "Workaround interno dependente da build, não contrato de extensão",
+      "ImpactoEsperado": "Usabilidade do menu; sem ganho de jogo",
+      "Riscos": "Pode ser ignorado/quebrar comportamento da shell em atualização",
+      "Dependencias": "Build concreta e verificação do menu; não aplicar em Win10",
+      "Reversibilidade": "Valor sem nome tipado reversível; verificar se chave original existia",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-ClassicContextMenuWin11",
+      "LinhaBase": 2357,
+      "EvidenciaComandos": [
+        "Write-SkyLog",
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "reg.exe"
+      ]
+    },
+    {
+      "Id": 64,
+      "Mecanismo": "MinAnimate=0 e TaskbarAnimations=0",
+      "Fundamento": "Parcial: SPI expõe animações; flags de shell precisam de confirmação",
+      "ImpactoEsperado": "Perceção de rapidez, não garante latência do jogo",
+      "Riscos": "Muda preferências de acessibilidade/animação",
+      "Dependencias": "Shell, sessão e SPI; sobrepõe objetivos com 83",
+      "Reversibilidade": "Registo mais estado runtime; consolidar sem reiniciar Explorer à força",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-WindowMinimizeAnimations",
+      "LinhaBase": 2379,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 65,
+      "Mecanismo": "JPEGImportQuality=100 para wallpaper",
+      "Fundamento": "Preferência cosmética, sem mecanismo demonstrado para jogos",
+      "ImpactoEsperado": "Qualidade do fundo, não FPS nem input lag",
+      "Riscos": "Pode aumentar tamanho do ficheiro do fundo",
+      "Dependencias": "Componente que importa wallpaper e preferências do utilizador",
+      "Reversibilidade": "Valor tipado possível; prioridade baixa, mantém bloqueio sem promessa de desempenho",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Set-MaxWallpaperQuality",
+      "LinhaBase": 2397,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 66,
+      "Mecanismo": "AllowEdgeSwipe=0 em EdgeUI",
+      "Fundamento": "Política de gestos documentada, suporte depende da edição/build",
+      "ImpactoEsperado": "Evita gestos acidentais; não muda render do jogo",
+      "Riscos": "Perda de navegação touch/tablet",
+      "Dependencias": "Touch/conta e políticas aplicáveis; finalidade é preferência",
+      "Reversibilidade": "Baseline tipada; confirmar gesto real antes de considerar compatibilidade",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-EdgeScreenGestures",
+      "LinhaBase": 2411,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 67,
+      "Mecanismo": "DisableWpbtExecution=1",
+      "Fundamento": "Interfere no binário OEM carregado via WPBT; sem regra universal de gaming",
+      "ImpactoEsperado": "Só reduz carga se software OEM problemático existir",
+      "Riscos": "Pode impedir componente OEM necessário",
+      "Dependencias": "Firmware/OEM, binário e processo identificados; recuperação de boot",
+      "Reversibilidade": "Valor reversível não prova recuperação de software instalado; exige hardware",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows-hardware/drivers/bringup/windows-platform-binary-table"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-WpbtExecution",
+      "LinhaBase": 2425,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 68,
+      "Mecanismo": "OptInOrOutPreference e wildcard de tarefas NvTm*",
+      "Fundamento": "Interno/legado dependente de pacote NVIDIA; fabricante não prova tarefas atuais",
+      "ImpactoEsperado": "Só se tarefa/processo realmente presente e consumidor",
+      "Riscos": "Pode atingir tarefas diferentes e perdeu baseline por tarefa",
+      "Dependencias": "Pacote/versão/assinatura e tarefa exata, sem wildcard amplo",
+      "Reversibilidade": "Registo e enabled de tarefas separados; não fingir sucesso quando ausentes",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-NvidiaTelemetry",
+      "LinhaBase": 2439,
+      "EvidenciaComandos": [
+        "Get-ItemProperty",
+        "Where-Object",
+        "Test-Path",
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Get-ScheduledTask",
+        "schtasks",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 69,
+      "Mecanismo": "DoNotShowFeedbackNotifications mais NumberOfSIUFInPeriod",
+      "Fundamento": "Parcial: política de feedback e regra interna SIUF distintas",
+      "ImpactoEsperado": "Privacidade/notificações, sem ganho de jogo demonstrado",
+      "Riscos": "Política no caminho errado ou campo interno pode não funcionar",
+      "Dependencias": "Verificar ADMX/edição e remover regra sem consumo demonstrado",
+      "Reversibilidade": "Guardar só política suportada; consolidar com privacidade sem apagar tarefas",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-WindowsFeedbackRequests",
+      "LinhaBase": 2475,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 70,
+      "Mecanismo": "AllowOnlineTips=0 e DisableSoftLanding=1",
+      "Fundamento": "Políticas com alcances/edições distintos",
+      "ImpactoEsperado": "UI/privacidade; tráfego real ainda não medido",
+      "Riscos": "Pode ocultar ajuda e duplicar objetivos de 14/58",
+      "Dependencias": "Build/edição e mapeamento ADMX correto",
+      "Reversibilidade": "Separar valores e consolidar CloudContent; não migrar tudo por ser DWORD",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-SettingsOnlineTips",
+      "LinhaBase": 2493,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 72,
+      "Mecanismo": "ActivationType=0 de PresenceWriter interno com fallback reg.exe",
+      "Fundamento": "Registo de ativação WinRT interno, sem contrato de debloat confirmado",
+      "ImpactoEsperado": "Sobrepõe finalidade de capturas 9, sem prova de processo poupado",
+      "Riscos": "Game Bar/presença/integrações e permissões protegidas",
+      "Dependencias": "Game Bar/Windows e significado exato de ActivationType",
+      "Reversibilidade": "Evitar alteração de registos de componente; prova/rollback completo ainda faltam",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-applicationmanagement#allowgamedvr"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-GameBarPresenceWriter",
+      "LinhaBase": 2521,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "reg.exe",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 73,
+      "Mecanismo": "KeyboardDelay=0 e KeyboardSpeed=31",
+      "Fundamento": "API SPI documenta repetição, não latência do primeiro keydown",
+      "ImpactoEsperado": "Preferência de texto; não counter-strafe/polling",
+      "Riscos": "Muda repetição/acessibilidade e estado runtime pode divergir",
+      "Dependencias": "Sessão e API de teclado; pack comercial fora de âmbito",
+      "Reversibilidade": "Guardar registo e SPI original, aplicar apenas bits/propriedades geridas",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow",
+        "https://learn.microsoft.com/en-us/windows/win32/inputdev/about-raw-input"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-KeyboardRepeatResponse",
+      "LinhaBase": 2543,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 77,
+      "Mecanismo": "MaxUserPort, TcpTimedWaitDelay e DefaultTTL=64 globais",
+      "Fundamento": "Tuning/diagnóstico TCP; não acelerador geral de rotas",
+      "ImpactoEsperado": "Só exaustão/estado TCP reproduzido; nada demonstrado em UDP",
+      "Riscos": "Altera sockets/portas/TTL de todas as apps e pode ser obsoleto",
+      "Dependencias": "Diagnóstico de portas dinâmicas e stack atual; separar campos",
+      "Reversibilidade": "Recursos globais exatos e validação de tráfego; sem reset global",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-TcpSocketsAndPorts",
+      "LinhaBase": 2578,
+      "EvidenciaComandos": [
+        "Backup-RegistryKey",
+        "Ensure-RegistryPath",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 78,
+      "Mecanismo": "TCP global já isolado sem netsh",
+      "Fundamento": "Estado e contratos variam por propriedade/Windows",
+      "ImpactoEsperado": "Só experiência de rede controlada; não FPS universal",
+      "Riscos": "Débito, congestion control e compatibilidade",
+      "Dependencias": "Captura estruturada e teste de cada propriedade, não texto localizado",
+      "Reversibilidade": "Reversão de cada parâmetro e configuração suportada ainda faltam",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-NetshTcpGlobal",
+      "LinhaBase": 2599,
+      "EvidenciaComandos": [
+        "New-SkyActionResult"
+      ]
+    },
+    {
+      "Id": 80,
+      "Mecanismo": "Três flags globais GameDVR FSE",
+      "Fundamento": "Mecanismo interno e conflito com 42/apresentação por jogo",
+      "ImpactoEsperado": "Pode mudar caminho de apresentação; benefício depende do jogo/API",
+      "Riscos": "Captura, VRR, overlays e performance podem piorar",
+      "Dependencias": "Jogo, API, modo/cap/driver e estado de apresentação observado",
+      "Reversibilidade": "Baseline tipada não basta para generalizar; testar por executável",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://devblogs.microsoft.com/directx/demystifying-fullscreen-optimizations/"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-FullscreenOptimizations",
+      "LinhaBase": 2623,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 81,
+      "Mecanismo": "PowerThrottlingOff=1 global",
+      "Fundamento": "QoS/power throttling existe; desativação global não é seleção do jogo",
+      "ImpactoEsperado": "Pode aumentar concorrência de apps background em vez de ajudar foreground",
+      "Riscos": "Energia, temperatura e trabalho concorrente",
+      "Dependencias": "CPU/topologia, processos causadores e políticas efetivas",
+      "Reversibilidade": "Valor tipado possível; experimentar QoS por processo antes de regra global",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/procthread/quality-of-service"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-PowerThrottling",
+      "LinhaBase": 2644,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 82,
+      "Mecanismo": "PreventIndexingArchives=1",
+      "Fundamento": "Política de Search; disponibilidade/edições e indexador devem ser confirmados",
+      "ImpactoEsperado": "Só evita custo se indexação de arquivos for carga real",
+      "Riscos": "Perda de pesquisa de conteúdo dentro de arquivos",
+      "Dependencias": "Windows Search ativo, formato de arquivo e política consumida",
+      "Reversibilidade": "Um valor reversível; candidato futuro após confirmar matriz e funcionalidade",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-search"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-ZipIndexing",
+      "LinhaBase": 2659,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 83,
+      "Mecanismo": "ListviewShadow=0, DragFullWindows=1 e FontSmoothing=2",
+      "Fundamento": "Preferências da shell; não são um mecanismo genérico de DWM/game latency",
+      "ImpactoEsperado": "UI visual; arrastar janelas completas pode aumentar trabalho",
+      "Riscos": "Sobrepõe 64 e altera escolhas gráficas não relacionadas",
+      "Dependencias": "Sessão/SPI e contenção DWM demonstrada",
+      "Reversibilidade": "Separar propriedades e preservar estado runtime, sem defaults arbitrários",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow",
+        "https://devblogs.microsoft.com/directx/demystifying-fullscreen-optimizations/"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-DwmVisualEffects",
+      "LinhaBase": 2674,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 84,
+      "Mecanismo": "RotatingLockScreen/ContentDelivery mais política Spotlight",
+      "Fundamento": "Parcial: política documentada com edições; flags internas repetidas",
+      "ImpactoEsperado": "Privacidade/conteúdo de lockscreen, não ping garantido",
+      "Riscos": "Repetição com 14/58 e alteração de fundo escolhido",
+      "Dependencias": "Build/edição, componente e mapeamento da política",
+      "Reversibilidade": "Consolidar só recursos pretendidos; não criar flags por ausência",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-WindowsSpotlightDownloads",
+      "LinhaBase": 2697,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 85,
+      "Mecanismo": "ShowRecent=0 e ShowFrequent=0 no Explorer",
+      "Fundamento": "Preferência de histórico; não prova eliminação de journaling contínuo no SSD",
+      "ImpactoEsperado": "Privacidade/UI; nenhum ganho esperado de render",
+      "Riscos": "Perda de listas úteis e atalhos recentes",
+      "Dependencias": "Shell/conta e preferência explícita",
+      "Reversibilidade": "Valores tipados possíveis; verificação funcional de Explorer necessária",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-experience"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Optimize-QuickAccessHistory",
+      "LinhaBase": 2720,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 87,
+      "Mecanismo": "Disable-MMAgent ApplicationPreLaunch com política Appx de perfis especiais",
+      "Fundamento": "Parcial: MMAgent documentado; AllowDeploymentInSpecialProfiles não controla prelaunch",
+      "ImpactoEsperado": "Hipótese de contenção/arranque; política Appx é tecnicamente alheia",
+      "Riscos": "Deployment em perfis especiais e estado MMAgent não guardado",
+      "Dependencias": "Get-MMAgent/capacidade e workload; separar funções",
+      "Reversibilidade": "Guardar estado MMAgent, verificar API; remover política Appx independente",
+      "DecisaoOffline": "IntegracaoSoftware",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/powershell/module/mmagent/disable-mmagent",
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-appxpackagemanager"
+      ],
+      "Implementacao3B": "Limpeza implementada: funcao bloqueada sem campos obsoletos/alheios; hipotese conservada na auditoria",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-ApplicationPreLaunch",
+      "LinhaBase": 2762,
+      "EvidenciaComandos": [
+        "Disable-MMAgent",
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 88,
+      "Mecanismo": "Flag user 01 e AllowStorageSenseGlobal=0",
+      "Fundamento": "Documentado: política Storage Sense desde Win10 1903 em edições suportadas",
+      "ImpactoEsperado": "Evita limpeza automática se provocar I/O concorrente; não é FPS automático",
+      "Riscos": "Disco pode encher; utilizador perde limpeza automática",
+      "Dependencias": "Cliente/edição/build >=18362 e escolha explícita de manutenção",
+      "Reversibilidade": "Migrar só política, preservando preferências/cadências; não apagar ficheiros",
+      "DecisaoOffline": "CandidatoOffline",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-storage#allowstoragesenseglobal"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-StorageSenseBackgroundScans",
+      "LinhaBase": 2780,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 89,
+      "Mecanismo": "NetbiosOptions=2 em todas as interfaces NetBT",
+      "Fundamento": "Configuração por interface; não justifica iteração indiscriminada",
+      "ImpactoEsperado": "Descoberta/nome legado, não latência geral de jogos",
+      "Riscos": "Partilhas/redes antigas podem falhar",
+      "Dependencias": "Interface real, NetBIOS/DHCP, rede empresarial e baseline por NIC",
+      "Reversibilidade": "Recurso por interface e sem reset; confirmar resolução no laboratório",
+      "DecisaoOffline": "Laboratorio",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-NetBiosOverTcpip",
+      "LinhaBase": 2798,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Get-ChildItem",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    },
+    {
+      "Id": 90,
+      "Mecanismo": "AllowCrossDeviceClipboard=0 e AllowClipboardHistory=1",
+      "Fundamento": "Documentado Win10 >=17763; sync e histórico são políticas independentes",
+      "ImpactoEsperado": "Privacidade/sincronização, não FPS",
+      "Riscos": "A versão antiga força histórico que o utilizador podia ter bloqueado",
+      "Dependencias": "Cliente/edição/build conhecidos e política de clipboard efetiva",
+      "Reversibilidade": "Migrar só sync; não tocar no histórico; existência/tipo/conteúdo exatos",
+      "DecisaoOffline": "CandidatoOffline",
+      "Fontes": [
+        "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy#allowcrossdeviceclipboard"
+      ],
+      "Implementacao3B": "Por executar",
+      "TestesAutomatizados3B": "Nao executados nesta auditoria",
+      "ValidacaoReal": "Nao executada",
+      "GanhoMedido": false,
+      "Funcao": "Disable-CloudClipboardSync",
+      "LinhaBase": 2819,
+      "EvidenciaComandos": [
+        "Ensure-RegistryPath",
+        "Backup-RegistryKey",
+        "Set-ItemProperty",
+        "Write-SkyLog"
+      ]
+    }
+  ]
 }
