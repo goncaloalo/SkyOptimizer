@@ -1,5 +1,7 @@
 . (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 $script:taskSave=(Get-Command Save-SkyMutationState).ScriptBlock
+$script:taskResourceGet=(Get-Command Get-SkyResourceState).ScriptBlock
+$script:taskResourceSet=(Get-Command Set-SkyResourceState).ScriptBlock
 
 function Get-FixtureTaskXml {
     param([bool]$Enabled=$true,[string]$Command='cmd.exe',[string]$Principal='S-1-5-21-123')
@@ -74,6 +76,9 @@ Describe 'Scheduled task journal with a mocked Task Scheduler backend' {
         }
         $script:runtime=3
         (Disable-SkyScheduledTask $script:path Fixture ('B'*64) $Global:SkyBackupDir).Status | Should Be Incompatible
+        $script:enabled=$null
+        (Disable-SkyScheduledTask $script:path Fixture $script:hash $Global:SkyBackupDir).Status | Should Be Incompatible
+        { Invoke-SkyTrackedChange $script:resource ([pscustomobject]@{Enabled=$false}) } | Should Throw
         $script:writes | Should Be 0
     }
     It 'blocks task replacement during Apply and Undo without creating a second baseline' {
@@ -125,6 +130,56 @@ Describe 'Scheduled task journal with a mocked Task Scheduler backend' {
         $null=[Management.Automation.Language.Parser]::ParseInput($source,[ref]$tokens,[ref]$errors)
         $errors.Count | Should Be 0
         $source.Contains('function Invoke-SkyTaskBackend') | Should Be $true
+    }
+}
+
+Describe 'Mixed task and registry recovery with isolated mocked resources' {
+    BeforeEach {
+        $Global:SkyBackupDir=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $null=[IO.Directory]::CreateDirectory($Global:SkyBackupDir)
+        $script:reg=ConvertTo-SkyRegistryResource 'HKCU:\Software\SkyMixed' 'Policy'
+        $script:regState=ConvertTo-SkyRegistryState -Exists $false
+        $script:enabled=$true; $script:hash='A'*64
+        $script:taskResource=[pscustomobject]@{Type='ScheduledTaskEnabled';Path='\SkyOptimizer-Lab\11111111222233334444555555555555\';Name='Fixture';DefinitionHash=$script:hash}
+    }
+    Mock Get-SkyMachineId { 'mock-machine' }
+    Mock Get-SkyUserSid { 'mock-user' }
+    Mock Open-SkyRegistryBase { throw 'Real registry access forbidden.' }
+    Mock Invoke-SkyTaskBackend {
+        if ($Operation -eq 'Write') {
+            if ($Resource.DefinitionHash -ne $script:hash) { throw 'Task changed' }
+            $script:enabled=$Enabled
+        } else { [pscustomobject]@{DefinitionHash=$script:hash;Enabled=$script:enabled;RuntimeState=3} }
+    }
+    Mock Get-SkyResourceState {
+        if ($Resource.Type -eq 'ScheduledTaskEnabled') { & $script:taskResourceGet $Resource }
+        else { $script:regState }
+    }
+    Mock Set-SkyResourceState {
+        if ($Resource.Type -eq 'ScheduledTaskEnabled') { & $script:taskResourceSet $Resource $State }
+        else { $script:regState=$State }
+    }
+    It 'restores independent registry state even if a changed task refuses Undo, then retries the task' {
+        $null=Invoke-SkyTrackedChange $script:reg (ConvertTo-SkyRegistryState -Exists $true -Kind DWord -Value 1) -OwnerActionId 58
+        $null=Invoke-SkyTrackedChange $script:taskResource ([pscustomobject]@{Enabled=$false})
+        $script:hash='B'*64
+        $results=@(Restore-SkyTrackedChanges $Global:SkyBackupDir)
+        @($results | Where-Object Status -eq 'Failed').Count | Should Be 1
+        $script:regState.Exists | Should Be $false
+        $script:enabled | Should Be $false
+        $script:hash='A'*64
+        $results=@(Restore-SkyTrackedChanges $Global:SkyBackupDir)
+        @($results | Where-Object Status -eq 'Failed').Count | Should Be 0
+        $script:enabled | Should Be $true
+    }
+    It 'does not let policy-scoped Undo release an unrelated task baseline' {
+        $null=Invoke-SkyTrackedChange $script:reg (ConvertTo-SkyRegistryState -Exists $true -Kind DWord -Value 1) -OwnerActionId 58
+        $null=Invoke-SkyTrackedChange $script:taskResource ([pscustomobject]@{Enabled=$false})
+        $null=Restore-SkyTrackedChanges $Global:SkyBackupDir -OwnerActionId 58
+        $script:regState.Exists | Should Be $false
+        $script:enabled | Should Be $false
+        $null=Restore-SkyTrackedChanges $Global:SkyBackupDir
+        $script:enabled | Should Be $true
     }
 }
 

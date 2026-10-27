@@ -644,7 +644,7 @@ function Disable-SkyScheduledTask {
     $resource=[pscustomobject]@{ Type='ScheduledTaskEnabled'; Path=$TaskPath; Name=$TaskName; DefinitionHash=$ExpectedDefinitionHash }
     Assert-SkyTaskResource $resource
     $snapshot=Invoke-SkyTaskBackend $resource
-    if ($snapshot.DefinitionHash -ine $ExpectedDefinitionHash -or $snapshot.RuntimeState -notin @(1,3)) {
+    if ($snapshot.DefinitionHash -ine $ExpectedDefinitionHash -or $snapshot.Enabled -isnot [bool] -or $snapshot.RuntimeState -notin @(1,3)) {
         return New-SkyActionResult -Status Incompatible -Reason 'Fingerprint/estado da fixture diferente do autorizado; nenhuma alteracao.' -RestartRequired No
     }
     $result=Invoke-SkyTrackedChange -Resource $resource -Desired ([pscustomobject]@{Enabled=$false}) -BackupDirectory $BackupDirectory
@@ -657,7 +657,7 @@ function Get-SkyResourceState {
     param($Resource)
     if ($Resource.Type -eq 'ScheduledTaskEnabled') {
         $snapshot=Invoke-SkyTaskBackend $Resource
-        if ($snapshot.DefinitionHash -ine $Resource.DefinitionHash) { throw 'Tarefa substituida/alterada; baseline preservada para revisao.' }
+        if ($snapshot.DefinitionHash -ine $Resource.DefinitionHash -or $snapshot.Enabled -isnot [bool]) { throw 'Tarefa substituida/alterada ou estado indisponivel; baseline preservada para revisao.' }
         return [pscustomobject]@{Enabled=[bool]$snapshot.Enabled}
     }
     if ($Resource.Type -eq 'ServiceStartup') {

@@ -101,6 +101,8 @@ Guardar antes/depois: exportações por valor com tipo/existência, `mutation_st
 
 ## 4. Aprovação de integração e desempenho
 
+O mecanismo de tarefas 3C tem um [procedimento próprio de fixture](TAREFAS-LAB-3C.md), sem allowlist de tarefas de produção. Não foi executado nesta fase. Registo com ownership/tarefas usa formato 2; utilizar o painel/programa atual, não misturar versões de leitura antigas.
+
 Só concluir integração quando a comparação independente depois do segundo boot confirma o estado original de todos os recursos alterados. Qualquer conflito deve continuar explícito. Restaurar snapshots pode recuperar a VM, mas não demonstra que o Undo funcionou.
 
 HAGS/MSI permanecem bloqueados. USB físico, docks, sleep/resume, áudio, GPUs híbridas, NIC físico e anti-cheats precisam de laboratório próprio. A VM valida mecanismos do Windows, não FPS, frametimes, latência de periféricos ou compatibilidade com todos os drivers. Benchmarks físicos seguem [BENCHMARKS.md](BENCHMARKS.md).
