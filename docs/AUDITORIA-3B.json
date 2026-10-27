@@ -209,7 +209,13 @@
         "Backup-RegistryKey",
         "Set-ItemProperty",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Consolidada em 58 na Fase 3C; sem repetir flags internas ContentDeliveryManager",
+        "Requisitos": "Retirada como ação separada; 58 cobre apenas consumer experiences documentadas. Não equivale a todas as antigas sugestões CDM; não corrigir preferências antigas sem baseline.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 15,
@@ -385,7 +391,13 @@
         "wevtutil.exe",
         "schtasks",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Deferred: corpo amplo suspenso; mecanismo ScheduledTaskEnabled apenas para fixtures de laboratório",
+        "Requisitos": "Conservar SleepStudy, logs e Modern Standby. Não há allowlist de tarefas reais; exigir contrato por build, medição de concorrência e ensaio no Windows descartável antes de qualquer migração.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 27,
@@ -1020,7 +1032,13 @@
         "Test-Path",
         "Remove-ItemProperty",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Deferred: corpo amplo suspenso; mecanismo ScheduledTaskEnabled apenas para fixtures de laboratório",
+        "Requisitos": "Não desativar manutenção/diagnóstico em grupo. Exigir identidade literal, definição e segurança conhecidas, Enabled original e prova de benefício em workload relevante; validar no guest antes de allowlist real.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 57,
@@ -1072,7 +1090,13 @@
         "Ensure-RegistryPath",
         "Set-ItemProperty",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
+        "Requisitos": "HKLM CloudContent/DisableWindowsConsumerFeatures=1; cliente >=17134, Enterprise/N/LTSC ou Education/N conhecidos; Pro/Home recusadas. Desliga experiências de consumidor, não demonstra FPS. Preservar CDM e valores alheios; validar consumo no Windows.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 59,
@@ -1302,7 +1326,13 @@
         "Get-ScheduledTask",
         "schtasks",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Deferred: corpo amplo suspenso; mecanismo ScheduledTaskEnabled apenas para fixtures de laboratório",
+        "Requisitos": "Sem wildcard de tarefas NVIDIA nem flags privadas. Exigir tarefa/versão de software concreta, função conhecida e validação funcional em driver/hardware real antes de desbloquear.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 69,
@@ -1352,7 +1382,13 @@
         "Ensure-RegistryPath",
         "Set-ItemProperty",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
+        "Requisitos": "HKLM Policies/Explorer/AllowOnlineTips=0; cliente >=16299, Pro/N, Enterprise/N/LTSC ou Education/N conhecidos. Não altera DisableSoftLanding/CDM. Preferência das Definições; não atribuir ganhos de FPS ou ping.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 72,
@@ -1577,7 +1613,13 @@
         "Backup-RegistryKey",
         "Set-ItemProperty",
         "Write-SkyLog"
-      ]
+      ],
+      "Atualizacao3C": {
+        "Estado": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
+        "Requisitos": "HKCU CloudContent/DisableWindowsSpotlightFeatures=1; cliente >=15063, Enterprise/N/LTSC ou Education/N conhecidos. Pro/Home recusadas. Conta do processo elevado; não modifica HKLM legado incorreto nem CDM. Sem tráfego/latência medidos.",
+        "ValidacaoReal": "Nao executada",
+        "GanhoMedido": false
+      }
     },
     {
       "Id": 85,
@@ -1707,5 +1749,6 @@
         "Write-SkyLog"
       ]
     }
-  ]
+  ],
+  "NotaAtualizacao3C": "Registo histórico da base 22def57 preservado; Atualizacao3C acrescenta decisão atual sem reescrever mecanismo/comandos históricos. Estado corrente em ACOES-ESTADO.json e FASE3C.md."
 }

@@ -1,29 +1,40 @@
 {
-    "Date":  "2026-10-27",
-    "PowerShell":  "5.1.26100.9711",
-    "Pester":  "3.4.0",
-    "Command":  "Invoke-Pester -Script .\\tests -PassThru",
-    "Total":  155,
-    "Passed":  155,
-    "Failed":  0,
-    "Skipped":  0,
-    "Pending":  0,
-    "Python":  "3.14.5",
-    "PythonCommand":  "python -B -m unittest discover -s benchmarks/tests -v",
-    "PythonPassed":  11,
-    "PythonFailed":  0,
-    "WindowsChangesApplied":  false,
-    "PhysicalBenchmarksPerformed":  false,
-    "IntegrationVmExecuted":  false,
-    "EligibleApplyActions":  25,
-    "RetiredActionIds":  [
-                             12,
-                             30,
-                             39,
-                             54
-                         ],
-    "ProductSourceSha256":  "B115146A7B5D9703F94ED06AC822C29B0C87BC26DF6FE135A9FCEA46F3EA752F",
-    "VmHarnessSourceSha256":  "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
-    "BlockedActions":  60,
-    "OriginalBlockedActionsAudited3B":  67
+  "Date": "2026-10-27",
+  "PowerShell": "5.1.26100.9711",
+  "Pester": "3.4.0",
+  "Command": "Invoke-Pester -Script .\\tests -PassThru -Quiet",
+  "Total": 187,
+  "Passed": 187,
+  "Failed": 0,
+  "Skipped": 0,
+  "Pending": 0,
+  "Python": "3.14.5",
+  "PythonCommand": "python -B -m unittest discover -s benchmarks/tests -v",
+  "PythonPassed": 11,
+  "PythonFailed": 0,
+  "WindowsChangesApplied": false,
+  "PhysicalBenchmarksPerformed": false,
+  "IntegrationVmExecuted": false,
+  "EligibleApplyActions": 28,
+  "RetiredActionIds": [
+    12,
+    14,
+    30,
+    39,
+    54
+  ],
+  "ProductSourceSha256": "4518D5697E0317438B1540D3AC517B0CF9CA591E65889C0C7D861C966D3622EB",
+  "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
+  "BlockedActions": 56,
+  "OriginalBlockedActionsAudited3B": 67,
+  "MaintenanceActionIds": [
+    24
+  ],
+  "JournalSchemaVersionsRead": [
+    1,
+    2
+  ],
+  "ProductionScheduledTasksEligible": false,
+  "Phase": "3C offline",
+  "ValidationScope": "Pester: AST, mocks, managed XML/crypto and temporary files only. Python: synthetic offline CSV metrics. No real COM tasks, registry mutations, VM integration or physical benchmarks."
 }

@@ -1,5 +1,7 @@
 # Fase 3B — auditoria e desenvolvimento offline
 
+Registo histórico deste lote. O estado corrente posterior está na [Fase 3C](FASE3C.md) e no [catálogo](ACOES-ESTADO.json); os números abaixo documentam o fecho da Fase 3B.
+
 Data: 27 de outubro de 2026. Base preservada: `22def57`, branch `dev/phase2-execution-power-safety`, working tree inicialmente limpa. Apenas SkyOptimizer. Não existe VM ou máquina física disponível para testes; esta fase não executa Apply/Undo no Windows de desenvolvimento.
 
 **Resultado do lote:** 67 ações auditadas individualmente; quatro migradas offline (16/59/88/90); três novas retiradas (12/30/54). Estado atual: **25 elegíveis, 60 bloqueadas, quatro retiradas (incluindo 39) e manutenção 24 separada**. Suite final: **155 testes Pester e 11 Python aprovados**, zero falhas. Não existem benchmarks ou validação real em VM/hardware.

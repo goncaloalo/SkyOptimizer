@@ -1,4 +1,4 @@
-﻿[
+[
   {
     "Id": 1,
     "Nome": "Plano de Energia Sky (cópia isolada do original)",
@@ -225,8 +225,8 @@
     "Nome": "Consolidada em 58: experiencias de consumidor (sem flags CDM)",
     "Funcao": "Disable-StartMenuSuggestions",
     "FinalidadeProposta": "Preferências",
-    "DecisaoAuditoria": "Preferência",
-    "RequisitosRiscosValidacao": "Consolidar com 58/69/70/84 onde partilham recursos; não duplicar backups da chave.",
+    "DecisaoAuditoria": "Consolidada em 58; não executar flags internas CDM",
+    "RequisitosRiscosValidacao": "Retirada como ação separada; 58 cobre apenas consumer experiences documentadas. Não equivale a todas as antigas sugestões CDM; não corrigir preferências antigas sem baseline.",
     "EstadoImplementacao": "Consolidada em 58 na Fase 3C; sem repetir flags internas ContentDeliveryManager",
     "PerfilImplementado": false,
     "GanhoMedido": false,
@@ -234,7 +234,7 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "ValidacaoAutomatizada": "RetiredActions.Tests e Catalogue.Tests: bloqueio e função direta sem alterações; CloudContent.Tests: substituição limitada",
     "ConsolidadaEm": 58
   },
   {
@@ -429,15 +429,15 @@
     "Funcao": "Disable-SleepStudyLogging",
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Retirar do perfil geral",
-    "RequisitosRiscosValidacao": "Diagnóstico útil em portáteis; medir overhead antes de sacrificar observabilidade.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "RequisitosRiscosValidacao": "Conservar SleepStudy, logs e Modern Standby. Não há allowlist de tarefas reais; exigir contrato por build, medição de concorrência e ensaio no Windows descartável antes de qualquer migração.",
+    "EstadoImplementacao": "Deferred: corpo amplo suspenso; mecanismo ScheduledTaskEnabled apenas para fixtures de laboratório",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada"
   },
   {
     "Id": 27,
@@ -918,15 +918,15 @@
     "Funcao": "Disable-MaintenanceScheduledTasks",
     "FinalidadeProposta": "Debloat",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Lista explícita e estado por tarefa; preservar diagnóstico útil; medir execução durante jogos.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "RequisitosRiscosValidacao": "Não desativar manutenção/diagnóstico em grupo. Exigir identidade literal, definição e segurança conhecidas, Enabled original e prova de benefício em workload relevante; validar no guest antes de allowlist real.",
+    "EstadoImplementacao": "Deferred: corpo amplo suspenso; mecanismo ScheduledTaskEnabled apenas para fixtures de laboratório",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada"
   },
   {
     "Id": 57,
@@ -948,9 +948,9 @@
     "Id": 58,
     "Nome": "Consumer experiences: politica HKLM Enterprise/Education",
     "Funcao": "Disable-SilentAppInstallation",
-    "FinalidadeProposta": "Preferências",
-    "DecisaoAuditoria": "Preferência",
-    "RequisitosRiscosValidacao": "Consolidar ContentDeliveryManager; guardar apenas os valores geridos.",
+    "FinalidadeProposta": "Debloat",
+    "DecisaoAuditoria": "Política documentada; escolha explícita em Extreme",
+    "RequisitosRiscosValidacao": "HKLM CloudContent/DisableWindowsConsumerFeatures=1; cliente >=17134, Enterprise/N/LTSC ou Education/N conhecidos; Pro/Home recusadas. Desliga experiências de consumidor, não demonstra FPS. Preservar CDM e valores alheios; validar consumo no Windows.",
     "EstadoImplementacao": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
     "PerfilImplementado": true,
     "GanhoMedido": false,
@@ -1116,15 +1116,15 @@
     "Funcao": "Disable-NvidiaTelemetry",
     "FinalidadeProposta": "Debloat",
     "DecisaoAuditoria": "Condicional",
-    "RequisitosRiscosValidacao": "Identificar serviço/tarefa na versão de driver; evitar nomes antigos e preservar funções necessárias.",
-    "EstadoImplementacao": "Deferred: nao executada pelos perfis; codigo preservado para revisao individual",
+    "RequisitosRiscosValidacao": "Sem wildcard de tarefas NVIDIA nem flags privadas. Exigir tarefa/versão de software concreta, função conhecida e validação funcional em driver/hardware real antes de desbloquear.",
+    "EstadoImplementacao": "Deferred: corpo amplo suspenso; mecanismo ScheduledTaskEnabled apenas para fixtures de laboratório",
     "PerfilImplementado": false,
     "GanhoMedido": false,
     "ElegivelApply": false,
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada"
   },
   {
     "Id": 69,
@@ -1147,8 +1147,8 @@
     "Nome": "Definicoes: impedir obtencao de dicas online",
     "Funcao": "Disable-SettingsOnlineTips",
     "FinalidadeProposta": "Preferências",
-    "DecisaoAuditoria": "Preferência",
-    "RequisitosRiscosValidacao": "Interface/privacidade; não contabilizar como FPS.",
+    "DecisaoAuditoria": "Política documentada; escolha explícita em Extreme",
+    "RequisitosRiscosValidacao": "HKLM Policies/Explorer/AllowOnlineTips=0; cliente >=16299, Pro/N, Enterprise/N/LTSC ou Education/N conhecidos. Não altera DisableSoftLanding/CDM. Preferência das Definições; não atribuir ganhos de FPS ou ping.",
     "EstadoImplementacao": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
     "PerfilImplementado": true,
     "GanhoMedido": false,
@@ -1385,8 +1385,8 @@
     "Nome": "Spotlight: politica HKCU Enterprise/Education",
     "Funcao": "Disable-WindowsSpotlightDownloads",
     "FinalidadeProposta": "Preferências",
-    "DecisaoAuditoria": "Preferência",
-    "RequisitosRiscosValidacao": "Consolidar com 14/15/58; medir tráfego real antes de alegar efeito em ping.",
+    "DecisaoAuditoria": "Política documentada; escolha explícita em Extreme",
+    "RequisitosRiscosValidacao": "HKCU CloudContent/DisableWindowsSpotlightFeatures=1; cliente >=15063, Enterprise/N/LTSC ou Education/N conhecidos. Pro/Home recusadas. Conta do processo elevado; não modifica HKLM legado incorreto nem CDM. Sem tráfego/latência medidos.",
     "EstadoImplementacao": "Migrada offline 3C: politica minima por escopo/build/edicao, ownership no diario v2 e Undo exato",
     "PerfilImplementado": true,
     "GanhoMedido": false,
