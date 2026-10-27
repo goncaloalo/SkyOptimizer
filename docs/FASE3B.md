@@ -33,3 +33,11 @@ Fontes centrais: [Widgets](https://learn.microsoft.com/en-us/windows/client-mana
 Aprovar um teste automatizado significa que o percurso de código satisfez os cenários simulados. Não confirma política consumida, compatibilidade funcional com apps, estabilidade de driver ou ganhos de FPS/latência. Toda a validação real permanece `Não executada`.
 
 As candidatas só podem entrar por seleção explícita em Extreme, com compatibilidade e tradeoffs comunicados. Balanced e Performance não recebem mais ações por conveniência. As restantes hipóteses conservam o bloqueio; não há promoção de HAGS/MSI ou tweaks de kernel por falta de laboratório.
+
+## 3. Alimentação: ausência de informação nunca equivale a AC
+
+A Fase 3A já tinha corrigido o fallback antigo que devolvia AC em falha de CIM. Nesta fase, o estado é explícito: AC, DC ou Unknown. GetSystemPowerStatus só autoriza AC quando devolve o código numérico 1; 255, exceção, null ou resultado malformado ficam Unknown. Não se utiliza a ausência de Win32_Battery nem o tipo de chassis como prova de desktop.
+
+O writer comum `Set-SkyAcPowerSettings` passa a recusar alimentação não confirmada antes de abrir backups e a verificar de novo antes de cada escrita e reativação. Assim, core parking também fica abrangido. Se a alimentação mudar a meio de um grupo, comunica falha e conserva a cópia/baseline para Undo; nunca escreve DC nem o plano original. Não existe atomicidade física entre observar AC e enviar o comando, pelo que transições reais continuam por testar.
+
+`Test-IsOnBattery` distingue DC de Unknown e não é usado como prova inversa de AC. Os percursos ativos consultam a condição afirmativa de AC. Validação focada: **39 testes aprovados**, incluindo resultado desconhecido/malformado, core parking sem AC e perda de AC após a primeira escrita com Undo posterior. Nenhum API de leitura de alimentação real foi chamado pelos testes.

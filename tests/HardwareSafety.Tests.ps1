@@ -5,6 +5,7 @@ Describe 'AC-only capability checks fail closed' {
     Mock Get-SkyAcLineStatus { if ($script:readFails) { throw 'Power status unavailable' }; $script:line }
     Mock Invoke-SkyTrackedChange { throw 'A blocked AC-only operation must not mutate Windows.' }
     Mock Set-SkyNicProperties { throw 'A blocked AC-only operation must not configure a NIC.' }
+    Mock Invoke-SkyNativeProcess { throw 'A blocked AC-only operation must not run powercfg.' }
     It 'permits only an explicit online status' {
         (Test-IsDesktopOrAcPower) | Should Be $true
         foreach ($value in @(0,255,2,$null)) {
@@ -24,6 +25,25 @@ Describe 'AC-only capability checks fail closed' {
             (Disable-USBSelectiveSuspend).Status | Should Be Incompatible
         }
         Assert-MockCalled Invoke-SkyTrackedChange -Times 0 -Exactly -Scope It
+    }
+    It 'keeps unknown separate from DC and refuses malformed API results' {
+        foreach ($line in @(255,2,$null,'1',$true,@(0,1))) {
+            $script:line = $line
+            (Get-SkyPowerSource) | Should Be Unknown
+            (Test-IsDesktopOrAcPower) | Should Be $false
+            (Test-IsOnBattery) | Should Be $false
+        }
+        $script:line = [byte]0
+        (Get-SkyPowerSource) | Should Be DC
+        (Test-IsOnBattery) | Should Be $true
+        $script:line = [byte]1
+        (Get-SkyPowerSource) | Should Be AC
+    }
+    It 'blocks core parking and direct AC policy writes before backup access on unknown power' {
+        $script:line = 255
+        (Disable-CoreParking).Status | Should Be Incompatible
+        (Set-SkyAcPowerSettings -Settings @()).Status | Should Be Incompatible
+        Assert-MockCalled Invoke-SkyNativeProcess -Times 0 -Exactly -Scope It
     }
     It 'compiles the power status declaration without invoking its native API' {
         $tokens = $null; $errors = $null

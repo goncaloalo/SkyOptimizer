@@ -390,6 +390,9 @@ namespace SkyOptimizer {
 function Set-SkyAcPowerSettings {
     [CmdletBinding()]
     param([object[]]$Settings)
+    if (-not (Test-IsDesktopOrAcPower)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'AC nao confirmado: nenhum indice de energia alterado.' -RestartRequired No
+    }
     $lock = Enter-SkyPowerLock -BackupDirectory $Global:SkyBackupDir
     try {
         $state = Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir
@@ -412,11 +415,13 @@ function Set-SkyAcPowerSettings {
         for ($i = 0; $i -lt $Settings.Count; $i++) {
             $setting = $Settings[$i]
             if ($before[$i].AC -ne $setting.Value) {
+                if (-not (Test-IsDesktopOrAcPower)) { throw 'Alimentacao mudou ou ficou desconhecida antes da escrita AC. Baseline preservada para Undo.' }
                 $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setacvalueindex', $state.OwnedGuid, $setting.Subgroup, $setting.Setting, [string]$setting.Value)
                 $changed = $true
             }
         }
         if ($changed) {
+            if (-not (Test-IsDesktopOrAcPower)) { throw 'AC deixou de estar confirmado antes de reativar o plano. Baseline preservada para Undo.' }
             # Refuse to replace a plan selected by a user or another tool during this operation.
             if ((Get-SkyActivePowerGuid) -ne $state.OwnedGuid) { throw 'O plano ativo mudou durante a operação.' }
             $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/setactive', $state.OwnedGuid)
@@ -1046,14 +1051,25 @@ public static class SkyPowerSourceRead {
     [SkyPowerSourceRead]::ReadLineStatus()
 }
 
+function Get-SkyPowerSource {
+    # Preserve uncertainty. A failed query, malformed result or missing battery is not AC evidence.
+    try { $line = Get-SkyAcLineStatus }
+    catch { return 'Unknown' }
+    if ($line -isnot [byte] -and $line -isnot [int]) { return 'Unknown' }
+    switch ($line) {
+        0 { return 'DC' }
+        1 { return 'AC' }
+        default { return 'Unknown' }
+    }
+}
+
 function Test-IsDesktopOrAcPower {
-    # Only an explicit Online result permits AC-only experiments. Unknown is not a desktop.
-    try { return ((Get-SkyAcLineStatus) -eq 1) }
-    catch { return $false }
+    # Legacy name retained; only explicit AC, never a guessed desktop/chassis, is accepted.
+    (Get-SkyPowerSource) -eq 'AC'
 }
 
 function Test-IsOnBattery {
-    return (-not (Test-IsDesktopOrAcPower))
+    (Get-SkyPowerSource) -eq 'DC'
 }
 
 function Get-AccurateVramBytes {

@@ -40,6 +40,7 @@ function Invoke-FakePowerProcess {
             if (-not $script:fake.IgnoreWrite) {
                 $script:fake.Plans[$Arguments[1]][$Arguments[3]].AC = [int]$Arguments[4]
             }
+            if ($script:fake.DropAcAfterWrite) { $script:fake.AcOnline = $false }
         }
         default { throw "Unmocked power operation: $command" }
     }
@@ -56,6 +57,7 @@ Describe 'Owned power plan lifecycle' {
         $script:minimum = '0cc5b647-c1df-4637-891a-dec75c318583'
         $script:maximum = 'ea062031-0e34-4ff1-9b6d-eb1059324028'
         $script:fake = @{ Active = $script:original; Plans = @{}; Calls = @(); FailCommand = ''; FailSave = ''; MachineId = 'test-machine-guid'; IgnoreActivation = $false; IgnoreWrite = $false }
+        $script:fake.AcOnline = $true; $script:fake.DropAcAfterWrite = $false
         $script:fake.Plans[$script:original] = @{
             $script:minimum = [pscustomobject]@{ AC = 23; DC = 14 }
             $script:maximum = [pscustomobject]@{ AC = 91; DC = 77 }
@@ -65,7 +67,7 @@ Describe 'Owned power plan lifecycle' {
     Mock Invoke-SkyNativeProcess { Invoke-FakePowerProcess -FileName $FileName -Arguments $Arguments }
     Mock Get-SkyMachineId { $script:fake.MachineId }
     Mock Test-IsOnBattery { $false }
-    Mock Test-IsDesktopOrAcPower { $true }
+    Mock Test-IsDesktopOrAcPower { $script:fake.AcOnline }
     Mock Get-ItemProperty { throw 'Unexpected registry access in power tests.' }
     Mock Save-SkyPowerState {
         if ($script:fake.FailSave -eq $State.Status) { throw 'Disk full' }
@@ -110,6 +112,16 @@ Describe 'Owned power plan lifecycle' {
         $null = Set-UltimatePowerPlan
         $null = Disable-CoreParking
         @($script:fake.Calls | Where-Object { $_ -match '/setdcvalueindex|/attributes' }).Count | Should Be 0
+    }
+    It 'stops an AC group if power becomes unknown or offline after its first write and keeps Undo usable' {
+        $null = Set-UltimatePowerPlan
+        $script:fake.DropAcAfterWrite = $true
+        { Disable-CoreParking } | Should Throw
+        @($script:fake.Calls | Where-Object { $_ -like '/setacvalueindex *' }).Count | Should Be 1
+        $script:fake.Plans[$script:original][$script:minimum].AC | Should Be 23
+        (Restore-SkyPowerPlan $Global:SkyBackupDir).Status | Should Be Applied
+        $script:fake.Active | Should Be $script:original
+        $script:fake.Plans[$script:original][$script:maximum].DC | Should Be 77
     }
     It 'blocks configuration without an active owned plan' {
         { Disable-CoreParking } | Should Throw
