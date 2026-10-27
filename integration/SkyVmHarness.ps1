@@ -167,27 +167,60 @@ function Invoke-SkyVmRegistryStep {
             if (@($results | Where-Object Status -eq 'Failed').Count) { throw 'Undo retry failed.' }
             Assert-SkyVmCaseStates $Cases Original
         }
+        'BackupWriteFailure' {
+            if ($State.Phase -ne 'Prepared') { throw 'Backup failure probe requires Prepared.' }
+            Assert-SkyVmCaseStates $Cases Original
+            $journal = Read-SkyMutationState $BackupDirectory
+            Save-SkyMutationState $journal $BackupDirectory
+            $path = Join-Path $BackupDirectory 'mutation_state.json'
+            $before = [Convert]::ToBase64String([IO.File]::ReadAllBytes($path))
+            # Real file-sharing barrier: reads remain possible, but atomic replacement must fail.
+            $held = [IO.File]::Open($path, 'Open', 'Read', 'Read')
+            $blocked = $false
+            try {
+                try { $null = Invoke-SkyTrackedChange -Resource $Cases[0].Resource -Desired $Cases[0].Desired -BackupDirectory $BackupDirectory }
+                catch {
+                    if ($_.Exception.GetBaseException() -isnot [IO.IOException]) { throw }
+                    $blocked = $true
+                }
+            } finally { $held.Dispose() }
+            if (-not $blocked) { throw 'Locked journal did not prevent mutation.' }
+            if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($path)) -cne $before) { throw 'Original journal changed after a failed intent write.' }
+            Assert-SkyVmCaseStates $Cases Original
+        }
         'ExternalConflict' {
             if ($State.Phase -ne 'Prepared') { throw 'Conflict probe requires Prepared.' }
             Assert-SkyVmCaseStates $Cases Original
             $case = $Cases[0]
-            $null = Invoke-SkyTrackedChange -Resource $case.Resource -Desired $case.Desired -BackupDirectory $BackupDirectory
+            foreach ($candidate in $Cases) { $null = Invoke-SkyTrackedChange -Resource $candidate.Resource -Desired $candidate.Desired -BackupDirectory $BackupDirectory }
             $external = ConvertTo-SkyRegistryState -Exists $true -Kind String -Value 'external preference'
             Set-SkyResourceState $case.Resource $external
             $results = @(Restore-SkyTrackedChanges $BackupDirectory)
             if (@($results | Where-Object Status -eq 'Failed').Count -ne 1 -or
                 -not (Test-SkyStateEqual (Get-SkyResourceState $case.Resource) $external)) { throw 'External conflict was not preserved.' }
+            Assert-SkyVmCaseStates @($Cases | Select-Object -Skip 1) Original
             $State.Phase = 'ConflictObserved'
         }
         default { throw 'Unknown registry stage.' }
     }
 }
 
+function Write-SkyVmEvidence {
+    param([string]$Directory, [string]$Stage, [bool]$Passed, $State, $Context, $Permission, [string]$ErrorMessage = '')
+    $report = [pscustomobject]@{ Stage = $Stage; Passed = $Passed
+        Phase = $(if ($State) { $State.Phase } else { 'Unavailable' }); BootId = $Context.BootId
+        SourceSha256 = $Permission.SourceSha256; RunId = $Permission.RunId; Utc = [DateTime]::UtcNow.ToString('o')
+        ErrorMessage = $ErrorMessage
+        Scope = 'Registry fixture only; not full Apply, services, NIC, hardware or performance validation.' }
+    Write-SkyAtomicFile (Join-Path $Directory ("evidence-$Stage-$([guid]::NewGuid().ToString('N')).json")) ($report | ConvertTo-Json)
+    $report
+}
+
 function Invoke-SkyVmScenario {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$ManifestPath,
-        [Parameter(Mandatory)][ValidateSet('Prepare','Apply','VerifyAfterReboot','Undo','VerifyAfterUndo','FailureRecovery','ExternalConflict')][string]$Stage,
+        [Parameter(Mandatory)][ValidateSet('Prepare','Apply','VerifyAfterReboot','Undo','VerifyAfterUndo','FailureRecovery','BackupWriteFailure','ExternalConflict')][string]$Stage,
         [string]$SourcePath = (Join-Path $PSScriptRoot '..\SkyOptimizer.ps1'),
         [switch]$AllowSystemChanges
     )
@@ -206,6 +239,7 @@ function Invoke-SkyVmScenario {
     $null = [IO.Directory]::CreateDirectory($directory)
     $lock = [IO.File]::Open((Join-Path $directory 'scenario.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
     $oldBackup = $Global:SkyBackupDir; $oldLog = $Global:SkyLogFile
+    $state = $null
     try {
         $Global:SkyBackupDir = Join-Path $directory 'Backups'
         $Global:SkyLogFile = $null
@@ -226,11 +260,12 @@ function Invoke-SkyVmScenario {
             Invoke-SkyVmRegistryStep -Stage $Stage -State $state -Cases $cases -BackupDirectory $Global:SkyBackupDir -BootId $context.BootId
         }
         Write-SkyAtomicFile $statePath ($state | ConvertTo-Json)
-        $report = [pscustomobject]@{ Stage = $Stage; Passed = $true; Phase = $state.Phase; BootId = $context.BootId
-            SourceSha256 = $permission.SourceSha256; RunId = $permission.RunId; Utc = [DateTime]::UtcNow.ToString('o')
-            Scope = 'Registry fixture only; not full Apply, services, NIC, hardware or performance validation.' }
-        Write-SkyAtomicFile (Join-Path $directory ("evidence-$Stage-$([guid]::NewGuid().ToString('N')).json")) ($report | ConvertTo-Json)
-        $report
+        Write-SkyVmEvidence $directory $Stage $true $state $context $permission
+    } catch {
+        $failure = $_
+        try { $null = Write-SkyVmEvidence $directory $Stage $false $state $context $permission $failure.Exception.Message }
+        catch { Write-Warning 'Failure evidence could not be persisted; preserve the transcript and original journal.' }
+        throw $failure
     } finally {
         $Global:SkyBackupDir = $oldBackup; $Global:SkyLogFile = $oldLog
         $lock.Dispose()

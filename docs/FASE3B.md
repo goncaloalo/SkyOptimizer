@@ -70,3 +70,11 @@ Os testes verificam ausência original, tipos inesperados, Apply repetido, Undo,
 ### Correção adicional de resultados
 
 Reproduzido: `Invoke-SkyAction` convertia um resultado Deferred em AlreadyCompliant e descartava o reinício necessário quando havia um child Unverified/Failed. Corrigido para preservar estados de não execução, detalhes de falhas e requisitos de reinício. Aplicação parcial com child Deferred/NotSelected fica Unverified. A suite acrescenta três regressões; não apresenta uma operação bloqueada como sucesso.
+
+## 6. Harness e futura integração
+
+O harness acrescenta BackupWriteFailure: um handle real bloqueia a substituição atómica do diário num ficheiro de laboratório. Exige IOException, bytes da baseline intactos e zero alteração de recursos. Os testes offline usam exclusivamente ficheiros TestDrive e registo simulado, sem executar um cenário real em guest.
+
+ExternalConflict passa a confirmar a restauração dos restantes recursos apesar do conflito no primeiro. Falhas depois de abrir o run produzem JSON `Passed=false` quando possível. A falha de guardar a própria evidência não substitui a exceção original nem avança o cenário. Estão preparados procedimentos específicos de Widgets, long paths, Storage Sense e clipboard em [INTEGRACAO-VM.md](INTEGRACAO-VM.md).
+
+A falta de VM não bloqueou estes desenvolvimentos. Continuam pendentes execução do harness em Windows descartável, reinícios reais, verificação das políticas na shell/apps e ensaios de hardware. O harness não contém reboot nem aprovação automática de desempenho.

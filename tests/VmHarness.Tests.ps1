@@ -107,7 +107,15 @@ Describe 'VM scenario transitions using mocked Windows resources only' {
         Invoke-SkyVmRegistryStep ExternalConflict $script:state $script:cases $Global:SkyBackupDir 'boot-A'
         $script:state.Phase | Should Be ConflictObserved
         (Get-SkyResourceState $script:cases[0].Resource).Data | Should Be 'external preference'
-        $script:writes | Should Be 2
+        $script:writes | Should Be 12
+        Assert-SkyVmCaseStates @($script:cases | Select-Object -Skip 1) Original
+    }
+    It 'blocks mutation when real file sharing prevents atomic journal replacement' {
+        Invoke-SkyVmRegistryStep BackupWriteFailure $script:state $script:cases $Global:SkyBackupDir 'boot-A'
+        $script:writes | Should Be 0
+        Assert-SkyVmCaseStates $script:cases Original
+        @((Read-SkyMutationState $Global:SkyBackupDir).Entries).Count | Should Be 0
+        @(Get-ChildItem -LiteralPath $Global:SkyBackupDir -Filter '*.tmp').Count | Should Be 0
     }
     It 'refuses invalid stage order before making a change' {
         { Invoke-SkyVmRegistryStep Undo $script:state $script:cases $Global:SkyBackupDir 'boot-A' } | Should Throw
@@ -130,15 +138,30 @@ Describe 'VM scenario transitions using mocked Windows resources only' {
         { Invoke-SkyVmScenario $manifestPath Prepare -SourcePath $source -AllowSystemChanges } | Should Throw
         (Invoke-SkyVmScenario $manifestPath Apply -SourcePath $source -AllowSystemChanges).Phase | Should Be Applied
         $script:vmContext.BootId = 'boot-B'
+        # An invalid stage is recorded without advancing the scenario or masking the error.
+        { Invoke-SkyVmScenario $manifestPath VerifyAfterUndo -SourcePath $source -AllowSystemChanges } | Should Throw
         (Invoke-SkyVmScenario $manifestPath VerifyAfterReboot -SourcePath $source -AllowSystemChanges).Phase | Should Be VerifiedAfterReboot
         (Invoke-SkyVmScenario $manifestPath Undo -SourcePath $source -AllowSystemChanges).Phase | Should Be Restored
         $script:vmContext.BootId = 'boot-C'
         (Invoke-SkyVmScenario $manifestPath VerifyAfterUndo -SourcePath $source -AllowSystemChanges).Phase | Should Be VerifiedAfterUndo
         $Global:SkyBackupDir | Should Be $callerBackup
         $lab = Join-Path (Join-Path $TestDrive 'SkyOptimizer-Lab') ([guid]$runId).ToString('N')
-        @(Get-ChildItem -LiteralPath $lab -Filter 'evidence-*.json').Count | Should Be 5
+        @(Get-ChildItem -LiteralPath $lab -Filter 'evidence-*.json').Count | Should Be 6
+        $failureReport = Get-Content -LiteralPath (Get-ChildItem -LiteralPath $lab -Filter 'evidence-VerifyAfterUndo-*.json' | Where-Object {
+            -not (Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json).Passed
+        } | Select-Object -First 1).FullName -Raw | ConvertFrom-Json
+        $failureReport.Passed | Should Be $false
+        $failureReport.Phase | Should Be Applied
+        $failureReport.ErrorMessage.Contains('boot after Undo') | Should Be $true
         ([IO.File]::ReadAllText((Join-Path $lab 'scenario_state.json')) | ConvertFrom-Json).Phase | Should Be VerifiedAfterUndo
         Assert-MockCalled Open-SkyRegistryBase -Times 0 -Exactly -Scope It
         Assert-MockCalled Invoke-SkyNativeProcess -Times 0 -Exactly -Scope It
+        Mock Write-SkyVmEvidence { throw 'Evidence volume unavailable' }
+        $originalError = ''
+        try { Invoke-SkyVmScenario $manifestPath Apply -SourcePath $source -AllowSystemChanges }
+        catch { $originalError = $_.Exception.Message }
+        $originalError.Contains('Apply requires Prepared or Applied') | Should Be $true
+        $Global:SkyBackupDir | Should Be $callerBackup
+        ([IO.File]::ReadAllText((Join-Path $lab 'scenario_state.json')) | ConvertFrom-Json).Phase | Should Be VerifiedAfterUndo
     }
 }

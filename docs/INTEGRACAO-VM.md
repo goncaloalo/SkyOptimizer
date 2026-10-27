@@ -55,13 +55,19 @@ Em snapshots/runs separados, executar Prepare e depois apenas um destes comandos
 
 ```powershell
 Invoke-SkyVmScenario -ManifestPath .\guest.local.json -Stage FailureRecovery -AllowSystemChanges
+# Ou, num run independente, falha real de substituicao atomica do diario bloqueado:
+Invoke-SkyVmScenario -ManifestPath .\guest.local.json -Stage BackupWriteFailure -AllowSystemChanges
 # Ou, num run independente:
 Invoke-SkyVmScenario -ManifestPath .\guest.local.json -Stage ExternalConflict -AllowSystemChanges
 ```
 
 `FailureRecovery` injeta uma exceção depois do setter real e antes de persistir a conclusão. Exige Pending após Apply interrompido; restaura e repete com uma falha de Undo, exigindo Restoring e recuperação no retry. Termina com a fixture original. Isto valida o limite lógico; não simula falha elétrica, kernel crash ou write cache do disco.
 
-`ExternalConflict` aplica um valor, muda-o como software externo e exige Undo falhado que preserve essa preferência. O cenário passa precisamente quando o conflito esperado é comunicado. Deixa a preferência e o diário para revisão, sem substituir o valor para “limpar” o teste. Exportar provas e restaurar o snapshot.
+`BackupWriteFailure` mantém o diário aberto para leitura sem permitir a sua substituição. A persistência da intenção tem de falhar com IOException, sem nenhuma escrita de registo e sem alterar os bytes da baseline. Verifica também a fixture original. A regressão automatizada executa o bloqueio real apenas em ficheiros TestDrive e usa registo simulado; não constitui execução deste cenário numa VM.
+
+`ExternalConflict` aplica os recursos da fixture, muda o primeiro como software externo e exige Undo falhado que preserve essa preferência. Os outros recursos devem ser restaurados independentemente do conflito. O cenário passa precisamente quando o conflito esperado é comunicado. Deixa a preferência e o diário para revisão, sem substituir o valor para “limpar” o teste. Exportar provas e restaurar o snapshot.
+
+Falhas de fase depois do guard e da abertura do run geram JSON com `Passed=false`, mensagem e fase observada, quando o volume permite. Não avançam artificialmente o estado do cenário. Se persistir a evidência também falhar, o harness conserva o erro original e emite aviso; usar a transcrição e os diários existentes. Recusas anteriores ao run não criam um diretório apenas para guardar a recusa.
 
 Para crash de processo real, usar um snapshot separado e debugger/breakpoint no guest depois de Save-SkyMutationState e antes/depois de Set-SkyResourceState. Terminar apenas o processo de teste, reabrir e executar Undo. Registar instrução/commit do breakpoint, journal Pending/Restoring e estado do recurso. Não classificar a injeção de exceção como este teste. Falha de disco/permissões deve ser ensaiada num volume de laboratório, sem encher o disco do host.
 
@@ -80,6 +86,10 @@ Para crash de processo real, usar um snapshot separado e debugger/breakpoint no 
 | NIC virtual | Registar GUID/PnP/driver e todas as propriedades; selecionar 74/75 individualmente; reiniciar; Undo | Só propriedades suportadas alteradas. Sem reset global. Se driver não expõe propriedade: incompatível, não fingir teste passado. VM não valida NIC física. |
 | NIC alterado externamente | Renomear, alterar propriedade e, noutro snapshot, mudar driver/remover dispositivo | Renomear mantém identidade; preferência externa fica intacta; driver/dispositivo diferente bloqueia Undo. Recuperar via consola. |
 | AppPrivacy 25 | Preparar exceção por pacote e default existente; Extreme + 25; reiniciar apps; Undo | Exceção intacta, default restaurado; comparar política efetiva e comportamento de notificação. Home/edição desconhecida recusada. |
+| Widgets 16 | Windows 11 Pro/Enterprise/Education; preparar TaskbarDa/Feeds distintos; Apply e Undo | Só AllowNewsAndInterests muda; flags pessoais intactas; confirmar política efetiva e Widgets. Win10/Home fora da matriz recusados. |
+| Long paths 59 | Testar app longPathAware e outra não opt-in; aplicar, reiniciar processos/guest e Undo | Só LongPathsEnabled muda; baseline exata após Undo. Não exigir que apps não opt-in, shell ou cloud ultrapassem os seus limites. |
+| Storage Sense 88 | Guardar cadências e preferências user; aplicar política e Undo | Só AllowStorageSenseGlobal muda; preferências e ficheiros intactos. Confirmar bloqueio de limpeza automática e recuperação sem encher o disco para provocar o teste. |
+| Clipboard 90 | Histórico desativado, ativado e sem política, em snapshots distintos; aplicar sync off e Undo | AllowClipboardHistory e conteúdo do histórico intactos; apenas sync alterado. Confirmar política efetiva e restauro de tipo/existência. |
 | Backups legados | Introduzir cópia de `.reg`/previous_* artificiais; tentar Apply/Undo | Apply recusa; não importa chaves inteiras nem reativa planos pelo GUID textual. Evidência preservada. |
 | Painel/elevação | Caminho com espaços/acentos; gerar e regenerar; testar Undo e Spooler/bthserv em snapshots separados | Mesma pasta central, mesmo diário, scripts completos sem truncamento. Perfil/IDs preservados na elevação. Sem recriar baseline ou copiar backup sobre si mesmo. |
 | Conta diferente | Elevar com outra conta e executar com baseline pertencente ao SID anterior | Diário recusa SID diferente. A limitação de seleção de HKCU deve ficar registada; não declarar suporte multiutilizador. |
