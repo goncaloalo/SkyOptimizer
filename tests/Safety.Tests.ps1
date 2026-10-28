@@ -80,6 +80,24 @@ Describe 'Action reporting' {
         $result.RestartRequired | Should Be Yes
         $result.Reason.Contains('second resource rejected') | Should Be $true
     }
+    It 'keeps completed child evidence when a later child throws' {
+        $result = Invoke-SkyAction {
+            New-SkyActionResult Applied 'NIC persisted' Yes
+            throw 'later child failed'
+        }
+        $result.Status | Should Be Failed
+        $result.RestartRequired | Should Be Yes
+        $result.Reason.Contains('NIC persisted') | Should Be $true
+        $result.Reason.Contains('later child failed') | Should Be $true
+    }
+    It 'reports incomplete mixed compatibility rather than full application' {
+        $result = Invoke-SkyAction {
+            New-SkyActionResult Applied 'first resource changed' Yes
+            New-SkyActionResult Incompatible 'second resource unsupported' No
+        }
+        $result.Status | Should Be Unverified
+        $result.RestartRequired | Should Be Yes
+    }
 }
 
 Describe 'Atomic files and registry export barriers' {

@@ -1074,9 +1074,10 @@ function Invoke-SkyAction {
     # Legacy booleans cannot prove effective state or distinguish a skip from a failure.
     $previousContext = $script:SkyActionContext
     $script:SkyActionContext = @{ ErrorLogged = $false }
+    $output = New-Object 'System.Collections.Generic.List[object]'
     try {
         $ErrorActionPreference = 'Stop'
-        $output = @(& $Action)
+        & $Action | ForEach-Object { $output.Add($_) }
         if ($script:SkyActionContext.ErrorLogged) { throw 'A ação registou um erro; consultar o log.' }
         $verified = @($output | Where-Object { $_ -and $_.PSTypeNames -contains 'SkyOptimizer.ActionResult' })
         if ($verified.Count -gt 0) {
@@ -1085,8 +1086,9 @@ function Invoke-SkyAction {
             $applied = @($verified | Where-Object Status -eq 'Applied').Count
             $deferred = @($verified | Where-Object Status -eq 'Deferred').Count
             $notSelected = @($verified | Where-Object Status -eq 'NotSelected').Count
+            $incompatible = @($verified | Where-Object Status -eq 'Incompatible').Count
             $status = if (@($verified | Where-Object Status -eq 'Failed').Count) { 'Failed' }
-                elseif (@($verified | Where-Object Status -eq 'Unverified').Count -or ($applied -and ($deferred -or $notSelected))) { 'Unverified' }
+                elseif (@($verified | Where-Object Status -eq 'Unverified').Count -or ($applied -and ($deferred -or $notSelected -or $incompatible))) { 'Unverified' }
                 elseif ($deferred) { 'Deferred' }
                 elseif ($applied) { 'Applied' }
                 elseif (@($verified | Where-Object Status -eq 'Incompatible').Count) { 'Incompatible' }
@@ -1096,7 +1098,10 @@ function Invoke-SkyAction {
         }
         return New-SkyActionResult -Status Unverified -Reason 'Implementação legada sem verificação completa do estado; não contabilizada como sucesso.'
     } catch {
-        return New-SkyActionResult -Status Failed -Reason $_.Exception.Message
+        $failure = $_.Exception.Message
+        $partial = @($output | Where-Object { $_ -and $_.PSTypeNames -contains 'SkyOptimizer.ActionResult' })
+        $restart = if (@($partial | Where-Object RestartRequired -eq 'Yes').Count) { 'Yes' } else { 'Unknown' }
+        return New-SkyActionResult -Status Failed -Reason ((@($partial | ForEach-Object { $_.Reason }) + $failure) -join ' ') -RestartRequired $restart
     } finally {
         $script:SkyActionContext = $previousContext
     }
@@ -3439,7 +3444,7 @@ function Invoke-SkyOptimize {
     }
 
     Write-Host "`nSessão terminada: $totalFailed falhas e $totalUnverified ações sem validação completa. Consulte o relatório antes de considerar o sistema validado." -ForegroundColor Cyan
-    $script:SkyLastExitCode = if ($totalFailed) { 1 } elseif ($totalDeferred -or $totalUnverified) { 2 } else { 0 }
+    $script:SkyLastExitCode = if ($totalFailed -or $panelCreated -ne $true) { 1 } elseif ($totalDeferred -or $totalUnverified -or $totalIncompatible) { 2 } else { 0 }
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }
 
@@ -3510,6 +3515,8 @@ function Enable-WindowedOptimizations {
 
 function Get-SkyProfileActionIds {
     param([ValidateSet('Balanced', 'Performance', 'Extreme')][string]$Profile = 'Balanced', [int[]]$Experiments = @())
+    # An empty pipeline in the CLI/menu arrives as null, not the default empty array.
+    $Experiments = @($Experiments | Where-Object { $null -ne $_ })
     if (@($Experiments | Where-Object { $_ -lt 1 -or $_ -gt 90 }).Count) { throw 'IDs de ações devem estar entre 1 e 90.' }
     if ($Experiments.Count -and $Profile -ne 'Extreme') { throw 'Ações adicionais exigem o perfil Extreme e uma comparação de laboratório.' }
     $ids = @(79)
