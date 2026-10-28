@@ -426,6 +426,9 @@ function Restore-SkyPowerPlan {
             return New-SkyActionResult -Status Unverified -Reason 'Backup legado de energia preservado para revisao manual: autoria e indices originais AC/DC nao demonstrados. Nenhum plano foi alterado.' -RestartRequired No
         }
         if ($state.Status -eq 'Restored') {
+            if (@($state.RetainedOwnedGuids | Where-Object { $_ }).Count) {
+                return New-SkyActionResult -Status Unverified -Reason "Ativacao original ja revertida. Copias preservadas para revisao manual: $($state.RetainedOwnedGuids -join ', '). Nenhum plano eliminado." -RestartRequired No
+            }
             return New-SkyActionResult -Status AlreadyCompliant -Reason 'Este ciclo de energia já foi revertido; nenhuma alteração efetuada.' -RestartRequired No
         }
         $plans = @(Get-SkyPowerGuids)
@@ -439,12 +442,16 @@ function Restore-SkyPowerPlan {
         }
         if ((Get-SkyActivePowerGuid) -ne $state.OriginalGuid) { throw 'O plano original não ficou ativo.' }
         if ($plans -contains $state.OwnedGuid) {
-            $null = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/delete', $state.OwnedGuid)
-            if (@(Get-SkyPowerGuids) -contains $state.OwnedGuid) { throw 'O plano temporário não foi removido.' }
+            # A GUID proves creation, not that every setting still belongs to us. Preserve external edits.
+            $retained = @(@($state.RetainedOwnedGuids | Where-Object { $_ }) + $state.OwnedGuid | Select-Object -Unique)
+            $state | Add-Member NoteProperty RetainedOwnedGuids $retained -Force
         }
         $state.Status = 'Restored'
         Save-SkyPowerState -BackupDirectory $BackupDirectory -State $state
-        return New-SkyActionResult -Status Applied -Reason 'Plano original reativado sem modificar os seus valores AC/DC; cópia Sky removida.' -RestartRequired No
+        if (@($state.RetainedOwnedGuids | Where-Object { $_ }).Count) {
+            return New-SkyActionResult -Status Unverified -Reason "Plano original reativado, indices originais intactos. Copias preservadas porque alteracoes externas nao podem ser excluidas: $($state.RetainedOwnedGuids -join ', '). Limpeza manual pendente." -RestartRequired No
+        }
+        return New-SkyActionResult -Status Applied -Reason 'Plano original reativado sem modificar os seus valores AC/DC; copia ja ausente.' -RestartRequired No
     } finally { $lock.Dispose() }
 }
 
@@ -1467,6 +1474,7 @@ function Set-UltimatePowerPlan {
                 OriginalGuid = $currentGuid
                 OwnedGuid = [guid]::NewGuid().ToString()
                 Status = 'Prepared'
+                RetainedOwnedGuids = @($state.RetainedOwnedGuids | Where-Object { $_ })
             }
             if ([string]::IsNullOrWhiteSpace($state.MachineId)) { throw 'Identidade da máquina indisponível.' }
             # Persist original state and destination GUID before the first Windows mutation.

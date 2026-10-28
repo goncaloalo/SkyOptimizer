@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 $script:realSavePowerState = (Get-Command Save-SkyPowerState).ScriptBlock
 
 # In-memory Windows model. These tests never call powercfg, registry APIs or Add-Type.
@@ -100,13 +100,13 @@ Describe 'Owned power plan lifecycle' {
         @($script:fake.Calls | Where-Object { $_ -like '/duplicatescheme *' }).Count | Should Be 1
         $script:fake.Plans[$first.OwnedGuid][$script:minimum].DC | Should Be 14
         $script:fake.Plans[$first.OwnedGuid][$script:maximum].DC | Should Be 77
-        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Applied'
+        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Unverified'
         $script:fake.Active | Should Be $script:original
-        $script:fake.Plans.Count | Should Be 1
+        $script:fake.Plans.Count | Should Be 2
         $script:fake.Plans[$script:original][$script:minimum].AC | Should Be 23
         $script:fake.Plans[$script:original][$script:maximum].AC | Should Be 91
         $script:fake.Plans[$script:original][$script:minimum].DC | Should Be 14
-        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'AlreadyCompliant'
+        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Unverified'
     }
     It 'never writes DC indices or global setting attributes' {
         $null = Set-UltimatePowerPlan
@@ -119,7 +119,7 @@ Describe 'Owned power plan lifecycle' {
         { Disable-CoreParking } | Should Throw
         @($script:fake.Calls | Where-Object { $_ -like '/setacvalueindex *' }).Count | Should Be 1
         $script:fake.Plans[$script:original][$script:minimum].AC | Should Be 23
-        (Restore-SkyPowerPlan $Global:SkyBackupDir).Status | Should Be Applied
+        (Restore-SkyPowerPlan $Global:SkyBackupDir).Status | Should Be Unverified
         $script:fake.Active | Should Be $script:original
         $script:fake.Plans[$script:original][$script:maximum].DC | Should Be 77
     }
@@ -143,15 +143,15 @@ Describe 'Owned power plan lifecycle' {
         $script:fake.FailCommand = ''
         (Set-UltimatePowerPlan).Status | Should Be 'Applied'
         @($script:fake.Calls | Where-Object { $_ -like '/duplicatescheme *' }).Count | Should Be 1
-        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Applied'
+        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Unverified'
     }
     It 'can undo an interrupted Prepared transaction without activating the owned plan' {
         $script:fake.FailCommand = '/changename'
         { Set-UltimatePowerPlan } | Should Throw
         $script:fake.FailCommand = ''
-        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Applied'
+        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Unverified'
         $script:fake.Active | Should Be $script:original
-        $script:fake.Plans.Count | Should Be 1
+        $script:fake.Plans.Count | Should Be 2
     }
     It 'recovers from a crash between activation and the final journal write' {
         $script:fake.FailSave = 'Active'
@@ -228,20 +228,29 @@ Describe 'Owned power plan lifecycle' {
         { Set-UltimatePowerPlan } | Should Throw
         $script:fake.Active | Should Be $third
     }
+    It 'does not delete external edits inside the Sky copy during Undo' {
+        $null=Set-UltimatePowerPlan
+        $state=Read-SkyPowerState $Global:SkyBackupDir
+        $script:fake.Plans[$state.OwnedGuid][$script:minimum].DC=32
+        $null=Restore-SkyPowerPlan $Global:SkyBackupDir
+        $script:fake.Active | Should Be $script:original
+        $script:fake.Plans.ContainsKey($state.OwnedGuid) | Should Be $true
+        $script:fake.Plans[$state.OwnedGuid][$script:minimum].DC | Should Be 32
+        @($script:fake.Calls | Where-Object { $_ -like '/delete *' }).Count | Should Be 0
+    }
     It 'refuses to choose a default when the original plan disappeared' {
         $null = Set-UltimatePowerPlan
         $script:fake.Plans.Remove($script:original)
         { Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir } | Should Throw
         (Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Active'
     }
-    It 'preserves retry information when deleting the owned plan fails' {
-        $null = Set-UltimatePowerPlan
-        $script:fake.FailCommand = '/delete'
-        { Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir } | Should Throw
+    It 'preserves the copy rather than attempting unverified plan deletion' {
+        $null=Set-UltimatePowerPlan
+        $script:fake.FailCommand='/delete'
+        (Restore-SkyPowerPlan $Global:SkyBackupDir).Status | Should Be Unverified
         $script:fake.Active | Should Be $script:original
-        (Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Active'
-        $script:fake.FailCommand = ''
-        (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'Applied'
+        (Read-SkyPowerState $Global:SkyBackupDir).Status | Should Be Restored
+        @($script:fake.Calls | Where-Object { $_ -like '/delete *' }).Count | Should Be 0
     }
     It 'allows a new cycle after completed Undo' {
         $null = Set-UltimatePowerPlan
@@ -249,6 +258,7 @@ Describe 'Owned power plan lifecycle' {
         $null = Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir
         (Set-UltimatePowerPlan).Status | Should Be 'Applied'
         (Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir).OwnedGuid | Should Not Be $first.OwnedGuid
+        ((Read-SkyPowerState $Global:SkyBackupDir).RetainedOwnedGuids -contains $first.OwnedGuid) | Should Be $true
     }
     It 'does nothing on Undo without any baseline' {
         (Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir).Status | Should Be 'AlreadyCompliant'
