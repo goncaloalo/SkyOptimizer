@@ -4,6 +4,8 @@
 
 A [checklist da Fase 4](VALIDACAO-FASE4.md) acrescenta gates de ACL/UAC, serialização de sessões, resultados parciais e conservação de cópias de energia. Usar ambos os documentos; todos os ensaios reais continuam pendentes.
 
+A [preparação da Fase 5A](FASE5A.md) especifica arranque limpo, comparação independente por HMAC, template de recursos Performance e gates de aceitação. Não enviar journals/transcripts privados junto dos snapshots sanitizados sem revisão.
+
 ## 1. Ambiente e evidência
 
 1. Criar uma VM sem dados de clientes, sem conta de produção e sem discos/pastas partilhados de escrita com o host. Usar consola do hipervisor; não depender de AnyDesk/RDP para recuperar rede ou login.
@@ -97,7 +99,7 @@ Para crash de processo real, usar um snapshot separado e debugger/breakpoint no 
 | Conta diferente | Elevar com outra conta e executar com baseline pertencente ao SID anterior | Diário recusa SID diferente. A limitação de seleção de HKCU deve ficar registada; não declarar suporte multiutilizador. |
 | Concorrência | Abrir dois Apply/Undo e painel ao mesmo tempo; interromper um processo com lock | Um proprietário por diário; segunda operação falha claramente; terminar processo liberta handle, sem apagar baseline. Energia e diário têm locks separados; não há atomicidade global entre recursos. |
 
-Para o fluxo completo, usar o menu ou parâmetros documentados em [PERFIS.md](PERFIS.md); Extreme inclui Performance. Não atribuir diferenças de várias ações a um único ID. O harness usa pasta própria; o produto completo usa `%SystemDrive%\ProgramData\SkyOptimizer\Backups`. Não misturar as duas baselines.
+Para o fluxo completo, usar o menu ou parâmetros documentados em [PERFIS.md](PERFIS.md); Extreme inclui Performance. Não atribuir diferenças de várias ações a um único ID. O harness usa pasta própria; o produto completo usa `SkyOptimizer\Backups` sob CommonApplicationData. Não misturar as duas baselines.
 
 Guardar antes/depois: exportações por valor com tipo/existência, `mutation_state.json`, `power_state.json`, `execution_results.json`, relatórios do painel, stdout/stderr/exit code, histórico de boots, Event Viewer e inventário de drivers. Marcar cada célula como Passed, Failed, Incompatible ou NotRun. Não usar “passou” para hardware ausente.
 

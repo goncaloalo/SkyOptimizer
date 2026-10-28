@@ -1,10 +1,10 @@
 {
-  "Date": "2026-10-28",
+  "Date": "2026-10-28T14:50:14.6076526+00:00",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
   "Command": "Invoke-Pester -Script .\\tests -PassThru -Quiet",
-  "Total": 211,
-  "Passed": 211,
+  "Total": 225,
+  "Passed": 225,
   "Failed": 0,
   "Skipped": 0,
   "Pending": 0,
@@ -23,7 +23,7 @@
     39,
     54
   ],
-  "ProductSourceSha256": "FF32A5EA7C862C39A4F985378195238A2F8191D50B549A38896490DBFCBC6093",
+  "ProductSourceSha256": "5E49346EDA68074E33F5C2FD5F220F87DCADEC18982B4C059B8A6C76EEFCB88D",
   "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
   "BlockedActions": 56,
   "OriginalBlockedActionsAudited3B": 67,
@@ -35,15 +35,9 @@
     2
   ],
   "ProductionScheduledTasksEligible": false,
-  "Phase": "4 offline",
-  "ValidationScope": "Pester: AST, mocked Windows effects, in-memory security descriptors, managed XML/crypto and temporary files. Python: synthetic offline CSV metrics. No real ACL installation, UAC, COM tasks, registry mutations, VM integration or physical benchmarks.",
-  "SourceCommit": "bb49720744216a7c6d938e8dd4f0ce4a19dbb29d",
-  "DetailedPesterEvidence": "FASE4-TESTES.json",
-  "PostDocumentationCatalogueCheck": {
-    "Command": "Invoke-Pester -Script .\\tests\\Catalogue.Tests.ps1 -PassThru -Quiet",
-    "Total": 3,
-    "Passed": 3,
-    "Failed": 0,
-    "Note": "Focused repeat after audit metadata update; these tests are already included in the full 211, not additional tests."
-  }
+  "Phase": "5A offline",
+  "ValidationScope": "Pester: declarations only, mocked Windows effects, independent registry reader with managed fake handles, HMAC and temporary files. Python: 11 synthetic offline CSV tests. No product entry point, real registry changes, installed ACL tests, UAC, VM or physical benchmarks.",
+  "SourceCommit": "0878bd97f72a78c6549b2edab66a5f1f1889b2cf",
+  "DetailedPesterEvidence": "FASE5A-TESTES.json",
+  "EvidenceSourceSha256": "59AEE5A4F263880FDE65021575D9F4DEF470DC614FAA8315AEDB9313286A60CF"
 }

@@ -1,6 +1,6 @@
 # SkyOptimizer
 
-**Branch de desenvolvimento — Fase 4 — auditoria global offline. Não distribuir como versão validada para clientes.**
+**Branch de desenvolvimento — Fase 5A — preparação para validação. Não distribuir como versão validada para clientes.**
 
 O SkyOptimizer mantém o programa PowerShell existente, destinado a instalações Windows já em uso. O objetivo é melhorar desempenho real em jogos; ainda não foram medidos ganhos de FPS, 1% lows ou latência.
 
@@ -9,6 +9,7 @@ O SkyOptimizer mantém o programa PowerShell existente, destinado a instalaçõe
 - O catálogo conserva **90 IDs históricos**: 28 elegíveis para Apply, 56 bloqueados, manutenção 24 separada e cinco retirados (12/14/30/39/54). Migradas: **1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 58, 59, 60, 70, 71, 74, 75, 76, 79, 84, 86, 88 e 90**.
 - As restantes ações ficam bloqueadas no dispatcher enquanto faltam baseline, reversão ou compatibilidade. As escritas indiscriminadas USB/HAGS/MSI foram retiradas; o catálogo regista as decisões.
 - A ação 24 é manutenção de diagnóstico separada, com confirmação explícita. Não existe limpeza automática de shaders nos perfis.
+- [Preparação final da Fase 5A](docs/FASE5A.md): instalação, recolha privada de evidências, comparação independente e gates de aceitação.
 - [Auditoria global da Fase 4](docs/FASE4.md), [checklist de validação real](docs/VALIDACAO-FASE4.md), [maturidade das 28 elegíveis](docs/FASE4-ELEGIVEIS.json) e [classificação das 56 bloqueadas](docs/FASE4-BLOQUEADAS.json).
 - [Consolidação de políticas e integração 3C](docs/FASE3C.md), [auditoria histórica 3B](docs/FASE3B.md), [estado das ações](docs/ACOES-ESTADO.json), [Fase 3A](docs/FASE3A.md), [perfis](docs/PERFIS.md), [benchmarks](docs/BENCHMARKS.md) e [oportunidades](docs/OPORTUNIDADES.md).
 - 14 foi consolidada em 58. 58/70/84 usam apenas políticas documentadas, com escopo, edição e build verificados. Não escrevem flags internas CDM. Tarefas de Windows/NVIDIA continuam bloqueadas; o mecanismo novo aceita apenas fixtures de laboratório.
@@ -79,9 +80,9 @@ python -B -m unittest discover -s benchmarks/tests -v
 
 Os testes PowerShell carregam declarações por AST e usam mocks/ficheiros temporários. Os testes Python usam intervalos sintéticos. O [analisador offline](benchmarks/analyze.py) lê CSV recolhido em laboratório; não executa tweaks nem captura jogos. Integração em Windows descartável e benchmarks físicos continuam necessários.
 
-Última suite offline: **211 testes Pester e 11 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
+Última suite offline: **225 testes Pester e 11 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
 
-A [prova detalhada Pester](docs/FASE4-TESTES.json) identifica o código testado. Nenhuma ação foi desbloqueada nesta auditoria.
+A [prova detalhada Pester](docs/FASE5A-TESTES.json) identifica o código testado. Nenhuma ação foi desbloqueada nesta auditoria.
 
 O [protocolo de VM](docs/INTEGRACAO-VM.md) inclui o harness de registo com reinícios manuais, falhas intermédias e conflitos externos. O harness está preparado e testado com mocks; ainda não foi executado num guest real. Só o utilizar num Windows descartável com snapshot confirmado e autorização para alterações. A [preparação de tarefas 3C](docs/TAREFAS-LAB-3C.md) acrescenta fixtures isoladas, fingerprint e Enabled, sem allowlist de tarefas reais.
 

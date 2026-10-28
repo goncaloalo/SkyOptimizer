@@ -1,5 +1,7 @@
 # Fase 4 — Auditoria global e preparação para validação
 
+> Registo da auditoria da Fase 4. Preparação e correções posteriores: [Fase 5A](FASE5A.md). As contagens de testes abaixo pertencem à entrega auditada.
+
 Data: 2026-10-28. Branch: `dev/phase2-execution-power-safety`. Base auditada: `4dca7e7`. Código final testado: `bb49720744216a7c6d938e8dd4f0ce4a19dbb29d`.
 
 ## Veredicto
