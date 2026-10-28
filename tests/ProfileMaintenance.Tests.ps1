@@ -28,6 +28,15 @@ Describe 'Panel shares the original backup directory without copying' {
 
 Describe 'Evidence-scoped development profiles' {
     Mock Get-SkyWindowsBuild { 22631 }
+    It 'keeps all automatic profile selections within the eligible set and resolves eligible dependencies' {
+        $eligible=@(Get-SkyMigratedActionIds)
+        foreach($profile in @('Balanced','Performance','Extreme')) {
+            foreach($id in @(Get-SkyProfileActionIds $profile)) { ($id -in $eligible) | Should Be $true }
+        }
+        foreach($experiment in $eligible) {
+            foreach($id in @(Get-SkyProfileActionIds Extreme -Experiments @($experiment))) { ($id -in $eligible) | Should Be $true }
+        }
+    }
     It 'keeps Balanced small and does not disable captures, services or offloads' {
         (@(Get-SkyProfileActionIds Balanced) -join ',') | Should Be '79'
     }
