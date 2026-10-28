@@ -365,6 +365,13 @@ function Enter-SkyPowerLock {
         [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
 }
 
+function Enter-SkySessionLock {
+    param([string]$BackupDirectory)
+    # Serialize application/panel lifetimes as well as individual resource writes.
+    try { [IO.File]::Open((Join-Path $BackupDirectory 'session.lock'), 'OpenOrCreate', 'ReadWrite', 'None') }
+    catch { throw 'Outra sessao SkyOptimizer/painel esta aberta ou o lock nao e acessivel. Fechar a outra sessao; nao apagar locks/backups para contornar o bloqueio.' }
+}
+
 function Read-SkyPowerState {
     param([string]$BackupDirectory)
     $path = Join-Path $BackupDirectory 'power_state.json'
@@ -1103,7 +1110,9 @@ $Global:SkyBackupDir = Join-Path $env:SystemDrive 'ProgramData\SkyOptimizer\Back
     $footer = @'
 try {
     Initialize-SkyStorage
-    $results = @(Switch-SkyPanelService -Name $Name)
+    $session = Enter-SkySessionLock $Global:SkyBackupDir
+    try { $results = @(Switch-SkyPanelService -Name $Name) }
+    finally { $session.Dispose() }
     $results | Format-Table Status, Reason -Wrap
     if (@($results | Where-Object Status -eq 'Failed').Count) { exit 1 }
 } catch { Write-Error $_; exit 1 }
@@ -1156,7 +1165,7 @@ function Get-SkyPowerRestoreSource {
     # Embed the same implementation in the existing standalone Undo; no runtime module dependency.
     $names = @('Get-SkyStorageRoot', 'Get-SkyStorageTrustedSids', 'Assert-SkyNoReparsePoint', 'Assert-SkyStorageAcl',
         'Assert-SkyStorageTree', 'New-SkyStorageSecurity', 'New-SkyProtectedDirectory', 'Initialize-SkyStorage', 'Invoke-SkyNativeProcess', 'Invoke-SkyNativeCommand', 'Write-SkyAtomicFile',
-        'New-SkyActionResult', 'Get-SkyMachineId', 'Enter-SkyPowerLock', 'Read-SkyPowerState',
+        'New-SkyActionResult', 'Get-SkyMachineId', 'Enter-SkySessionLock', 'Enter-SkyPowerLock', 'Read-SkyPowerState',
         'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope', 'Invoke-SkyVerifiedUndo',
         'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
         'ConvertTo-SkyRegistryState', 'ConvertFrom-SkyRegistryState', 'Open-SkyRegistryBase',
@@ -3065,7 +3074,11 @@ if (-not (Test-Path $backupDir)) {
 # SKY_POWER_RESTORE_FUNCTIONS
 try { Initialize-SkyStorage; $backupDir = $Global:SkyBackupDir }
 catch { Write-Error $_; exit 1 }
-$results = @(Invoke-SkyVerifiedUndo -BackupDirectory $backupDir)
+try {
+    $session = Enter-SkySessionLock $backupDir
+    try { $results = @(Invoke-SkyVerifiedUndo -BackupDirectory $backupDir) }
+    finally { $session.Dispose() }
+} catch { Write-Error $_; exit 1 }
 foreach ($result in $results) { Write-Host "[$($result.Status)] $($result.Reason)" }
 Write-Host 'Backups e painel preservados. Reinicie quando indicado; ganhos nao foram medidos.'
 if (@($results | Where-Object Status -eq 'Failed').Count) { exit 1 }
@@ -3858,6 +3871,10 @@ function Invoke-SkyHardwareAudit {
 # Se invocado com parâmetros diretos de linha de comando:
 try { Initialize-SkyStorage }
 catch { Write-Error "Armazenamento recusado; nenhuma acao executada: $($_.Exception.Message)"; exit 1 }
+try { $skySession = Enter-SkySessionLock $Global:SkyBackupDir }
+catch { Write-Error $_; exit 1 }
+
+try {
 
 if ($Apply) {
     Invoke-SkyOptimize
@@ -3978,6 +3995,7 @@ while ($true) {
         }
     }
 }
+} finally { $skySession.Dispose() }
 
 
 

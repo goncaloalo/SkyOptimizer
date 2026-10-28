@@ -106,5 +106,14 @@ Describe 'Generated recovery includes the storage boundary' {
         $source.Contains('function Assert-SkyStorageAcl') | Should Be $true
         $source.Contains("Initialize-SkyStorage`r`n") -or $source.Contains("Initialize-SkyStorage`n") | Should Be $true
         $source.Contains('-Wait -PassThru') | Should Be $true
+        $source.Contains('$session = Enter-SkySessionLock') | Should Be $true
+    }
+    It 'excludes a second app or panel session and permits recovery after the handle closes' {
+        $held=Enter-SkySessionLock $TestDrive
+        try { { Enter-SkySessionLock $TestDrive } | Should Throw }
+        finally { $held.Dispose() }
+        $retry=Enter-SkySessionLock $TestDrive
+        $retry.Dispose()
+        [IO.File]::Exists((Join-Path $TestDrive 'session.lock')) | Should Be $true
     }
 }
