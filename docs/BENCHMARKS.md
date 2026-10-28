@@ -48,7 +48,9 @@ Comparar original, cópia Sky sem alterações de índices e cópia Sky com aç�
 
 Testar core parking em desktop Intel/AMD e em portátil AC, separadamente. Incluir topologias híbridas/X3D apenas quando houver máquinas físicas e metodologia adequadas. Verificar também que os índices DC permanecem iguais; não concluir isso a partir de o portátil estar ligado à tomada.
 
-A ação 8 completa ainda não deve ser promovida como validada: o percurso por dispositivo permanece legado. Para ensaiar apenas a política do plano, usar uma execução de laboratório delimitada e documentar essa diferença.
+A ação 8 atual altera apenas a política AC de suspensão seletiva no plano Sky, com AC confirmado. Não altera hubs/dispositivos; a antiga receita por dispositivo é a ação 39, retirada. Continua experimental e sem validação física.
+
+O Undo reativa o plano original e conserva cópias Sky potencialmente alteradas externamente, com Unverified/código 2. Comparar GUID ativo e índices AC/DC do original; não exigir limpeza automática das cópias nem ocultar este resultado incompleto no manifesto do ensaio.
 
 ## Métricas e fórmulas
 

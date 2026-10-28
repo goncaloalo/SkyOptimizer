@@ -1,0 +1,1281 @@
+{
+    "Date":  "2026-10-28T14:16:28.5364109+00:00",
+    "SourceCommit":  "bb49720744216a7c6d938e8dd4f0ce4a19dbb29d",
+    "ProductSourceSha256":  "FF32A5EA7C862C39A4F985378195238A2F8191D50B549A38896490DBFCBC6093",
+    "PowerShell":  "5.1.26100.9711",
+    "Pester":  "3.4.0",
+    "Total":  211,
+    "Passed":  211,
+    "Failed":  0,
+    "Skipped":  0,
+    "Pending":  0,
+    "WindowsChangesApplied":  false,
+    "Tests":  [
+                  {
+                      "Name":  "shares one immutable baseline in either action order and undoes only after the last release",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "treats casing and property order as the same registry resource, not another baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects opposing desired states from another owner before changing the baseline or value",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not acquire ownership for an initially compliant resource",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps legacy ownership unknown until full Undo, without inventing an action baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not persist a second owner if its journal write fails",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "retries failed ownership release and interrupted final Undo without rewriting the original state twice",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves an external conflict while restoring independent resources for the selected action",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not persist a failed owner release through a later independent journal save",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "retries a partial mutation and retains the first baseline across action releases",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a duplicate physical resource in reordered journal data and an unsupported schema",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "includes panel deployment failure in the final exit code while retaining action evidence",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "returns incomplete when the selected action is incompatible",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps successful execution distinct from performance validation",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "contains every originally blocked ID exactly once",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "provides individual mechanism, risks, dependencies, rollback and baseline evidence without claiming real validation",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps historical IDs unique and maps names/functions to the existing menu declarations",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "matches eligible and retired IDs with dispatcher gates and never claims measured gains",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "quarantines every selected unmigrated or retired action before reaching its body",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "supports six execution orders, repeated Apply and exact scoped/global Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves internal CDM flags, unrelated CloudContent values and misplaced legacy machine values",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not invent ownership for policies already configured by the user",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "allows only OnlineTips on Pro and refuses Home, Server and unknown editions",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "respects minimum builds and does not write a machine consumer policy in the old user-scope window",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers independently after a middle action fails to persist intent",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not turn unknown VBS into anti-cheat certification or maximum performance",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not infer memory channels, XMP state or percentage gains from module count and WMI speeds",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "distinguishes missing inventory from a clean system or a detected VM",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "permits only an explicit online status",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not classify an API failure as desktop or AC",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "skips the USB plan experiment when AC is unknown or offline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps unknown separate from DC and refuses malformed API results",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "blocks core parking and direct AC policy writes before backup access on unknown power",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "compiles the power status declaration without invoking its native API",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "blocks HAGS and MSI even when invoked directly",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "retires the broad WDF hub operation in the dispatcher and direct function",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "adds only the power plan dependency for the explicit USB experiment",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores absence after Apply Apply Undo Undo without claiming an untouched value",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves original type and literal expansion strings across different desired values",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not own already compliant values and never undoes their later changes",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "makes no write when persisting intent fails",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers a write interrupted before completion",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers a write interrupted after the state changed",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "detects no-effect success and keeps a recoverable journal",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves external changes during Apply and Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "retries interrupted Undo and leaves unrelated values alone",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "starts a fresh baseline only after completed Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not create a new baseline over legacy exports, including empty files",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects corrupted and wrong-machine journals before any write",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a journal from a different user even for the same machine",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "serializes concurrent access",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects duplicate active resources before Undo writes any value",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects missing identity before a new baseline or a system write",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores a deleted value with the exact binary bytes",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "integrates the migrated multi-value Game DVR action with repeated Apply and Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "writes browser policies once per machine without redundant user policies",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves unrelated graphics flags and restores the exact original string",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "journals the background default without overwriting per-app or user exceptions",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "applies the four software options twice and restores absence without managing unrelated preferences",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores unexpected original types for every migrated software policy",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers an after-write failure in each software option without inventing defaults",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "never writes any software option if the initial journal persistence fails",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores update policies after repeated Apply without touching other driver and peer settings",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not overwrite a composed value changed after its preparation",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers when the final Apply journal update fails after a successful write",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "retries after Undo changed the value but failed to persist completion",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "round trips signed DWORD and full QWORD without JSON precision loss",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves empty and multi-element strings, binaries and multi-strings",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "canonicalizes provider paths and keeps the default value name empty",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "runs nothing when cancelled",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not run SFC after DISM fails or omits its exit code",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports restart required and defers SFC after DISM returns 3010",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports a launch exception without proceeding",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports nonzero or missing SFC exit codes as unconfirmed failures",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "requires diagnostic review even after both commands return zero",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "identifies only runtime status 2 as running",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "identifies explicit status 0 as disabled",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps missing, null and future status values unknown",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not translate provider failure into disabled security",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "parses the GUID independently of localized plan names and automatic matches",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects ambiguous active-plan output",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "persists the baseline before mutation and reuses the owned GUID on Apply Apply Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "never writes DC indices or global setting attributes",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "stops an AC group if power becomes unknown or offline after its first write and keeps Undo usable",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "blocks configuration without an active owned plan",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "detects a successful native command that did not change the setting",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "detects a successful activation command that did not activate the plan",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers after duplication succeeded but activation failed",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "can undo an interrupted Prepared transaction without activating the owned plan",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "recovers from a crash between activation and the final journal write",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores the original after an intermediate setting write fails",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "classifies an unsupported setting without changing any index",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not enter device writes when selective suspend is unsupported",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "changes only USB AC on the owned copy and restores the original after repetition",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not mutate Windows if persisting the baseline fails",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects malformed baseline JSON without making a native call",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a baseline from another machine",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves an external choice of active plan",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not delete external edits inside the Sky copy during Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses to choose a default when the original plan disappeared",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves the copy rather than attempting unverified plan deletion",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "allows a new cycle after completed Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does nothing on Undo without any baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "blocks legacy baseline overwrite and never changes a plan from incomplete evidence",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects concurrent access to the power transaction",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reads all capabilities before changing any index",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "embeds the same restoration functions and parses without errors",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "parses the complete generated Undo after shared functions are inserted",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "returns before confirmation or system operations when no backups exist",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not mistake execution reports and lock files for an original baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "accepts equivalent paths without rewriting the existing baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses distinct backup directories without replacing either baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses missing directories and empty paths",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps Balanced small and does not disable captures, services or offloads",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "adds only documented background mechanisms to Performance",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "requires explicit experimental IDs and resolves the owned-power dependency",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "never executes unmigrated experiments or actions outside the selection",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "executes a selected migrated action without interpreting legacy booleans as success",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects duplicate managed graphics flags rather than losing unknown settings",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves caches when diagnostic deletion is not confirmed",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports locked files as failures instead of counting false success",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "deletes only enumerated literal files and confirms their absence",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "makes every retired dispatcher decision traceable and blocks direct legacy entry points",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves the MMCSS and prelaunch hypotheses without writing unused or unrelated settings",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a nonzero exit code even with success-like output",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a missing exit code",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "returns output only after a zero exit code",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not count legacy true as verified success",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not count legacy false as success or invent an incompatibility reason",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not count missing output as success",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports exceptions as failures",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports a nonterminating error as failure",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a claimed success when the action logged an error",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves structured verification and reboot requirements",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores caller logging context after failure",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves Deferred and NotSelected instead of misreporting conformity",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports partial application and keeps the restart requirement when a child remains unverified or skipped",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "retains failed child details and restart requirements after partial mutation",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps completed child evidence when a later child throws",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports incomplete mixed compatibility rather than full application",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "atomically creates and replaces UTF-8 content",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "stops the action after an export failure and removes a partial export",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a success exit code without an exported file",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves the first export across repeated applications",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses to overwrite an existing empty backup",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not enumerate, disable or modify system/vendor resources through legacy entry points",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "applies twice and restores only the original Enabled flag with a version 2 journal",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not own a task originally disabled",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses running, queued or unknown tasks and an unapproved fingerprint",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "blocks task replacement during Apply and Undo without creating a second baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not write if initial persistence fails and recovers after an after-write exception",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects no-effect success and retries interrupted Undo after the original flag was restored",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects system/third-party names and invalid states before backend access",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses task entries in schema 1 and includes task restoration in the standalone panel source",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores independent registry state even if a changed task refuses Undo, then retries the task",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not let policy-scoped Undo release an unrelated task baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "ignores only Enabled while hashing definition and security",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects DTDs, absent/duplicate Enabled and XML/runtime inconsistency",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "gets the literal task and writes only Enabled without starting, stopping or registering it",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a changed definition or task path and never stops a running task",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores delayed automatic startup and running state after Apply Apply Undo",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves manual and originally stopped services without starting them",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not own an already disabled and stopped service",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores runtime after stopping succeeded but disabling failed",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses active dependents and paused or transitional services",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "restores only the changed NIC property and its exact string value",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "preserves user changes to a NIC property instead of resetting defaults",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "filters panel Undo to its service without changing NIC settings",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "compiles SCM declarations without invoking any native function",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "parses the generated service panel with the same journal and SCM helpers",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "resolves the adapter by GUID even after a friendly-name change",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a changed driver or substituted device",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a missing property and skips wireless for Ethernet-only changes",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses ambiguous multiple physical adapters before reading driver settings",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports a partial multi-property NIC action when one requested property is unsupported",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "checks each documented minimum build before any write",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "allows known Home SKUs only for the native long-path feature",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects Server, unknown editions and unavailable OS detection before writes",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "requests validation after reboot for cached long-path state and preserves clipboard history",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps all four choices explicit and respects long-path support in the dispatcher",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "accepts administrator-owned storage and optional read-only user access",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "builds a protected administrator and SYSTEM descriptor without applying it to the host",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "allows parent child-creation but refuses parent permissions that permit replacing protected storage",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects untrusted ownership even with a restrictive DACL",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects write, delete-child and permission takeover grants independently",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a null DACL and does not treat deny rules as a reason to accept broad allow rules",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "creates only the dedicated root, backup and log directories and is repeatable",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses unsafe existing evidence before creating or replacing anything",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "uses atomic ASCII panel files without a BOM or truncating the existing content on failure",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "generates fixed executable launchers with child exit status and no CMD elevation command",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects an ancestor junction before writing a panel file",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "embeds and invokes storage validation in the service panel",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "excludes a second app or panel session and permits recovery after the handle closes",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "accepts only enumerated client editions on supported builds",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "does not write either policy on Home, unknown editions or Server",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects old or unknown builds, another OS version and missing data",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "reports capability query failures and never treats them as applied",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "keeps both policies opt-in and out of Balanced and Performance",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses entry without explicit system-change opt-in before querying the machine",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "accepts a matching explicit guest declaration and constructs only its fixed fixture paths",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects a physical Hyper-V host or unknown guest instead of trusting a hypervisor flag",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects mismatched identity, missing elevation and modified source",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects absent snapshot acknowledgement and RunId traversal",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "loads only function declarations and omits application entry points",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "rejects files where a lab directory is required",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "checks repeated Apply, distinct boot, exact Undo and a second boot without owning the untouched value",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "exercises after-write faults in Apply and Undo and leaves a retryable baseline",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "confirms an expected external conflict and preserves that external value for review",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "blocks mutation when real file sharing prevents atomic journal replacement",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "refuses invalid stage order before making a change",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  },
+                  {
+                      "Name":  "persists scenario reports and restores caller globals across separate invocations with mocked registry access",
+                      "Passed":  true,
+                      "Result":  "Passed",
+                      "FailureMessage":  ""
+                  }
+              ]
+}

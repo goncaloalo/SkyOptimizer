@@ -1,10 +1,10 @@
 {
-  "Date": "2026-10-27",
+  "Date": "2026-10-28",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
   "Command": "Invoke-Pester -Script .\\tests -PassThru -Quiet",
-  "Total": 187,
-  "Passed": 187,
+  "Total": 211,
+  "Passed": 211,
   "Failed": 0,
   "Skipped": 0,
   "Pending": 0,
@@ -23,7 +23,7 @@
     39,
     54
   ],
-  "ProductSourceSha256": "4518D5697E0317438B1540D3AC517B0CF9CA591E65889C0C7D861C966D3622EB",
+  "ProductSourceSha256": "FF32A5EA7C862C39A4F985378195238A2F8191D50B549A38896490DBFCBC6093",
   "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
   "BlockedActions": 56,
   "OriginalBlockedActionsAudited3B": 67,
@@ -35,6 +35,15 @@
     2
   ],
   "ProductionScheduledTasksEligible": false,
-  "Phase": "3C offline",
-  "ValidationScope": "Pester: AST, mocks, managed XML/crypto and temporary files only. Python: synthetic offline CSV metrics. No real COM tasks, registry mutations, VM integration or physical benchmarks."
+  "Phase": "4 offline",
+  "ValidationScope": "Pester: AST, mocked Windows effects, in-memory security descriptors, managed XML/crypto and temporary files. Python: synthetic offline CSV metrics. No real ACL installation, UAC, COM tasks, registry mutations, VM integration or physical benchmarks.",
+  "SourceCommit": "bb49720744216a7c6d938e8dd4f0ce4a19dbb29d",
+  "DetailedPesterEvidence": "FASE4-TESTES.json",
+  "PostDocumentationCatalogueCheck": {
+    "Command": "Invoke-Pester -Script .\\tests\\Catalogue.Tests.ps1 -PassThru -Quiet",
+    "Total": 3,
+    "Passed": 3,
+    "Failed": 0,
+    "Note": "Focused repeat after audit metadata update; these tests are already included in the full 211, not additional tests."
+  }
 }

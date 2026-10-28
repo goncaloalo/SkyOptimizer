@@ -1,5 +1,7 @@
 # Fase 3C — políticas, tarefas e interação entre ações
 
+> Registo histórico da Fase 3C. Contagens e conclusões referem-se à entrega dessa fase. Estado atual e correções posteriores: [Fase 4](FASE4.md).
+
 Base preservada: `8ae45bd`, branch `dev/phase2-execution-power-safety`, inicialmente limpa. Apenas SkyOptimizer; sem push, sem VM/hardware e sem aplicar otimizações ao Windows de desenvolvimento.
 
 ## 1. Identidade, ownership e Undo parcial

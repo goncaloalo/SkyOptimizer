@@ -6,7 +6,7 @@
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "Corrigir captura de GUID e duplicação; criar plano próprio, preservar original; comparar boost e frametime em carga sustentada.",
-    "EstadoImplementacao": "Migrada: plano isolado, baseline persistente, resultado verificado e Undo de energia",
+    "EstadoImplementacao": "Migrada: plano isolado, baseline persistente, resultado verificado e Undo de energia; Fase 4: Undo reativa original e conserva copias existentes com Unverified; limpeza pendente",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -15,7 +15,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Undo com limpeza conservadora pendente",
+      "LacunasERiscos": "Undo reativa original mas conserva cópia potencialmente alterada: Unverified/exit 2. Histórico RetainedOwnedGuids preservado. Não há prova de benefício de uma cópia idêntica.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 2,
@@ -31,7 +37,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 3,
@@ -40,7 +52,7 @@
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "Separar AC/DC, CPU híbrida e topologia; comparar consumo, temperatura, FPS e 1% low.",
-    "EstadoImplementacao": "Migrada: configuração AC verificada, DC preservado; seleção por hardware e isolamento experimental pendentes",
+    "EstadoImplementacao": "Migrada: configuração AC verificada, DC preservado; seleção por hardware e isolamento experimental pendentes; Fase 4: Undo reativa original e conserva copias existentes com Unverified; limpeza pendente",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -49,7 +61,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Não adapta CPU híbrido/X3D; pode aumentar consumo/temperatura. Sem deteção de todas as alterações externas nos índices da cópia; original/DC preservados.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 4,
@@ -65,7 +83,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 5,
@@ -81,7 +105,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 6,
@@ -99,7 +129,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "Pode piorar carregamentos/cache. Restore de arranque/runtime não é transação; confirmar dependências e delayed start via SCM real.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 7,
@@ -115,7 +151,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 8,
@@ -124,7 +166,7 @@
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "AC confirmado, plano Sky ativo, definicao legivel por API; sem USB Enum. Testar retoma apos idle, docks, consumo e temperatura. Nao prova polling nem input lag.",
-    "EstadoImplementacao": "Migrada: apenas USB AC no plano Sky, DC preservado; sem escritas por dispositivo",
+    "EstadoImplementacao": "Migrada: apenas USB AC no plano Sky, DC preservado; sem escritas por dispositivo; Fase 4: Undo reativa original e conserva copias existentes com Unverified; limpeza pendente",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -133,7 +175,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Experiência de diagnóstico, não recomendação geral. Validar idle/resume, energia e periféricos; Undo conserva cópia.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 9,
@@ -152,7 +200,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "Matriz de edição/consumo de todas as flags não está comprovada. Desativa captura; não prova fim dos processos Game Bar.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 10,
@@ -168,7 +222,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 11,
@@ -184,7 +244,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 12,
@@ -200,7 +266,12 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas",
+    "AuditoriaFase4": {
+      "EstadoRuntime": "Retirada; estado preservado",
+      "Evidencia": "FASE4.md",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 13,
@@ -218,7 +289,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "Pode elevar 0 preexistente para 1; finalidade é configuração de privacidade, não redução universal. Compatibilidade Update/Store não está certificada.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 14,
@@ -235,7 +312,12 @@
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
     "ValidacaoAutomatizada": "RetiredActions.Tests e Catalogue.Tests: bloqueio e função direta sem alterações; CloudContent.Tests: substituição limitada",
-    "ConsolidadaEm": 58
+    "ConsolidadaEm": 58,
+    "AuditoriaFase4": {
+      "EstadoRuntime": "Retirada; estado preservado",
+      "Evidencia": "FASE4.md",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 15,
@@ -251,7 +333,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 16,
@@ -269,7 +357,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Não remove pacote nem comprova terminação WebView; perde Widgets.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 17,
@@ -287,7 +381,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Preferência Explorer sem ganho de FPS; sessão pode fazer cache.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 18,
@@ -303,7 +403,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 19,
@@ -321,7 +427,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Não impede todos os métodos de driver update; exige servicing e precedência GPO/MDM reais.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 20,
@@ -339,7 +451,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Peering fica desativado; HTTP/Connected Cache não são limitados; não garante menor ping.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 21,
@@ -355,7 +473,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 22,
@@ -371,7 +495,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 23,
@@ -387,7 +517,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 24,
@@ -403,7 +539,12 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "EstadoRuntime": "Manutencao separada",
+      "Evidencia": "FASE4.md",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 25,
@@ -421,7 +562,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Pode perder notificações/sincronização; não controla todos os processos Win32.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 26,
@@ -437,7 +584,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada"
+    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 27,
@@ -453,7 +606,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 28,
@@ -469,7 +628,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 29,
@@ -485,7 +650,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 30,
@@ -501,7 +672,12 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas",
+    "AuditoriaFase4": {
+      "EstadoRuntime": "Retirada; estado preservado",
+      "Evidencia": "FASE4.md",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 31,
@@ -517,7 +693,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 32,
@@ -533,7 +715,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 33,
@@ -549,7 +737,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 34,
@@ -565,7 +759,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 35,
@@ -581,7 +781,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 36,
@@ -597,7 +803,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 37,
@@ -613,7 +825,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 38,
@@ -622,7 +840,7 @@
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "NIC/driver suportado, ligação física e teste de jitter/energia; agrupar reinício da interface.",
-    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes",
+    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes; Fase 4: apenas um candidato NIC; propriedades indisponiveis comunicadas; grupo parcial Unverified",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -631,7 +849,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Exige reinício; escrita no registo não prova aplicação pelo driver. Mudança AC/DC durante enumeração não é atómica.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 39,
@@ -647,7 +871,12 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas",
+    "AuditoriaFase4": {
+      "EstadoRuntime": "Retirada; estado preservado",
+      "Evidencia": "FASE4.md",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 40,
@@ -663,7 +892,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 41,
@@ -682,7 +917,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Pode retardar abertura; browsers existentes podem não reler política. Instalações não padrão ficam de fora.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 42,
@@ -700,7 +941,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Armazenamento interno não é contrato universal; comparação exata protege flags externas mas Undo recusa restaurar se elas mudarem.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 43,
@@ -716,7 +963,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 44,
@@ -732,7 +985,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 45,
@@ -748,7 +1007,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 46,
@@ -764,7 +1029,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 47,
@@ -780,7 +1051,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 48,
@@ -798,7 +1075,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "São finalidades distintas; compatibilidade e assistência de apps podem perder-se. Grupo não é transação; testar cada serviço e falha intermédia.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 49,
@@ -814,7 +1097,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 50,
@@ -830,7 +1119,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 51,
@@ -846,7 +1141,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 52,
@@ -862,7 +1163,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 53,
@@ -878,7 +1185,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 54,
@@ -894,7 +1207,12 @@
     "PerfisAtuais": [],
     "Retirada": true,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas"
+    "ValidacaoAutomatizada": "Dispatcher e funcao direta sem mutacoes; configuracoes antigas nao sao alteradas",
+    "AuditoriaFase4": {
+      "EstadoRuntime": "Retirada; estado preservado",
+      "Evidencia": "FASE4.md",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 55,
@@ -910,7 +1228,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 56,
@@ -926,7 +1250,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada"
+    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 57,
@@ -942,7 +1272,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 58,
@@ -960,7 +1296,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado"
+    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Não cobre todas as sugestões nem desinstala apps; Pro/Home recusadas. GPO/MDM/consumo pendentes.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 59,
@@ -978,7 +1320,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Apps precisam de opt-in longPathAware; reinício após Apply e Undo; não remove todos os limites.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 60,
@@ -987,7 +1335,7 @@
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "Apenas propriedades suportadas; medir latência local/CPU/energia e restaurar variantes exatas.",
-    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes",
+    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes; Fase 4: apenas um candidato NIC; propriedades indisponiveis comunicadas; grupo parcial Unverified",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -996,7 +1344,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Não inferir semântica de driver só do nome; requer documentação do driver e medidas de CPU/latência/throughput.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 61,
@@ -1012,7 +1366,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 62,
@@ -1028,7 +1388,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 63,
@@ -1044,7 +1410,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 64,
@@ -1060,7 +1432,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 65,
@@ -1076,7 +1454,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 66,
@@ -1092,7 +1476,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 67,
@@ -1108,7 +1498,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 68,
@@ -1124,7 +1520,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada"
+    "ValidacaoAutomatizada": "ScheduledTask.Tests: funções diretas Deferred sem enumeração/escrita; adapter e diário testados só com fixtures simuladas, nenhuma tarefa de produção validada",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 69,
@@ -1140,7 +1542,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 70,
@@ -1158,7 +1566,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado"
+    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Preferência das Definições; DisableSoftLanding e CDM preservados; benefício de jogo não estabelecido.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 71,
@@ -1176,7 +1590,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "Alterar template não representa estado das instâncias por utilizador; sincronização pode ser afetada. Requer login/reboot e invariantes por conta.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 72,
@@ -1192,7 +1612,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 73,
@@ -1208,7 +1634,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 74,
@@ -1217,7 +1649,7 @@
     "FinalidadeProposta": "Otimização condicional",
     "DecisaoAuditoria": "Condicional",
     "RequisitosRiscosValidacao": "CPU/DPC e tráfego reais, incluindo carga; não chamar hitreg instantâneo; recuperação por NIC.",
-    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes",
+    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes; Fase 4: apenas um candidato NIC; propriedades indisponiveis comunicadas; grupo parcial Unverified",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -1226,7 +1658,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Mais interrupções/CPU pode piorar frametime; sem prova de latência até hardware.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 75,
@@ -1235,7 +1673,7 @@
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Laboratório",
     "RequisitosRiscosValidacao": "Não usar wildcard global; identificar protocolo/offload; avaliar CPU, jitter e throughput.",
-    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes",
+    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes; Fase 4: apenas um candidato NIC; propriedades indisponiveis comunicadas; grupo parcial Unverified",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -1244,7 +1682,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Grupo pode ser parcial e exige reinício; perda de throughput/mais CPU. API efetiva de offload não validada.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 76,
@@ -1253,7 +1697,7 @@
     "FinalidadeProposta": "Experimental",
     "DecisaoAuditoria": "Laboratório",
     "RequisitosRiscosValidacao": "Não equivale a anti-bufferbloat; testar perdas/congestão em conjunto com rede física.",
-    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes",
+    "EstadoImplementacao": "Baseline por recurso e Undo migrados; configuracao verificada, eficacia e integracao pendentes; Fase 4: apenas um candidato NIC; propriedades indisponiveis comunicadas; grupo parcial Unverified",
     "PerfilImplementado": true,
     "GanhoMedido": false,
     "ElegivelApply": true,
@@ -1262,7 +1706,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Experimental; exige hardware",
+      "LacunasERiscos": "Pode aumentar perdas sob congestionamento; testar switch/router, duplex e carga.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 77,
@@ -1278,7 +1728,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 78,
@@ -1294,7 +1750,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 79,
@@ -1314,7 +1776,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "Flags não certificam Game Mode efetivo; falta matriz funcional por edição/build/jogo. Perfil Balanced é apenas seleção de desenvolvimento.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 80,
@@ -1330,7 +1798,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 81,
@@ -1346,7 +1820,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 82,
@@ -1362,7 +1842,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 83,
@@ -1378,7 +1864,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "RetirarReceita",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 84,
@@ -1396,7 +1888,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado"
+    "ValidacaoAutomatizada": "Regressao de compatibilidade e interacao com mocks; sem consumo de politica validado",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Conta elevada é o alvo; sobreposição semântica com 58 não equivale a mesmo recurso. Pro/Home recusadas.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 85,
@@ -1412,7 +1910,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Software",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 86,
@@ -1430,7 +1934,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao"
+    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "AuditoriaFase4": {
+      "Maturidade": "Contrato funcional ainda incompleto",
+      "LacunasERiscos": "Grupo combina políticas, consentimento e serviço; edições/efeito do ConsentStore e software de sensores exigem integração.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 87,
@@ -1446,7 +1956,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 88,
@@ -1464,7 +1980,13 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Perde limpeza automática; risco de disco cheio. Sem prova de scans durante jogos.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 89,
@@ -1480,7 +2002,13 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado"
+    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "AuditoriaFase4": {
+      "Recomendacao": "Fisico",
+      "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
+      "Evidencia": "FASE4-BLOQUEADAS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   },
   {
     "Id": 90,
@@ -1498,6 +2026,12 @@
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks"
+    "ValidacaoAutomatizada": "Apply repetido, Undo exato, tipos originais, falha apos escrita e barreira de backup testados com mocks",
+    "AuditoriaFase4": {
+      "Maturidade": "Candidata a ensaio de integracao em VM",
+      "LacunasERiscos": "Preferência de sincronização/privacidade, não otimização de FPS; confirmar sessão/MDM.",
+      "Evidencia": "FASE4-ELEGIVEIS.json",
+      "ValidacaoReal": "Nao executada"
+    }
   }
 ]

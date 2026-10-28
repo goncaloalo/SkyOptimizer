@@ -1,6 +1,6 @@
 # SkyOptimizer
 
-**Branch de desenvolvimento — Fase 3C offline. Não distribuir como versão validada para clientes.**
+**Branch de desenvolvimento — Fase 4 — auditoria global offline. Não distribuir como versão validada para clientes.**
 
 O SkyOptimizer mantém o programa PowerShell existente, destinado a instalações Windows já em uso. O objetivo é melhorar desempenho real em jogos; ainda não foram medidos ganhos de FPS, 1% lows ou latência.
 
@@ -9,6 +9,7 @@ O SkyOptimizer mantém o programa PowerShell existente, destinado a instalaçõe
 - O catálogo conserva **90 IDs históricos**: 28 elegíveis para Apply, 56 bloqueados, manutenção 24 separada e cinco retirados (12/14/30/39/54). Migradas: **1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 58, 59, 60, 70, 71, 74, 75, 76, 79, 84, 86, 88 e 90**.
 - As restantes ações ficam bloqueadas no dispatcher enquanto faltam baseline, reversão ou compatibilidade. As escritas indiscriminadas USB/HAGS/MSI foram retiradas; o catálogo regista as decisões.
 - A ação 24 é manutenção de diagnóstico separada, com confirmação explícita. Não existe limpeza automática de shaders nos perfis.
+- [Auditoria global da Fase 4](docs/FASE4.md), [checklist de validação real](docs/VALIDACAO-FASE4.md), [maturidade das 28 elegíveis](docs/FASE4-ELEGIVEIS.json) e [classificação das 56 bloqueadas](docs/FASE4-BLOQUEADAS.json).
 - [Consolidação de políticas e integração 3C](docs/FASE3C.md), [auditoria histórica 3B](docs/FASE3B.md), [estado das ações](docs/ACOES-ESTADO.json), [Fase 3A](docs/FASE3A.md), [perfis](docs/PERFIS.md), [benchmarks](docs/BENCHMARKS.md) e [oportunidades](docs/OPORTUNIDADES.md).
 - 14 foi consolidada em 58. 58/70/84 usam apenas políticas documentadas, com escopo, edição e build verificados. Não escrevem flags internas CDM. Tarefas de Windows/NVIDIA continuam bloqueadas; o mecanismo novo aceita apenas fixtures de laboratório.
 
@@ -24,9 +25,9 @@ Não existem receitas automáticas por fabricante, CPU híbrido/X3D ou anti-chea
 
 ## Backup e Undo
 
-`mutation_state.json`, na pasta central `%SystemDrive%\ProgramData\SkyOptimizer\Backups`, guarda existência, tipo e conteúdo original de cada valor gerido. A intenção é persistida antes da alteração. Apply repetido conserva a baseline; Undo repetido não modifica recursos já restaurados. Valores inicialmente conformes não passam a pertencer ao programa. Conflitos externos são preservados e comunicados.
+`mutation_state.json`, na pasta central `SkyOptimizer\Backups` sob a known folder `CommonApplicationData` (normalmente `%ProgramData%`), guarda existência, tipo e conteúdo original de cada valor gerido. A intenção é persistida antes da alteração. Apply repetido conserva a baseline; Undo repetido não modifica recursos já restaurados. Valores inicialmente conformes não passam a pertencer ao programa. Conflitos externos são preservados e comunicados.
 
-Energia usa `power_state.json` e uma cópia isolada do plano original. Serviços guardam arranque e execução separadamente. NIC exige identidade e versão do driver; a configuração persistida requer reinício e validação no hardware. Programa e painel partilham a lógica de reversão.
+Energia usa `power_state.json` e uma cópia isolada do plano original. Serviços guardam arranque e execução separadamente. NIC exige identidade e versão do driver; a configuração persistida requer reinício e validação no hardware. Programa e painel partilham a lógica de reversão. Undo de energia reativa o original, mas conserva cópias potencialmente alteradas externamente e comunica `Unverified`/código 2; a limpeza dessas cópias está pendente. NIC exige um único candidato após os filtros e comunica propriedades indisponíveis, incluindo aplicação parcial.
 
 A identidade normalizada evita baselines duplicadas por ordem JSON ou maiúsculas no mesmo tipo de recurso. As novas políticas 58/70/84 usam ownership explícito no diário de formato 2; ações com o mesmo objetivo podem partilhar baseline e libertar referências por Undo parcial interno. Objetivos opostos são recusados. Os leitores atuais aceitam formatos 1/2; versões antigas recusam formato 2. Regenerar o painel e manter programa/painel na mesma versão. Não existe equivalência automática entre todos os tipos de recurso ou APIs.
 
@@ -34,9 +35,13 @@ Backups legados `.reg`/`previous_*` ficam intactos, sem inferir dados ausentes. 
 
 O programa tenta criar um ponto de restauro, que pode falhar e não substitui as baselines. O relatório distingue `Applied`, `AlreadyCompliant`, `Incompatible`, `Failed`, `Unverified`, `NotSelected` e `Deferred`. Configuração persistida não prova ganho de desempenho nem consumo pelo Windows/driver.
 
+O armazenamento valida proprietário, DACL e ausência de reparse points antes de usar dados elevados. Recusa instalações antigas inseguras sem alterar ACL ou adotar backups automaticamente. Não apagar backups para ultrapassar a recusa. Novos diretórios usam DACL protegida; integração NTFS/UAC real continua pendente. Logs ficam em `SkyOptimizer\Logs` sob a mesma pasta central.
+
 ## Interface e painel
 
 O menu existente mantém Apply, painel, inspeção, limpeza, Undo, reparação e saída. A opção 8 seleciona perfil e experiências.
+
+Programa e painel usam um lock comum de sessão. Fechar o programa principal antes de abrir o painel autónomo. Regenerar o painel na mesma versão; painéis já instalados não recebem correções retroativas. Launchers aguardam a elevação e propagam o código de saída. O reinício automático global do Explorer está suspenso.
 
 O painel mantém os atalhos:
 
@@ -74,7 +79,9 @@ python -B -m unittest discover -s benchmarks/tests -v
 
 Os testes PowerShell carregam declarações por AST e usam mocks/ficheiros temporários. Os testes Python usam intervalos sintéticos. O [analisador offline](benchmarks/analyze.py) lê CSV recolhido em laboratório; não executa tweaks nem captura jogos. Integração em Windows descartável e benchmarks físicos continuam necessários.
 
-Última suite offline: **187 testes Pester e 11 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
+Última suite offline: **211 testes Pester e 11 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
+
+A [prova detalhada Pester](docs/FASE4-TESTES.json) identifica o código testado. Nenhuma ação foi desbloqueada nesta auditoria.
 
 O [protocolo de VM](docs/INTEGRACAO-VM.md) inclui o harness de registo com reinícios manuais, falhas intermédias e conflitos externos. O harness está preparado e testado com mocks; ainda não foi executado num guest real. Só o utilizar num Windows descartável com snapshot confirmado e autorização para alterações. A [preparação de tarefas 3C](docs/TAREFAS-LAB-3C.md) acrescenta fixtures isoladas, fingerprint e Enabled, sem allowlist de tarefas reais.
 

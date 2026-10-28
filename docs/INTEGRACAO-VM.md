@@ -2,6 +2,8 @@
 
 **Preparado, não executado nesta fase.** Estes comandos são instruções para um operador autorizado numa VM descartável. Não os executar no Windows de desenvolvimento. Não foram criados snapshots nem arrancadas VMs durante o desenvolvimento.
 
+A [checklist da Fase 4](VALIDACAO-FASE4.md) acrescenta gates de ACL/UAC, serialização de sessões, resultados parciais e conservação de cópias de energia. Usar ambos os documentos; todos os ensaios reais continuam pendentes.
+
 ## 1. Ambiente e evidência
 
 1. Criar uma VM sem dados de clientes, sem conta de produção e sem discos/pastas partilhados de escrita com o host. Usar consola do hipervisor; não depender de AnyDesk/RDP para recuperar rede ou login.
@@ -78,7 +80,7 @@ Para crash de processo real, usar um snapshot separado e debugger/breakpoint no 
 | Baseline inexistente | Iniciar com Backups vazio; Undo pelo programa e painel | Zero alteração de configuração; nenhum default aplicado. |
 | Balanced repetido | Exportar valores Game Mode com tipo/existência; Apply Balanced duas vezes; reiniciar; Undo e novo reinício | Baseline original estável; valores conforme; já conformes sem autoria; recuperação exata. |
 | Performance | Acrescentar capturas e browsers instalados/ausentes; reiniciar browsers e consultar política efetiva | Valores exatos; diferenças de edição respeitadas; capturas e background regressam após Undo. Registo sozinho não prova política consumida. |
-| Energia/USB | Guardar plano ativo, lista e índices AC/DC; Extreme + 8 em snapshot; repetir; reiniciar; Undo | Uma cópia, DC/original intactos, AC verificado; original ativo no fim e cópia retirada. Se definição ausente, ação incompatível. |
+| Energia/USB | Guardar plano ativo, lista e índices AC/DC; Extreme + 8 em snapshot; repetir; reiniciar; Undo | Uma cópia, DC/original intactos, AC verificado; original ativo no fim e cópia conservada com Unverified/código 2 enquanto existir, incluindo se tiver alterações externas. Não há limpeza automática. Se definição ausente, ação incompatível. |
 | Alimentação desconhecida/DC | Guest/plataforma que reporte 255/0; repetir com 8 e 38 | Sem escrita AC-only nessas ações. A dependência 1 pode criar a cópia antes da recusa; não é ganho de desempenho. Não falsificar estado do host para passar. |
 | Mudança externa de plano | Após Apply escolher outro plano no guest; Undo | Falha/conflito preserva escolha externa. Repor snapshot para ensaiar plano original removido. |
 | Serviços | Registar startup, delayed start, runtime, triggers, dependências, conta e recovery de serviço de teste; testar automatic delayed/running, manual/stopped e already disabled | Só startup/runtime geridos mudam; Undo reconstitui os originais. Dependentes ativos e paused/pending recusados; nada arranca em cascata. Usar serviço descartável, não substituir binários de serviços do Windows. |

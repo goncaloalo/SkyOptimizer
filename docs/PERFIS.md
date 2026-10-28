@@ -19,7 +19,11 @@ Exemplos para laboratório — **não foram executados no Windows de desenvolvim
 
 Estes comandos usam o fluxo atual de Apply, incluindo o ponto de restauro e o relatório. Para uma comparação A/B de uma única experiência sem os efeitos do perfil Performance, comparar Performance com Extreme + essa experiência; não comparar com um Windows original e atribuir toda a diferença a um único ID.
 
-Mudar de perfil não desfaz configurações previamente aplicadas. Executar Undo, verificar resultados e reiniciar quando indicado antes de começar outra comparação. `NotSelected` significa fora da seleção; `Deferred` significa selecionada mas bloqueada por migração/compatibilidade pendente. Nenhuma é contabilizada como execução bem-sucedida. Códigos CLI: 0 sem falhas comunicadas, 1 falha, 2 execução/reversão incompleta. Um código 0 não certifica ganhos de desempenho.
+Mudar de perfil não desfaz configurações previamente aplicadas. Executar Undo, verificar resultados e reiniciar quando indicado antes de começar outra comparação. `NotSelected` significa fora da seleção; `Deferred` significa selecionada mas bloqueada por migração/compatibilidade pendente. Nenhuma é contabilizada como execução bem-sucedida. Códigos CLI: 0 sem falhas comunicadas, 1 falha de ação/painel, 2 execução/reversão incompleta, incluindo seleção incompatível. Aplicação de apenas parte das propriedades comunica Unverified. Um código 0 não certifica ganhos de desempenho.
+
+Undo de energia conserva cópias Sky cujo conteúdo externo não pode excluir, reativa o original e comunica Unverified/código 2. Não elimina cópias para fazer coincidir a lista de planos com a baseline. Confirmar plano ativo/índices e arquivar cópias conservadas antes de comparar resultados. Programa e painel autónomo não podem manter sessões concorrentes; fechar o menu principal primeiro.
+
+A [auditoria da Fase 4](FASE4.md) mantém 28 ações elegíveis, com maturidades diferentes e nenhuma validação real.
 
 ## Condições reais
 
@@ -31,7 +35,7 @@ Mudar de perfil não desfaz configurações previamente aplicadas. Executar Undo
 - 19/20 são escolhas explícitas de laboratório. Exigem build ≥ 15063, cliente Windows 10/11 e SKU conhecido Pro/N, Enterprise/N/LTSC ou Education/N. Home, Server e outras variantes ficam fora desta matriz conservadora. 19 exclui drivers das atualizações de qualidade, sem bloquear todos os métodos de instalação. 20 impede peering, sem impedir downloads HTTP ou garantir ping inferior. Não modificam serviços, SearchOrderConfig nem limites de cache.
 - 41 verifica instalação e versão nos caminhos habituais: Edge ≥ 88; Chrome ≥ 19. Instalações noutros caminhos ficam por detetar. Políticas são escritas apenas uma vez em HKLM. Não se afirma que foram aplicadas por browsers ainda em execução nem se estima RAM libertada.
 - 42 exige build ≥ 22621 e mantém as flags gráficas alheias. É experimental: o armazenamento interno `DirectXUserGlobalSettings` não constitui um contrato público de compatibilidade. Validar no Windows e no jogo. Foram retirados os overrides FSE concorrentes dessa ação.
-- NIC: físico, ativo, identidade e driver confirmados; valor `0` suportado pela propriedade existente. Flow Control/EEE/DMA são limitados a Ethernet. Só a configuração persistida foi verificada; reinício e teste do hardware continuam necessários.
+- NIC: exatamente um candidato físico e ativo após os filtros, identidade e driver confirmados; valor `0` suportado pela propriedade existente. Flow Control/EEE/DMA são limitados a Ethernet. Só a configuração persistida foi verificada; reinício e teste do hardware continuam necessários.
 - SysMain já não é desativado automaticamente por uma inferência SSD/HDD ou pelo nome do disco. Só entra por escolha explícita para comparação.
 - Não existem receitas automáticas por marca de CPU/GPU. Topologias híbridas, X3D, portáteis e drivers ainda precisam de ensaios físicos. HAGS/MSI continuam bloqueados, sem inferir capacidade por VRAM ou fabricante. A implementação indiscriminada de hubs USB (39) foi retirada; o ID histórico não executa alterações. Ver [investigação](HARDWARE-3A.md).
 - VBS/HVCI e requisitos de anti-cheat não são alterados por estes perfis.
