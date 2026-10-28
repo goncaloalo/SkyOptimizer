@@ -37,7 +37,7 @@
     Restaura as baselines verificáveis e comunica conflitos ou reversões pendentes.
 .NOTES
     Autor: SkyOS Team
-    Versão: 2.6.0
+    Versão: 2.8.0
     Requisitos: Windows 10 / 11, PowerShell 5.1+, Privilégios de Administrador
 #>
 
@@ -104,7 +104,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # ==============================================================================
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
-$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.6.0 [Administrador]"
+$Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.8.0 [Administrador]"
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -258,9 +258,16 @@ function Write-SkyLog {
 
     try {
         if ($Global:SkyLogFile) {
-            Add-Content -Path $Global:SkyLogFile -Value $fileLogEntry -Encoding UTF8 -ErrorAction SilentlyContinue
+            Add-Content -LiteralPath $Global:SkyLogFile -Value $fileLogEntry -Encoding UTF8 -ErrorAction Stop
         }
-    } catch {}
+    } catch {
+        # Auxiliary logging must not hide a journal result or recurse through this logger.
+        $script:SkyLogWriteFailed = $true
+        if ($script:SkyLogWarningPath -ne $Global:SkyLogFile) {
+            $script:SkyLogWarningPath = $Global:SkyLogFile
+            Write-Warning 'Log auxiliar indisponivel. Conservar a consola; consultar os resultados e diarios autoritativos.' -WarningAction Continue
+        }
+    }
 
     if ($NoConsole) { return }
 
