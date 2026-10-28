@@ -1,0 +1,82 @@
+[
+  {
+    "Id": "R001",
+    "Type": "Registry",
+    "Hive": "CurrentUser",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Microsoft\\GameBar",
+    "Name": "AutoGameModeEnabled"
+  },
+  {
+    "Id": "R002",
+    "Type": "Registry",
+    "Hive": "CurrentUser",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Microsoft\\GameBar",
+    "Name": "AllowAutoGameMode"
+  },
+  {
+    "Id": "R003",
+    "Type": "Registry",
+    "Hive": "CurrentUser",
+    "View": "Registry64",
+    "Path": "System\\GameConfigStore",
+    "Name": "GameDVR_Enabled"
+  },
+  {
+    "Id": "R004",
+    "Type": "Registry",
+    "Hive": "CurrentUser",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+    "Name": "AppCaptureEnabled"
+  },
+  {
+    "Id": "R005",
+    "Type": "Registry",
+    "Hive": "CurrentUser",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+    "Name": "HistoricalCaptureEnabled"
+  },
+  {
+    "Id": "R006",
+    "Type": "Registry",
+    "Hive": "CurrentUser",
+    "View": "Registry64",
+    "Path": "System\\GameConfigStore",
+    "Name": "GameDVR_HistoricalCaptureEnabled"
+  },
+  {
+    "Id": "R007",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR",
+    "Name": "AllowGameDVR"
+  },
+  {
+    "Id": "R008",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+    "Name": "StartupBoostEnabled"
+  },
+  {
+    "Id": "R009",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+    "Name": "BackgroundModeEnabled"
+  },
+  {
+    "Id": "R010",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Google\\Chrome",
+    "Name": "BackgroundModeEnabled"
+  }
+]
