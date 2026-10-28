@@ -158,4 +158,16 @@ Describe 'NIC binding and capability guards' {
         Assert-MockCalled Get-ChildItem -Times 0 -Exactly -Scope It
         Assert-MockCalled Invoke-SkyTrackedChange -Times 0 -Exactly -Scope It
     }
+    It 'reports a partial multi-property NIC action when one requested property is unsupported' {
+        Mock Get-NetAdapter { $script:adapter }
+        Mock Get-ChildItem { [pscustomobject]@{PSChildName='0001';PSPath='HKLM:\SYSTEM\CurrentControlSet\Control\Class\Fake\0001'} }
+        Mock Get-ItemProperty { [pscustomobject]@{NetCfgInstanceId=$script:adapter.InterfaceGuid} }
+        Mock Get-SkyResourceState { ConvertTo-SkyRegistryState -Exists $true -Kind String -Value '1' }
+        Mock Invoke-SkyTrackedChange { New-SkyActionResult Applied 'property persisted' Yes }
+        $result=Invoke-SkyAction { Set-SkyNicProperties -Keywords @('*EEE','*Unsupported') }
+        $result.Status | Should Be Unverified
+        $result.RestartRequired | Should Be Yes
+        $result.Reason.Contains('*Unsupported') | Should Be $true
+        Assert-MockCalled Invoke-SkyTrackedChange -Times 1 -Exactly -Scope It
+    }
 }

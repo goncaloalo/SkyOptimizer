@@ -1130,10 +1130,16 @@ function Set-SkyNicProperties {
         $properties = @(Get-NetAdapterAdvancedProperty -Name ([WildcardPattern]::Escape($nic.Name)) -AllProperties -ErrorAction Stop)
         foreach ($keyword in $Keywords) {
             $prop = @($properties | Where-Object RegistryKeyword -eq $keyword)
-            if ($prop.Count -ne 1 -or $prop[0].ValidRegistryValues -notcontains '0') { continue }
+            if ($prop.Count -ne 1 -or $prop[0].ValidRegistryValues -notcontains '0') {
+                New-SkyActionResult -Status Incompatible -Reason "Propriedade $keyword ausente/ambigua ou sem valor 0 suportado em $($nic.Name); nao alterada." -RestartRequired No
+                continue
+            }
             $registry = ConvertTo-SkyRegistryResource $keys[0].PSPath $keyword
             $before = Get-SkyResourceState $registry
-            if (-not $before.Exists -or $before.Kind -notin @('String', 'DWord')) { continue }
+            if (-not $before.Exists -or $before.Kind -notin @('String', 'DWord')) {
+                New-SkyActionResult -Status Incompatible -Reason "Estado/tipo de $keyword indisponivel em $($nic.Name); nao alterada." -RestartRequired No
+                continue
+            }
             $resource = [pscustomobject]@{ Type = 'NicRegistry'; InterfaceGuid = ([guid]$nic.InterfaceGuid).ToString()
                 PnpDeviceId = $nic.PnPDeviceID; DriverVersion = $nic.DriverVersionString; Keyword = $keyword; Registry = $registry }
             $result = Invoke-SkyTrackedChange -Resource $resource -Desired (ConvertTo-SkyRegistryState -Exists $true -Kind $before.Kind -Value 0)
@@ -1717,7 +1723,7 @@ function Set-TelemetryBasic {
 
     Set-SkyRegistryValue -Path $dataColKey -Name "AllowTelemetry" -Value 1 -Type DWord -Force
 
-    Write-SkyLog -Message "Telemetria configurada para nível Básico/Necessário (Windows Update e Store seguros)." -Level "Success"
+    Write-SkyLog -Message "AllowTelemetry solicitado com valor 1. Pode aumentar um valor 0 anterior; nao certifica Update/Store nem ganhos de desempenho." -Level "Info"
     return $true
 }
 
