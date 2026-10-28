@@ -94,8 +94,11 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     $paramString += " -Profile $Profile"
     if ($ExperimentalActions) { $paramString += " -ExperimentalActions $ExperimentalActions" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
-    Start-Process powershell.exe -ArgumentList $argsList -Verb RunAs
-    exit
+    try {
+        $child = Start-Process -FilePath (Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\powershell.exe') -ArgumentList $argsList -Verb RunAs -Wait -PassThru -ErrorAction Stop
+        if ($null -eq $child.ExitCode) { throw 'Processo elevado sem exit code.' }
+        exit $child.ExitCode
+    } catch { Write-Error $_; exit 1 }
 }
 
 # ==============================================================================
@@ -107,19 +110,12 @@ if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
 # Diretório Central de Backups (Cofre Oculto em C:\ProgramData\SkyOptimizer\Backups)
 # Todos os backups originais vão DIRETAMENTE para o cofre do sistema, mantendo a pasta de trabalho 100% limpa
-$Global:SkyPermDir = Join-Path -Path $env:SystemDrive -ChildPath "ProgramData\SkyOptimizer"
+$Global:SkyPermDir = Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'SkyOptimizer'
 $Global:SkyBackupDir = Join-Path -Path $Global:SkyPermDir -ChildPath "Backups"
-if (-not (Test-Path $Global:SkyBackupDir)) {
-    New-Item -ItemType Directory -Path $Global:SkyBackupDir -Force | Out-Null
-}
-$Global:SkyBackupDir = (Resolve-Path $Global:SkyBackupDir).Path
 $Global:SkyPermBackupDir = $Global:SkyBackupDir
 
 # Diretório de Logs
-$logsFolder = Join-Path -Path $scriptDir -ChildPath "Logs"
-if (-not (Test-Path $logsFolder)) {
-    New-Item -ItemType Directory -Path $logsFolder -Force | Out-Null
-}
+$logsFolder = Join-Path $Global:SkyPermDir 'Logs'
 $timestamp = Get-Date -Format "yyyy-MM-dd_HHmm"
 $Global:SkyLogFile = Join-Path -Path $logsFolder -ChildPath "SkyOptimizer_$timestamp.log"
 
@@ -142,6 +138,99 @@ if (-not $Global:SkyManifest) {
 # ==============================================================================
 # 3. FUNÇÕES PARTILHADAS (LOGGING, REGISTO E HARDWARE)
 # ==============================================================================
+
+function Get-SkyStorageRoot {
+    Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'SkyOptimizer'
+}
+
+function Get-SkyStorageTrustedSids {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]$identity
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Armazenamento requer processo elevado.' }
+    @('S-1-5-18', 'S-1-5-32-544', $identity.User.Value)
+}
+
+function Assert-SkyNoReparsePoint {
+    param([string]$Path)
+    $cursor = [IO.Path]::GetFullPath($Path)
+    while ($cursor) {
+        if (Test-Path -LiteralPath $cursor -ErrorAction Stop) {
+            $item = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Caminho redirecionado recusado: $cursor" }
+        }
+        $cursor = Split-Path -Parent $cursor
+    }
+}
+
+function Assert-SkyStorageAcl {
+    param($Acl, [string[]]$TrustedSids, [switch]$ParentDirectory)
+    $owner = $Acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+    if ($owner -notin $TrustedSids) { throw 'Owner do armazenamento nao e de confianca; preservar dados para revisao manual.' }
+    $rules = @($Acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+    if (-not $rules.Count) { throw 'DACL ausente/vazia; armazenamento recusado.' }
+    $writeMask = [Security.AccessControl.FileSystemRights]::Write -bor
+        [Security.AccessControl.FileSystemRights]::Delete -bor [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+        [Security.AccessControl.FileSystemRights]::ChangePermissions -bor [Security.AccessControl.FileSystemRights]::TakeOwnership
+    if ($ParentDirectory) {
+        # ProgramData may permit creating a new child, but not replacing our protected child.
+        $writeMask = [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+            [Security.AccessControl.FileSystemRights]::Delete -bor [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
+            [Security.AccessControl.FileSystemRights]::TakeOwnership
+    }
+    foreach ($rule in $rules) {
+        if ($ParentDirectory -and ($rule.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly)) { continue }
+        if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin $TrustedSids -and
+            ($rule.FileSystemRights -band $writeMask)) { throw 'Escrita por identidade nao autorizada; nao adotar nem corrigir ACL automaticamente.' }
+    }
+}
+
+function Assert-SkyStorageTree {
+    param([string]$Path, [string[]]$TrustedSids)
+    Assert-SkyNoReparsePoint $Path
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+    Assert-SkyStorageAcl (Get-Acl -LiteralPath $Path -ErrorAction Stop) $TrustedSids
+    if ($item.PSIsContainer) {
+        foreach ($child in Get-ChildItem -LiteralPath $Path -Force -ErrorAction Stop) {
+            Assert-SkyStorageTree -Path $child.FullName -TrustedSids $TrustedSids
+        }
+    }
+}
+
+function New-SkyStorageSecurity {
+    $security = New-Object Security.AccessControl.DirectorySecurity
+    $security.SetAccessRuleProtection($true, $false)
+    $security.SetOwner([Security.Principal.SecurityIdentifier]'S-1-5-32-544')
+    foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
+        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+            [Security.Principal.SecurityIdentifier]$sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+        $security.AddAccessRule($rule)
+    }
+    $security
+}
+
+function New-SkyProtectedDirectory {
+    param([string]$Path)
+    Assert-SkyNoReparsePoint $Path
+    $null = [IO.Directory]::CreateDirectory($Path, (New-SkyStorageSecurity))
+}
+
+function Initialize-SkyStorage {
+    $root = Get-SkyStorageRoot
+    $trusted = @(Get-SkyStorageTrustedSids)
+    Assert-SkyNoReparsePoint $root
+    Assert-SkyStorageAcl (Get-Acl -LiteralPath (Split-Path -Parent $root) -ErrorAction Stop) $trusted -ParentDirectory
+    # Existing content is evidence, not trusted merely because an administrator can read it.
+    if (Test-Path -LiteralPath $root -ErrorAction Stop) { Assert-SkyStorageTree $root $trusted }
+    else { New-SkyProtectedDirectory $root; Assert-SkyStorageTree $root $trusted }
+    foreach ($name in @('Backups', 'Logs')) {
+        $path = Join-Path $root $name
+        if (-not (Test-Path -LiteralPath $path -ErrorAction Stop)) { New-SkyProtectedDirectory $path }
+    }
+    Assert-SkyStorageTree $root $trusted
+    $Global:SkyPermDir = $root
+    $Global:SkyBackupDir = Join-Path $root 'Backups'
+    $Global:SkyPermBackupDir = $Global:SkyBackupDir
+}
 
 function Write-SkyLog {
     [CmdletBinding()]
@@ -234,10 +323,10 @@ function Invoke-SkyNativeCommand {
 
 function Write-SkyAtomicFile {
     [CmdletBinding()]
-    param([string]$Path, [AllowEmptyString()][string]$Content)
+    param([string]$Path, [AllowEmptyString()][string]$Content, [switch]$Ascii)
     $temporary = "$Path.$([guid]::NewGuid().ToString('N')).tmp"
     try {
-        $encoding = New-Object System.Text.UTF8Encoding($true)
+        $encoding = if ($Ascii) { [Text.Encoding]::ASCII } else { New-Object System.Text.UTF8Encoding($true) }
         $bytes = $encoding.GetPreamble() + $encoding.GetBytes($Content)
         $stream = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
         try { $stream.Write($bytes, 0, $bytes.Length); $stream.Flush($true) }
@@ -996,13 +1085,17 @@ function Get-SkyPanelServiceSource {
 param([ValidateSet('Spooler', 'bthserv')][string]$Name)
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Name $Name" -Verb RunAs
-    exit
+    try {
+        $child = Start-Process -FilePath (Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\powershell.exe') -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Name $Name" -Verb RunAs -Wait -PassThru -ErrorAction Stop
+        if ($null -eq $child.ExitCode) { throw 'Processo elevado sem exit code.' }
+        exit $child.ExitCode
+    } catch { Write-Error $_; exit 1 }
 }
 $Global:SkyBackupDir = Join-Path $env:SystemDrive 'ProgramData\SkyOptimizer\Backups'
 '@
     $footer = @'
 try {
+    Initialize-SkyStorage
     $results = @(Switch-SkyPanelService -Name $Name)
     $results | Format-Table Status, Reason -Wrap
     if (@($results | Where-Object Status -eq 'Failed').Count) { exit 1 }
@@ -1044,7 +1137,8 @@ function Set-SkyNicProperties {
 
 function Get-SkyPowerRestoreSource {
     # Embed the same implementation in the existing standalone Undo; no runtime module dependency.
-    $names = @('Invoke-SkyNativeProcess', 'Invoke-SkyNativeCommand', 'Write-SkyAtomicFile',
+    $names = @('Get-SkyStorageRoot', 'Get-SkyStorageTrustedSids', 'Assert-SkyNoReparsePoint', 'Assert-SkyStorageAcl',
+        'Assert-SkyStorageTree', 'New-SkyStorageSecurity', 'New-SkyProtectedDirectory', 'Initialize-SkyStorage', 'Invoke-SkyNativeProcess', 'Invoke-SkyNativeCommand', 'Write-SkyAtomicFile',
         'New-SkyActionResult', 'Get-SkyMachineId', 'Enter-SkyPowerLock', 'Read-SkyPowerState',
         'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope', 'Invoke-SkyVerifiedUndo',
         'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
@@ -2854,6 +2948,23 @@ function Assert-SkyPanelBackupDirectory {
     if (-not [IO.Directory]::Exists($active)) { throw 'A pasta central de backups nao existe.' }
 }
 
+function Write-SkyPanelFile {
+    param([string]$Path, [string]$Content, [switch]$Ascii)
+    Assert-SkyNoReparsePoint $Path
+    Write-SkyAtomicFile -Path $Path -Content $Content -Ascii:$Ascii
+}
+
+function Get-SkyPanelLauncher {
+    param([ValidateSet('SkyRevert.ps1','SkyService.ps1')][string]$FileName,
+        [ValidateSet('Spooler','bthserv')][string]$ServiceName)
+    if (($FileName -eq 'SkyService.ps1') -ne [bool]$ServiceName) { throw 'Argumentos de atalho inconsistentes.' }
+    $hostPath=Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\powershell.exe'
+    $scriptPath=Join-Path (Get-SkyStorageRoot) $FileName
+    if ($scriptPath -match '[%"\r\n]') { throw 'Caminho nao representavel com seguranca no atalho CMD.' }
+    $argument=if ($ServiceName) { " -Name $ServiceName" } else { '' }
+    "@echo off`r`n`"$hostPath`" -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"$argument`r`nset `"SkyExit=%errorlevel%`"`r`npause`r`nexit /b %SkyExit%`r`n"
+}
+
 function Deploy-ClientPanel {
     [CmdletBinding()]
     param(
@@ -2862,7 +2973,8 @@ function Deploy-ClientPanel {
     )
 
     try {
-        $permDir = Join-Path $env:SystemDrive "ProgramData\SkyOptimizer"
+        Initialize-SkyStorage
+        $permDir = Get-SkyStorageRoot
         $permBackups = Join-Path $permDir "Backups"
         Assert-SkyPanelBackupDirectory -ActiveDirectory $Global:SkyBackupDir -PanelDirectory $permBackups
         $desktopPath = [Environment]::GetFolderPath('Desktop')
@@ -2870,6 +2982,7 @@ function Deploy-ClientPanel {
             $desktopPath = Join-Path $env:USERPROFILE "Desktop"
         }
         $panelDir = Join-Path $desktopPath "SkyOptimizer - Painel de Controlo"
+        Assert-SkyNoReparsePoint $panelDir
         if (-not (Test-Path $panelDir)) {
             New-Item -ItemType Directory -Path $panelDir -Force | Out-Null
         }
@@ -2893,8 +3006,11 @@ $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]$currentUser
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[!] Privilegios de Administrador necessarios. A reiniciar com elevacao..." -ForegroundColor Yellow
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-    exit
+    try {
+        $child = Start-Process -FilePath (Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\powershell.exe') -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs -Wait -PassThru -ErrorAction Stop
+        if ($null -eq $child.ExitCode) { throw 'Processo elevado sem exit code.' }
+        exit $child.ExitCode
+    } catch { Write-Error $_; exit 1 }
 }
 
 Clear-Host
@@ -2928,6 +3044,8 @@ if (-not (Test-Path $backupDir)) {
 }
 
 # SKY_POWER_RESTORE_FUNCTIONS
+try { Initialize-SkyStorage; $backupDir = $Global:SkyBackupDir }
+catch { Write-Error $_; exit 1 }
 $results = @(Invoke-SkyVerifiedUndo -BackupDirectory $backupDir)
 foreach ($result in $results) { Write-Host "[$($result.Status)] $($result.Reason)" }
 Write-Host 'Backups e painel preservados. Reinicie quando indicado; ganhos nao foram medidos.'
@@ -2958,34 +3076,34 @@ exit 0
         }
 
         # 1. Atalho Reverter Otimizações (Executa exclusivamente o motor SkyRevert.ps1)
-        $undoCmd = "@echo off`r`ntitle SkyOptimizer - Reverter Otimizacoes`r`n:: SkyOptimizer Gaming Community - https://discord.gg/cE8ZaDRGV5`r`nnet session >nul 2>&1`r`nif %errorLevel% neq 0 (`r`n    powershell -Command `"Start-Process cmd -ArgumentList '/c \`"`\`"%~f0\`"\`"' -Verb RunAs`"`r`n    exit /b`r`n)`r`nchcp 65001 >nul`r`ncd /d `"%TEMP%`"`r`ncls`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyRevert.ps1`"`r`nexit /b"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd"), $undoCmd, [System.Text.Encoding]::ASCII)
+        $undoCmd = Get-SkyPanelLauncher -FileName SkyRevert.ps1
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd") -Content $undoCmd -Ascii
 
         Write-SkyAtomicFile -Path (Join-Path $Global:SkyPermDir 'SkyService.ps1') -Content (Get-SkyPanelServiceSource)
 
         # 2. Atalho Impressora
-        $printerCmd = "@echo off`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyService.ps1`" -Name Spooler`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[2] Alternar Impressora (Ligar-Desligar).cmd"), $printerCmd, [System.Text.Encoding]::ASCII)
+        $printerCmd = Get-SkyPanelLauncher -FileName SkyService.ps1 -ServiceName Spooler
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[2] Alternar Impressora (Ligar-Desligar).cmd") -Content $printerCmd -Ascii
 
         # 3. Atalho Bluetooth
-        $btCmd = "@echo off`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%SystemDrive%\ProgramData\SkyOptimizer\SkyService.ps1`" -Name bthserv`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd"), $btCmd, [System.Text.Encoding]::ASCII)
+        $btCmd = Get-SkyPanelLauncher -FileName SkyService.ps1 -ServiceName bthserv
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd") -Content $btCmd -Ascii
 
         # 4. Atalho Isolamento do Núcleo (VBS e Jogos)
         $vbsCmd = "@echo off`r`necho VBS: controlo suspenso nesta branch ate validar baseline, arranque e requisitos de anti-cheat.`r`necho Nenhuma configuracao foi alterada. Utilize as Definicoes do Windows.`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd"), $vbsCmd, [System.Text.Encoding]::ASCII)
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd") -Content $vbsCmd -Ascii
 
         # 5. Atalho Limpeza de Shaders e Caches de Jogos
         $cleanCmd = "@echo off`r`necho Limpeza automatica de shaders suspensa: reconstruir caches pode causar stuttering.`r`necho Use a limpeza de diagnostico no SkyOptimizer apenas com causa identificada.`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[5] Limpar Shaders e Caches de Jogos.cmd"), $cleanCmd, [System.Text.Encoding]::ASCII)
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[5] Limpar Shaders e Caches de Jogos.cmd") -Content $cleanCmd -Ascii
 
         # 6. Atalho Alternar Localização e GPS
         $locCmd = "@echo off`r`necho Localizacao: use Undo para restaurar apenas a baseline gerida pelo SkyOptimizer.`r`necho Alternancia independente pendente de validacao. Nenhuma alteracao aplicada.`r`npause"
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "[6] Alternar Localizacao e GPS (Ligar-Desligar).cmd"), $locCmd, [System.Text.Encoding]::ASCII)
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[6] Alternar Localizacao e GPS (Ligar-Desligar).cmd") -Content $locCmd -Ascii
 
         # Relatório Antes vs. Depois
         if ($ReportContent) {
-            [System.IO.File]::WriteAllText((Join-Path $panelDir "Relatorio_Otimizacao.txt"), $ReportContent, [System.Text.Encoding]::UTF8)
+            Write-SkyPanelFile -Path (Join-Path $panelDir "Relatorio_Otimizacao.txt") -Content $ReportContent
         }
 
         # Ficheiro LÊ-ME (Suporte SkyOptimizer)
@@ -3007,7 +3125,7 @@ O relatorio descreve configuracoes verificadas, nao ganhos de FPS/input lag.
 Alteracoes NIC exigem reinicio e teste de ligacao. A confirmacao no registo
 nao prova aplicacao pelo driver. Nao ha compatibilidade universal certificada.
 "@
-        [System.IO.File]::WriteAllText((Join-Path $panelDir "LÊ-ME (Suporte SkyOptimizer).txt"), $readmeTxt, [System.Text.Encoding]::UTF8)
+        Write-SkyPanelFile -Path (Join-Path $panelDir "LÊ-ME (Suporte SkyOptimizer).txt") -Content $readmeTxt
 
         Write-SkyLog -Message "Painel do Cliente criado com sucesso no Ambiente de Trabalho ('$panelDir')." -Level "Success"
         return $true
@@ -3726,6 +3844,9 @@ function Invoke-SkyHardwareAudit {
 # ==============================================================================
 
 # Se invocado com parâmetros diretos de linha de comando:
+try { Initialize-SkyStorage }
+catch { Write-Error "Armazenamento recusado; nenhuma acao executada: $($_.Exception.Message)"; exit 1 }
+
 if ($Apply) {
     Invoke-SkyOptimize
     exit $script:SkyLastExitCode
