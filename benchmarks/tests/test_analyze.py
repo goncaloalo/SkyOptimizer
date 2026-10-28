@@ -13,6 +13,12 @@ spec.loader.exec_module(analyze)
 
 
 class MetricsTests(unittest.TestCase):
+    def test_adjacent_slow_frames_are_one_incident_and_excess_is_not_interval_time(self):
+        r = analyze.summarize_frames([10, 60, 70, 10, 80])['spikes']['50.0']
+        self.assertEqual(r['count'], 3)
+        self.assertEqual(r['incidents'], 2)
+        self.assertEqual(r['total_interval_ms'], 210)
+        self.assertEqual(r['excess_ms'], 60)
     def test_constant_frametimes(self):
         result = analyze.summarize_frames([10.0] * 100)
         self.assertEqual(result["average_fps"], 100.0)
@@ -38,13 +44,23 @@ class MetricsTests(unittest.TestCase):
 
 
 class ManifestTests(unittest.TestCase):
+    def test_work_duration_and_legacy_untyped_manifest_are_rejected(self):
+        self.manifest['measurement']['semantics'] = 'gpu_work_duration'
+        with self.assertRaises(ValueError): self.run_analysis()
+        self.manifest['measurement']['semantics'] = 'between_present_events'
+        self.manifest['frametime_column'] = 'GPUBusy'
+        with self.assertRaises(ValueError): self.run_analysis()
+        self.manifest['frametime_column'] = 'FrameTimeMs'
+        self.manifest['schema_version'] = 1
+        with self.assertRaises(ValueError): self.run_analysis()
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.manifest = {
-            "schema_version": 1, "frametime_column": "FrameTimeMs", "interval_kind": "present",
+            "schema_version": 2, "frametime_column": "FrameTimeMs", "interval_kind": "present",
             "frame_generation": False,
+            "measurement": {"semantics": "between_present_events", "unit": "ms", "source_reference": "synthetic event intervals"},
             "environment": {key: "synthetic test fixture" for key in (
                 "cpu", "gpu", "windows_build", "gpu_driver", "game_version", "scene", "settings",
                 "capture_tool", "capture_version", "optimizer_commit")},

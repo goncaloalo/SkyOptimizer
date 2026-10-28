@@ -36,6 +36,9 @@ def summarize_frames(frames: list[float]) -> dict:
         "one_percent_sample_count": slow_count,
         "frametime_percentiles_ms": percentiles, "max_frametime_ms": ordered[-1],
         "spikes": {str(t): {"count": sum(x > t for x in frames),
+                            "incidents": sum(x > t and (i == 0 or frames[i-1] <= t) for i, x in enumerate(frames)),
+                            "excess_ms": math.fsum(max(0, x-t) for x in frames),
+                            "incidents_per_minute": 60000 * sum(x > t and (i == 0 or frames[i-1] <= t) for i, x in enumerate(frames)) / total,
                             "total_interval_ms": math.fsum(x for x in frames if x > t)}
                    for t in (16.667, 33.333, 50.0)},
         "histogram": histogram,
@@ -81,7 +84,7 @@ def read_run(path: Path, column: str, filters: dict) -> tuple[list[float], int, 
 def analyze_manifest(path: Path) -> dict:
     path = path.resolve()
     manifest = json.loads(path.read_text(encoding="utf-8-sig"))
-    if manifest.get("schema_version") != 1:
+    if manifest.get("schema_version") != 2:
         raise ValueError("Unsupported manifest schema.")
     environment = manifest.get("environment", {})
     required = ("cpu", "gpu", "windows_build", "gpu_driver", "game_version", "scene",
@@ -94,6 +97,15 @@ def analyze_manifest(path: Path) -> dict:
         raise ValueError("Declare frame_generation as a boolean.")
     if not isinstance(manifest.get("frametime_column"), str) or not manifest["frametime_column"]:
         raise ValueError("Declare the measured interval column in milliseconds.")
+    measurement = manifest.get("measurement", {})
+    semantics = {"present": "between_present_events", "display": "between_display_events",
+                 "render": "between_render_completion_events"}
+    if measurement.get("semantics") != semantics[manifest["interval_kind"]] or measurement.get("unit") != "ms":
+        raise ValueError("Require intervals between events, not GPU/CPU busy or work duration.")
+    if not isinstance(measurement.get("source_reference"), str) or not measurement["source_reference"].strip():
+        raise ValueError("Document the column definition and capture-tool version source.")
+    if any(word in manifest["frametime_column"].lower() for word in ("busy", "duration", "latency")):
+        raise ValueError("Work/latency duration column cannot be used as frame cadence.")
     runs = manifest.get("runs", [])
     if not isinstance(runs, list) or not runs:
         raise ValueError("At least one run per condition is required.")
@@ -138,7 +150,7 @@ def analyze_manifest(path: Path) -> dict:
         for metric in ("average_fps", "one_percent_low_fps", "max_frametime_ms")
     }
     return {
-        "schema_version": 1, "environment": environment, "interval_kind": manifest["interval_kind"],
+        "schema_version": 2, "measurement": measurement, "environment": environment, "interval_kind": manifest["interval_kind"],
         "frame_generation": manifest["frame_generation"], "frametime_column": manifest["frametime_column"],
         "percentile_method": "nearest-rank", "runs": results, "conditions": conditions,
         "descriptive_median_change_B_vs_A_percent": comparison, "quality_issues": quality,

@@ -1,8 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "frametime_column": "FrameTimeMs",
   "interval_kind": "present",
   "frame_generation": false,
+  "measurement": {"semantics": "between_present_events", "unit": "ms", "source_reference": ""},
   "environment": {
     "cpu": "",
     "gpu": "",
