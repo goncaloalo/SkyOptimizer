@@ -1115,6 +1115,10 @@ function Set-SkyNicProperties {
     [CmdletBinding()]
     param([string[]]$Keywords, [switch]$EthernetOnly)
     $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object Status -eq 'Up')
+    if ($EthernetOnly) { $adapters = @($adapters | Where-Object { [int]$_.NdisPhysicalMedium -eq 14 }) }
+    if ($adapters.Count -gt 1) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Varios adaptadores fisicos ativos elegiveis: selecao ambigua. Nenhuma propriedade alterada; falta selecao explicita por interface.' -RestartRequired No
+    }
     $found = $false
     foreach ($nic in $adapters) {
         if ($EthernetOnly -and [int]$nic.NdisPhysicalMedium -ne 14) { continue }
@@ -1417,9 +1421,9 @@ function Show-SystemHardwareInfo {
         } catch {}
 
         # Deteção de Plano de Energia Ativo
-        $powerPlan = "Equilibrado / Padrão"
+        $powerPlan = "Desconhecido"
         try {
-            $rawScheme = powercfg /getactivescheme 2>$null
+            $rawScheme = Invoke-SkyNativeCommand -FileName powercfg.exe -Arguments @('/getactivescheme')
             if ($rawScheme -match '\((.*?)\)') {
                 $powerPlan = $matches[1]
             }
@@ -1434,17 +1438,18 @@ function Show-SystemHardwareInfo {
         Write-Host "  Processador:   " -NoNewline -ForegroundColor Gray
         Write-Host "$cpuName" -ForegroundColor White
         Write-Host "  Placa Gráfica: " -NoNewline -ForegroundColor Gray
-        Write-Host "$gpuName $(if ($vramGB -gt 0) { "($vramGB GB VRAM)" })" -ForegroundColor White
+        Write-Host "$gpuName (primeiro adaptador reportado; GPU ativa por confirmar)" -ForegroundColor White
+        Write-Host "  VRAM reportada: $vramGB GB (associacao ao adaptador/jogo por confirmar)" -ForegroundColor Gray
         Write-Host "  Memória RAM:   " -NoNewline -ForegroundColor Gray
         Write-Host "$ramGB GB" -ForegroundColor White
-        Write-Host "  Disco do SO:   " -NoNewline -ForegroundColor Gray
+        Write-Host "  Primeiro disco reportado (mapeamento ao SO nao confirmado): " -NoNewline -ForegroundColor Gray
         Write-Host "$diskInfo" -ForegroundColor White
         Write-Host "  Plano Energia: " -NoNewline -ForegroundColor Gray
         $planColor = if ($powerPlan -match 'Desempenho|Ultimate|Performance') { "Green" } else { "Yellow" }
         Write-Host "$powerPlan" -ForegroundColor $planColor
         Write-Host "  Núcleo VBS:    " -NoNewline -ForegroundColor Gray
         $vbsColor = if ($vbsState -eq "Ativado") { "Yellow" } else { "Green" }
-        Write-Host "$vbsState $(if ($vbsState -eq "Ativado") { "(Valorant / CS2 no FACEIT Suportados)" } else { "(Máxima Performance)" })" -ForegroundColor $vbsColor
+        Write-Host "$vbsState (nao certifica anti-cheat, HVCI ou desempenho)" -ForegroundColor Gray
         Write-Host "================================================================================" -ForegroundColor Cyan
     } catch {}
 }
@@ -3224,6 +3229,8 @@ function Invoke-SkyOptimize {
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
+    Write-Host "Gaming - $Profile | IDs selecionados: $($selectedIds -join ', ')" -ForegroundColor Cyan
+    Write-Host 'Experiencias exigem validacao; mudar perfil nao desfaz o anterior. NIC, energia e servicos podem alterar funcionalidades.' -ForegroundColor Yellow
     Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.7.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
@@ -3263,7 +3270,7 @@ function Invoke-SkyOptimize {
         Write-Host "`n[!] ATENÇÃO:" -ForegroundColor Yellow
         Write-Host "    O Windows pode restringir a frequência de criação de pontos de restauro" -ForegroundColor Gray
         Write-Host "    ou a funcionalidade de Proteção do Sistema pode estar desativada." -ForegroundColor Gray
-        Write-Host "    Nota: Todos os backups de registo (.reg) e ficheiros de reversão continuarão a ser criados.`n" -ForegroundColor Gray
+        Write-Host "    Nota: O diario por recurso continua obrigatorio antes de cada alteracao; nao se criam exports .reg completos.`n" -ForegroundColor Gray
 
         $confirm = Read-Host "Deseja continuar com as otimizações mesmo assim? (S/N)"
         if ($confirm -notmatch '^(s|sim|y|yes)$') {
@@ -3492,18 +3499,18 @@ function Invoke-SkyOptimize {
     
     $reportText = @"
 ================================================================================
-                    SkyOptimizer - Relatório de Impacto (Antes vs. Depois)
+                    SkyOptimizer - Snapshots de Estado (Antes vs. Depois)
 ================================================================================
   Data/Hora:     $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
   Computador:    $env:COMPUTERNAME
   Sistema:       $($Global:SkyManifest.OperatingSystem)
   Núcleo VBS:    $($baselineMetrics.VbsState)
 --------------------------------------------------------------------------------
-  Métrica                      Antes             Depois            Impacto Real
+  Métrica                      Antes             Depois            Variação Observada
   ------------------------------------------------------------------------------
   Processos Ativos:            $($baselineMetrics.ProcessCount)               $($postMetrics.ProcessCount)               $(if ($deltaProcess -ge 0) { "-$deltaProcess processos" } else { "+$([math]::Abs($deltaProcess)) processos" })
-  Memória RAM em Uso:          $([math]::Round($baselineMetrics.RamUsedMB / 1024, 2)) GB          $([math]::Round($postMetrics.RamUsedMB / 1024, 2)) GB          $(if ($deltaRamMB -gt 0) { "-$([math]::Round($deltaRamMB / 1024, 2)) GB libertados" } else { "Estável" })
-  Espaço Livre Disco C:        $($baselineMetrics.FreeDiskCGB) GB         $($postMetrics.FreeDiskCGB) GB         $(if ($deltaDiskGB -gt 0) { "+$deltaDiskGB GB recuperados" } else { "Otimizado" })
+  Memória RAM em Uso:          $([math]::Round($baselineMetrics.RamUsedMB / 1024, 2)) GB          $([math]::Round($postMetrics.RamUsedMB / 1024, 2)) GB          $([math]::Round(-$deltaRamMB / 1024, 2)) GB (depois - antes)
+  Espaço Livre Disco C:        $($baselineMetrics.FreeDiskCGB) GB         $($postMetrics.FreeDiskCGB) GB         $deltaDiskGB GB (depois - antes)
   Resolução de Temporizador:   Não medida nesta execução.
   Modo de Interrupção GPU:     Não verificado nesta execução.
   FPS, frametimes/input lag:   Não medidos. Estes snapshots não demonstram ganhos em jogos.
@@ -3558,16 +3565,7 @@ function Invoke-SkyOptimize {
     }
 
     # Reinício opcional do Explorer
-    Write-Host "`nAlgumas alterações de interface (extensões de ficheiros, widgets, menu iniciar, delays)" -ForegroundColor Gray
-    Write-Host "tornam-se imediatamente visíveis após reiniciar o Windows Explorer." -ForegroundColor Gray
-    $restartExplorer = Read-Host "Pretende reiniciar o Windows Explorer agora? (S/N)"
-
-    if ($restartExplorer -match '^(s|sim|y|yes)$') {
-        Write-Host "A reiniciar o Windows Explorer..." -ForegroundColor Cyan
-        Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
-        Write-Host "[OK] Windows Explorer reiniciado com sucesso." -ForegroundColor Green
-    }
+    Write-Host 'Alteracoes de interface podem exigir nova sessao ou reinicio. O reinicio automatico do Explorer esta suspenso: terminava processos por nome sem limitar sessao nem verificar recuperacao.' -ForegroundColor Gray
 
     Write-Host "`nSessão terminada: $totalFailed falhas e $totalUnverified ações sem validação completa. Consulte o relatório antes de considerar o sistema validado." -ForegroundColor Cyan
     $script:SkyLastExitCode = if ($totalFailed -or $panelCreated -ne $true) { 1 } elseif ($totalDeferred -or $totalUnverified -or $totalIncompatible) { 2 } else { 0 }
@@ -3758,23 +3756,23 @@ function Invoke-SkyHardwareAudit {
         $nominalSpeed = $firstMod.Speed
         $channelCount = $ramModules.Count
 
-        Write-Host "  Capacidade Total:          $totalRamGB GB ($channelCount pentes instalados - $(if ($channelCount -ge 2) { 'Dual Channel / Multi-Channel Ativo' } else { 'Single Channel - Recomendar 2º módulo ao cliente' }))" -ForegroundColor White
+        Write-Host "  Capacidade Total:          $totalRamGB GB ($channelCount modulos reportados; canais ativos nao confirmados)" -ForegroundColor White
         Write-Host "  Velocidade Atual:          $currentSpeed MHz" -ForegroundColor $(if ($currentSpeed -ge $nominalSpeed -and $currentSpeed -gt 2400) { "Green" } else { "Yellow" })
         Write-Host "  Velocidade Nominal Módulo: $nominalSpeed MHz" -ForegroundColor White
 
         if ($currentSpeed -lt $nominalSpeed) {
             Write-Host "  [DIAGNÓSTICO TÉCNICO] RAM a $($currentSpeed) MHz (Capacidade Nominal: $($nominalSpeed) MHz)!" -ForegroundColor Yellow
-            Write-Host "    -> Perfil XMP (Intel) ou EXPO/DOCP (AMD) DESATIVADO na BIOS da motherboard." -ForegroundColor Cyan
-            Write-Host "    -> OPORTUNIDADE: Propor afinação de BIOS ao cliente (+10% a +25% de estabilidade nos 1% Lows)." -ForegroundColor Green
+            Write-Host "    -> Os valores WMI diferem; nao permitem concluir o estado de XMP/EXPO/DOCP." -ForegroundColor Cyan
+            Write-Host "    -> Confirmar configuracao e estabilidade da memoria no hardware. Nenhum ganho de 1% lows foi medido." -ForegroundColor Green
         } elseif ($currentSpeed -in @(2133, 2400) -and $nominalSpeed -eq $currentSpeed) {
             Write-Host "  [INFO JEDEC] A RAM está a correr a $currentSpeed MHz (frequência base)." -ForegroundColor Gray
             Write-Host "    -> Confirmar com o cliente se as memórias suportam frequências superiores para ativar perfil na BIOS." -ForegroundColor Cyan
         } else {
-            Write-Host "  [OK] Frequência da RAM afinada ($currentSpeed MHz)." -ForegroundColor Green
+            Write-Host "  [INFO] Valor configurado reportado: $currentSpeed. Perfil e estabilidade por confirmar." -ForegroundColor Green
         }
     } else {
         Write-Host "  Capacidade Total:          $totalRamGB GB" -ForegroundColor White
-        Write-Host "  [INFO] Ambiente Virtualizado (VM) ou chipset OEM sem exposição direta de dados SPD." -ForegroundColor Gray
+        Write-Host "  [INFO] Dados de modulos indisponiveis; isto nao identifica VM, chipset ou perfil de memoria." -ForegroundColor Gray
     }
 
     # 2. Monitores & Taxa de Atualização (Hz)
@@ -3790,11 +3788,11 @@ function Invoke-SkyHardwareAudit {
             Write-Host "  Taxa de Atualização:       $hz Hz" -ForegroundColor $(if ($hz -gt 60) { "Green" } else { "Yellow" })
 
             if ($hz -le 60) {
-                Write-Host "  [DIAGNÓSTICO TÉCNICO] O monitor está a correr a 60 Hz no Windows." -ForegroundColor Yellow
+                Write-Host "  [OBSERVACAO] O driver reporta $hz Hz; confirmar taxa e monitor nas Definicoes." -ForegroundColor Yellow
                 Write-Host "    -> Se o monitor do cliente for de 144Hz/165Hz/240Hz, ajustar nas definições do Windows (Ecrã Avançado)." -ForegroundColor Cyan
                 Write-Host "    -> Confirmar se o cliente está a utilizar cabo DisplayPort (DP) adequado." -ForegroundColor Gray
             } else {
-                Write-Host "  [OK] Monitor de Alta Frequência ativo ($hz Hz - Fluidez Máxima)." -ForegroundColor Green
+                Write-Host "  [INFO] Taxa reportada pelo driver: $hz Hz; nao mede frametimes ou latencia." -ForegroundColor Green
             }
         }
     }
@@ -3817,20 +3815,20 @@ function Invoke-SkyHardwareAudit {
             }
             if ($isHeavy) {
                 $detectedHeavy += $s.Name
-                Write-Host "    [!] $($s.Name) (Consome CPU e RAM em segundo plano)" -ForegroundColor Yellow
+                Write-Host "    [!] $($s.Name) (entrada de arranque; consumo atual nao medido)" -ForegroundColor Yellow
             } else {
                 Write-Host "    [-] $($s.Name)" -ForegroundColor Gray
             }
         }
         if ($detectedHeavy.Count -gt 0) {
-            Write-Host "`n  [DIAGNÓSTICO TÉCNICO] Detetadas $($detectedHeavy.Count) aplicações pesadas no arranque do cliente." -ForegroundColor Yellow
+            Write-Host "`n  [DIAGNÓSTICO TÉCNICO] Detetadas $($detectedHeavy.Count) entradas de arranque com nomes conhecidos; consumo por medir." -ForegroundColor Yellow
             Write-Host "    -> Recomenda-se abrir Gestor de Tarefas > Arranque e desativar com o consentimento do cliente." -ForegroundColor Cyan
             Write-Host "    -> Medir consumo real durante o jogo antes de alterar o arranque; nomes de aplicações não quantificam impacto." -ForegroundColor Gray
         } else {
-            Write-Host "  [OK] Arranque limpo! Nenhuma aplicação pesada detetada na inicialização." -ForegroundColor Green
+            Write-Host "  [INFO] Nenhum nome da lista identificado. Outras fontes de arranque/carga nao foram excluidas." -ForegroundColor Green
         }
     } else {
-        Write-Host "  [OK] Nenhuma aplicação de inicialização registada (Arranque ultra limpo)." -ForegroundColor Green
+        Write-Host "  [INFO] WMI nao devolveu entradas; ausencia/falha de dados nao prova um arranque sem carga." -ForegroundColor Green
     }
 
     # 4. Estado do Isolamento do Núcleo (VBS / HVCI)
@@ -3842,7 +3840,7 @@ function Invoke-SkyHardwareAudit {
 
     Write-Host "`n================================================================================" -ForegroundColor Cyan
     Write-Host "Inspeção Técnica de Hardware e Arranque concluída." -ForegroundColor Green
-    Write-Host "Utiliza estas informações para afinar o setup do cliente ou propor serviços VIP de BIOS." -ForegroundColor Gray
+    Write-Host "Confirmar estas observacoes em laboratorio antes de propor alteracoes. Nao foram realizados benchmarks." -ForegroundColor Gray
     Write-Host "================================================================================" -ForegroundColor Cyan
     Read-Host "`nPressione ENTER para regressar ao menu principal..."
 }

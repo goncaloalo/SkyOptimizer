@@ -151,4 +151,11 @@ Describe 'NIC binding and capability guards' {
         (Set-SkyNicProperties -Keywords @('*FlowControl') -EthernetOnly).Status | Should Be Incompatible
         Assert-MockCalled Invoke-SkyTrackedChange -Times 0 -Exactly -Scope It
     }
+    It 'refuses ambiguous multiple physical adapters before reading driver settings' {
+        Mock Get-NetAdapter { $script:adapter; $script:adapter }
+        Mock Get-ChildItem { throw 'Adapter selection must precede driver-key access.' }
+        (Set-SkyNicProperties -Keywords @('*EEE') -EthernetOnly).Status | Should Be Incompatible
+        Assert-MockCalled Get-ChildItem -Times 0 -Exactly -Scope It
+        Assert-MockCalled Invoke-SkyTrackedChange -Times 0 -Exactly -Scope It
+    }
 }
