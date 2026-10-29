@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "frametime_column": "FrameTimeMs",
+  "interval_kind": "present",
+  "frame_generation": false,
+  "measurement": {
+    "semantics": "between_present_events",
+    "unit": "ms",
+    "source_reference": ""
+  },
+  "environment": {
+    "cpu": "",
+    "gpu": "",
+    "windows_build": "",
+    "gpu_driver": "",
+    "game_version": "",
+    "scene": "",
+    "settings": "",
+    "capture_tool": "",
+    "capture_version": "",
+    "optimizer_commit": ""
+  },
+  "runs": [
+    {
+      "id": "A1",
+      "condition": "A",
+      "pair": "pair1",
+      "block": "block1",
+      "order": 1,
+      "csv": "A1-normalized/frames.csv",
+      "filters": {}
+    },
+    {
+      "id": "B1",
+      "condition": "B",
+      "pair": "pair1",
+      "block": "block1",
+      "order": 2,
+      "csv": "B1-normalized/frames.csv",
+      "filters": {}
+    },
+    {
+      "id": "B2",
+      "condition": "B",
+      "pair": "pair2",
+      "block": "block2",
+      "order": 3,
+      "csv": "B2-normalized/frames.csv",
+      "filters": {}
+    },
+    {
+      "id": "A2",
+      "condition": "A",
+      "pair": "pair2",
+      "block": "block2",
+      "order": 4,
+      "csv": "A2-normalized/frames.csv",
+      "filters": {}
+    }
+  ],
+  "experimental_design": {
+    "primary_metric": "average_fps",
+    "minimum_benefit_percent": 2,
+    "regression_margin_percent": 2,
+    "seed": 20261029,
+    "bootstrap_draws": 10000
+  }
+}

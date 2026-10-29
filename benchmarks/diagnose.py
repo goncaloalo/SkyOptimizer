@@ -105,7 +105,17 @@ def diagnose(session):
                          if row["role"] == "concurrent" and
                          ((row["cpu_core_equivalents"] or 0) >= 0.25 or
                           (row["read_bytes_per_second"] or 0) + (row["write_bytes_per_second"] or 0) >= 1048576)})
+    recommendations = []
+    if candidates:
+        recommendations.append({"hypothesis": "Concurrent work may compete with the game",
+                                "evidence": candidates, "next_measurement": "Repeat the same scene with one locally identified background workload paused by consent; compare paired frametimes.",
+                                "action": "Manual review only; anonymous identity does not justify selecting action 41 or removing AppX."})
+    if any(w['game_observed_at_both_boundaries'] and w['commit_fraction'] is not None and w['commit_fraction'] >= .9 for w in windows):
+        recommendations.append({"hypothesis": "High commit warrants memory-pressure investigation",
+                                "next_measurement": "Correlate hard faults, available physical memory and game-volume I/O with stutter; commit alone does not prove paging.",
+                                "action": "Do not disable pagefile or empty working sets."})
     return {"schema_version": 1, "windows": windows, "concurrent_activity_candidates": candidates,
+            "recommendations": recommendations,
             "decision": "Investigate observed activity" if candidates else "No change justified by these samples",
             "thresholds": {"cpu_core_equivalents": 0.25, "process_io_bytes_per_second": 1048576},
             "limits": ["Thresholds prioritize inspection, not causal bottleneck or removal decisions.",
