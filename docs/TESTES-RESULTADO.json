@@ -1,21 +1,21 @@
 {
-  "Date": "2026-10-28T14:50:14.6076526+00:00",
+  "Date": "2026-10-29T11:46:44.5503545+00:00",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
-  "Command": "Invoke-Pester -Script .\\tests -PassThru -Quiet",
-  "Total": 225,
-  "Passed": 225,
+  "Command": "Windows PowerShell 5.1 -NoProfile -ExecutionPolicy Bypass: Invoke-Pester -Script .\\tests -PassThru -Quiet",
+  "Total": 232,
+  "Passed": 232,
   "Failed": 0,
   "Skipped": 0,
   "Pending": 0,
-  "Python": "3.14.5",
+  "Python": "3.12.14",
   "PythonCommand": "python -B -m unittest discover -s benchmarks/tests -v",
-  "PythonPassed": 11,
+  "PythonPassed": 19,
   "PythonFailed": 0,
   "WindowsChangesApplied": false,
   "PhysicalBenchmarksPerformed": false,
   "IntegrationVmExecuted": false,
-  "EligibleApplyActions": 28,
+  "EligibleApplyActions": 26,
   "RetiredActionIds": [
     12,
     14,
@@ -23,9 +23,9 @@
     39,
     54
   ],
-  "ProductSourceSha256": "5E49346EDA68074E33F5C2FD5F220F87DCADEC18982B4C059B8A6C76EEFCB88D",
+  "ProductSourceSha256": "6B9997C204F748AC9213559AC05025F655DDCA2A3C0AEFA92D9908FBC0783F8A",
   "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
-  "BlockedActions": 56,
+  "BlockedActions": 58,
   "OriginalBlockedActionsAudited3B": 67,
   "MaintenanceActionIds": [
     24
@@ -35,9 +35,11 @@
     2
   ],
   "ProductionScheduledTasksEligible": false,
-  "Phase": "5A offline",
-  "ValidationScope": "Pester: declarations only, mocked Windows effects, independent registry reader with managed fake handles, HMAC and temporary files. Python: 11 synthetic offline CSV tests. No product entry point, real registry changes, installed ACL tests, UAC, VM or physical benchmarks.",
-  "SourceCommit": "0878bd97f72a78c6549b2edab66a5f1f1889b2cf",
-  "DetailedPesterEvidence": "FASE5A-TESTES.json",
-  "EvidenceSourceSha256": "59AEE5A4F263880FDE65021575D9F4DEF470DC614FAA8315AEDB9313286A60CF"
+  "Phase": "5C offline",
+  "ValidationScope": "Pester: declarations only, mocked Windows effects, independent registry reader with managed fake handles, HMAC and temporary files. Python: 19 synthetic CSV/session tests. No product entry point, live process/AppX capture, real registry changes, installed ACL tests, UAC, VM or physical benchmarks.",
+  "SourceCommit": "65e1d2db3268f1a9e34da6738e434befcc475c34",
+  "DetailedPesterEvidence": "FASE5C-TESTES.json",
+  "EvidenceSourceSha256": "59AEE5A4F263880FDE65021575D9F4DEF470DC614FAA8315AEDB9313286A60CF",
+  "BenchmarkAnalyzerSha256": "5C11AC7E0B7BE5E52A0FE15D8B6BDA3A46828B07FBFB66B2437ADF6A553E4E1B",
+  "SessionDiagnosisSha256": "DB988C4A16B472320927BC489D00CC9C89229ACD187C203AE9139DAC6DA91CD6"
 }

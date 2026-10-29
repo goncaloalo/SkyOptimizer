@@ -11,7 +11,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -57,7 +58,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -125,7 +127,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -171,7 +174,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -196,11 +200,12 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Performance",
-      "Extreme"
+      "Extreme",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "ValidacaoAutomatizada": "Barreira Win11/Home/Server/build desconhecida sem escrita; cinco valores Win10, Apply repetido e Undo cobertos por mocks",
     "AuditoriaFase4": {
       "Maturidade": "Contrato funcional ainda incompleto",
       "LacunasERiscos": "Matriz de edição/consumo de todas as flags não está comprovada. Desativa captura; não prova fim dos processos Game Bar.",
@@ -285,7 +290,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -353,7 +359,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -377,7 +384,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -423,7 +431,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -447,7 +456,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -558,7 +568,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -845,7 +856,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -913,7 +925,8 @@
     "ElegivelApply": true,
     "PerfisAtuais": [
       "Performance",
-      "Extreme"
+      "Extreme",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -937,7 +950,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1073,7 +1087,7 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "ValidacaoAutomatizada": "Fase 5C: dispatcher e chamada direta recusam mutacoes; mecanismos de Undo de servicos anteriores continuam cobertos por mocks",
     "AuditoriaFase4": {
       "Maturidade": "Contrato funcional ainda incompleto",
       "LacunasERiscos": "São finalidades distintas; compatibilidade e assistência de apps podem perder-se. Grupo não é transação; testar cada serviço e falha intermédia.",
@@ -1095,7 +1109,7 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Bloqueio/estrutura; nao certifica o corpo legado",
+    "ValidacaoAutomatizada": "Fase 5C: bloqueio direto/dispatcher; preview AppX simulado distingue falha, vazio, dependencias e metadados desconhecidos; nenhuma remocao autorizada",
     "AuditoriaFase4": {
       "Recomendacao": "RetirarReceita",
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
@@ -1290,7 +1304,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1314,7 +1329,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1338,7 +1354,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1560,7 +1577,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1586,7 +1604,7 @@
     "PerfisAtuais": [],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
-    "ValidacaoAutomatizada": "Mecanismos comuns cobertos por mocks; ver testes e limites por acao",
+    "ValidacaoAutomatizada": "Fase 5C: dispatcher e chamada direta recusam mutacoes; mecanismos de Undo de servicos anteriores continuam cobertos por mocks",
     "AuditoriaFase4": {
       "Maturidade": "Contrato funcional ainda incompleto",
       "LacunasERiscos": "Alterar template não representa estado das instâncias por utilizador; sincronização pode ser afetada. Requer login/reboot e invariantes por conta.",
@@ -1650,7 +1668,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1674,7 +1693,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1698,7 +1718,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1768,7 +1789,8 @@
     "PerfisAtuais": [
       "Balanced",
       "Performance",
-      "Extreme"
+      "Extreme",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1880,7 +1902,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1926,7 +1949,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -1972,7 +1996,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
@@ -2018,7 +2043,8 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
-      "Extreme: selecao explicita"
+      "Extreme: selecao explicita",
+      "Laboratory: selecao explicita"
     ],
     "Retirada": false,
     "ValidacaoReal": "Nao executada",
