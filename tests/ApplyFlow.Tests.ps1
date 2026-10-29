@@ -48,4 +48,11 @@ Describe 'Apply orchestration without host changes' {
         $script:SkyLastExitCode | Should Be 0
         $script:report.Contains('FPS, frametimes/input lag:') | Should Be $true
     }
+    It 'uses the same action journal path in operator mode without deploying a panel or waiting at the end' {
+        $null=Invoke-SkyOptimize -SelectedActionIds @(79) -OperatorMode
+        $script:SkyLastExitCode | Should Be 0
+        Assert-MockCalled Deploy-ClientPanel -Times 0 -Exactly -Scope It
+        Assert-MockCalled Read-Host -Times 0 -Exactly -Scope It
+        Test-Path (Join-Path $Global:SkyBackupDir 'operator_report.txt') | Should Be $true
+    }
 }

@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer v2.8 - perfis de desenvolvimento com baseline e Undo por recurso.
+    SkyOptimizer MAX - execucao pontual com baseline e Undo por recurso.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Mantém o catálogo de 90 ações, mas só executa ações selecionadas e migradas.
@@ -9,9 +9,9 @@
     Backups legados incompletos são preservados para revisão; não se aplicam defaults no Undo.
     Esta branch ainda exige integração num Windows descartável e benchmarks físicos.
 .PARAMETER Apply
-    Aplica o perfil selecionado e gera o painel existente.
+    Executa MAX e termina; modos antigos apenas para compatibilidade tecnica.
 .PARAMETER Profile
-    Balanced (padrão), Performance, Extreme ou Laboratory (selecao exata). Consultar docs/PERFIS.md.
+    MAX (padrao) ou Laboratory (selecao exata). Balanced/Performance/Extreme sao aliases tecnicos legados.
 .PARAMETER ExperimentalActions
     IDs adicionais separados por vírgula, para Extreme ou Laboratory. Ações não migradas não são executadas.
 .PARAMETER Clean
@@ -22,10 +22,10 @@
     Gera exclusivamente o 'Painel do Cliente' no Ambiente de Trabalho.
 .EXAMPLE
     .\SkyOptimizer.ps1
-    Apresenta o menu interativo inicial.
+    Executa o planeamento MAX, confirma impactos funcionais e termina apos Apply.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica Gaming - Balanced e gera o painel no Desktop.
+    Aplica SKYOPTIMIZER MAX e guarda relatorio junto dos backups.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
@@ -61,8 +61,17 @@ param(
     [Parameter(ParameterSetName = "AuditDirect")]
     [switch]$Audit,
 
-    [ValidateSet('Balanced', 'Performance', 'Extreme', 'Laboratory')]
-    [string]$Profile = 'Balanced',
+    [Parameter(ParameterSetName = "DryRunDirect")]
+    [switch]$DryRun,
+
+    [Parameter(ParameterSetName = "DiagnoseDirect")]
+    [switch]$Diagnose,
+
+    [Parameter(ParameterSetName = "DebloatPreviewDirect")]
+    [switch]$DebloatPreview,
+
+    [ValidateSet('MAX', 'Balanced', 'Performance', 'Extreme', 'Laboratory')]
+    [string]$Profile = 'MAX',
 
     [ValidatePattern('^(\d{1,2}(,\d{1,2})*)?$')]
     [string]$ExperimentalActions = ''
@@ -82,7 +91,7 @@ try {
 # ==============================================================================
 $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]$currentUser
-if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -and -not ($DryRun -or $Diagnose -or $DebloatPreview)) {
     Write-Host "[!] Privilégios de Administrador necessários. A reiniciar com elevação..." -ForegroundColor Yellow
     $paramString = ""
     if ($Apply) { $paramString = " -Apply" }
@@ -1814,8 +1823,8 @@ function Disable-AppArchival {
 
 function Test-SkyClientPolicySupport {
     [CmdletBinding()]
-    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [ValidateRange(10240,99999)][int]$MaximumBuild = 99999, [switch]$AllowHome, [switch]$EnterpriseOnly)
-    $systems = @(Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, BuildNumber, ProductType, OperatingSystemSKU -ErrorAction Stop)
+    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [ValidateRange(10240,99999)][int]$MaximumBuild = 99999, [switch]$AllowHome, [switch]$EnterpriseOnly, $SystemInfo)
+    $systems = @(if ($PSBoundParameters.ContainsKey('SystemInfo')) { $SystemInfo } else { Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, BuildNumber, ProductType, OperatingSystemSKU -ErrorAction Stop })
     if ($systems.Count -ne 1) { return $false }
     $os = $systems[0]
     $build = 0
@@ -3229,11 +3238,11 @@ function Repair-WindowsSystemIntegrity {
 
 function Invoke-SkyOptimize {
     [CmdletBinding()]
-    param()
+    param([int[]]$SelectedActionIds, [switch]$OperatorMode)
     $script:SkyLastExitCode = 1
 
     $experiments = if ($ExperimentalActions) { [int[]]$ExperimentalActions.Split(',') } else { @() }
-    $selectedIds = @(Get-SkyProfileActionIds -Profile $Profile -Experiments $experiments)
+    $selectedIds = @(if($PSBoundParameters.ContainsKey('SelectedActionIds')) { $SelectedActionIds } else { Get-SkyProfileActionIds -Profile $Profile -Experiments $experiments })
     Write-Host "Gaming - $Profile | IDs selecionados: $($selectedIds -join ', ')" -ForegroundColor Cyan
     Write-Host 'Mudar de perfil não desfaz alterações anteriores. Para comparar perfis, executar Undo e confirmar a baseline primeiro.' -ForegroundColor Yellow
     if ($Profile -in @('Performance', 'Extreme')) {
@@ -3255,14 +3264,14 @@ function Invoke-SkyOptimize {
  |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
              |___/      |_|                                    
                  Windows 10/11 Performance Toolkit
-                          Versão: 2.7.0
+                          Versão: 2.8.0
 ===============================================================================
 "@
     Write-Host $banner -ForegroundColor Cyan
     Show-SystemHardwareInfo
     Write-Host "Gaming - $Profile | IDs selecionados: $($selectedIds -join ', ')" -ForegroundColor Cyan
     Write-Host 'Experiencias exigem validacao; mudar perfil nao desfaz o anterior. NIC, energia e servicos podem alterar funcionalidades.' -ForegroundColor Yellow
-    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.7.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
+    Write-SkyLog -Message "Início da sessão de Otimização SkyOptimizer v2.8.0 em $env:COMPUTERNAME ($($Global:SkyManifest.OperatingSystem))" -Level "Info" -NoConsole
 
     # 0. Recolha de Métricas Iniciais (Antes da Otimização)
     $baselineMetrics = [ordered]@{
@@ -3466,12 +3475,12 @@ function Invoke-SkyOptimize {
     $failureDetails = @()
 
     foreach ($item in $tweaks) {
-        if ($item.Category -ne $currentCategory) {
+        if (($item.Category -ne $currentCategory) -and (-not $OperatorMode -or $item.Id -in $selectedIds)) {
             $currentCategory = $item.Category
             Write-Host "`n--- [$currentCategory] ---" -ForegroundColor DarkCyan
         }
 
-        Write-Host ("[*] [{0,2}/{1}] {2}" -f $item.Id, $tweaks.Count, $item.Name) -ForegroundColor White
+        if(-not $OperatorMode -or $item.Id -in $selectedIds) { Write-Host ("[*] [{0,2}/{1}] {2}" -f $item.Id, $tweaks.Count, $item.Name) -ForegroundColor White }
         Write-SkyLog -Message "A iniciar: $($item.Name)" -Level "Info" -NoConsole
 
         $result = Invoke-SkyEligibleAction -Id $item.Id -Action $item.Action -SelectedIds $selectedIds
@@ -3489,7 +3498,7 @@ function Invoke-SkyOptimize {
             }
             'AlreadyCompliant' { $totalAlreadyCompliant++; Write-SkyLog -Message $result.Reason -Level Info }
             'Incompatible' { $totalIncompatible++; Write-SkyLog -Message $result.Reason -Level Warning }
-            'NotSelected' { $totalNotSelected++; Write-SkyLog -Message $result.Reason -Level Info }
+            'NotSelected' { $totalNotSelected++; Write-SkyLog -Message $result.Reason -Level Info -NoConsole:$OperatorMode }
             'Deferred' { $totalDeferred++; Write-SkyLog -Message $result.Reason -Level Warning }
             'Unverified' { $totalUnverified++; Write-SkyLog -Message $result.Reason -Level Warning }
             'Failed' {
@@ -3526,7 +3535,7 @@ function Invoke-SkyOptimize {
     $deltaDiskGB  = [math]::Round($postMetrics.FreeDiskCGB - $baselineMetrics.FreeDiskCGB, 2)
 
     # 3. Implementação Automática do Painel do Cliente & Relatório Antes vs. Depois
-    Write-Host "`n>>> [Passo 3/3] A gerar o 'Painel do Cliente' e Relatório no Ambiente de Trabalho..." -ForegroundColor Magenta
+    Write-Host "`n>>> [Passo 3/3] A guardar resultados da execucao..." -ForegroundColor Magenta
     
     $reportText = @"
 ================================================================================
@@ -3560,7 +3569,10 @@ function Invoke-SkyOptimize {
 ================================================================================
 "@
 
-    $panelCreated = Deploy-ClientPanel -ReportContent $reportText
+    $panelCreated = $true
+    if($OperatorMode) {
+        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'operator_report.txt') -Content $reportText
+    } else { $panelCreated = Deploy-ClientPanel -ReportContent $reportText }
     Write-Host $reportText -ForegroundColor Cyan
 
     # Relatório Final de Execução
@@ -3579,8 +3591,8 @@ function Invoke-SkyOptimize {
   Falhas:                      $totalFailed
   Ponto de Restauro:           $(if ($restorePointCreated) { "Criado com Sucesso" } else { "Ignorado / Restrito" })
 
-  Painel do Cliente:           $(if ($panelCreated -eq $true) { 'Criado' } else { 'Falhou; consultar o log' })
-  Relatório Gravado em:        Área de Trabalho\SkyOptimizer - Painel de Controlo\Relatorio_Otimizacao.txt
+  Painel do Cliente:           $(if ($OperatorMode) { 'Nao solicitado; comando tecnico separado' } elseif ($panelCreated -eq $true) { 'Criado' } else { 'Falhou; consultar o log' })
+  Relatório:                  $(if ($OperatorMode) { Join-Path $Global:SkyBackupDir 'operator_report.txt' } else { 'Desktop: SkyOptimizer - Painel de Controlo\Relatorio_Otimizacao.txt' })
   Pasta de Backups:            $Global:SkyBackupDir
   Comando de Reversão:         .\SkyOptimizer.ps1 -Undo
   Discord da Comunidade:       https://discord.gg/cE8ZaDRGV5
@@ -3600,7 +3612,7 @@ function Invoke-SkyOptimize {
 
     Write-Host "`nSessão terminada: $totalFailed falhas e $totalUnverified ações sem validação completa. Consulte o relatório antes de considerar o sistema validado." -ForegroundColor Cyan
     $script:SkyLastExitCode = if ($totalFailed -or $panelCreated -ne $true) { 1 } elseif ($totalDeferred -or $totalUnverified -or $totalIncompatible) { 2 } else { 0 }
-    Read-Host "`nPressione ENTER para regressar ao menu principal..."
+    if(-not $OperatorMode) { Read-Host "`nPressione ENTER para regressar ao menu principal..." }
 }
 
 # ==============================================================================
@@ -3608,6 +3620,180 @@ function Invoke-SkyOptimize {
 # ==============================================================================
 
 
+
+function Get-SkyMaxContext {
+    $issues = New-Object 'Collections.Generic.List[string]'
+    $os=$null; $system=$null; $cpus=@(); $gpus=@(); $mdm=$null
+    try { $rows=@(Get-CimInstance Win32_OperatingSystem -ErrorAction Stop); if($rows.Count -ne 1){throw 'ambiguous'}; $os=$rows[0] | Select-Object Version,BuildNumber,ProductType,OperatingSystemSKU } catch { $issues.Add('Windows desconhecido') }
+    try { $rows=@(Get-CimInstance Win32_ComputerSystem -ErrorAction Stop); if($rows.Count -ne 1){throw 'ambiguous'}; $system=$rows[0] } catch { $issues.Add('Sistema/gestao desconhecidos') }
+    try { $cpus=@(Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors) } catch { $issues.Add('CPU desconhecido') }
+    try { $gpus=@(Get-CimInstance Win32_VideoController -ErrorAction Stop | Select-Object Name,DriverVersion) } catch { $issues.Add('GPU desconhecida') }
+    try {
+        $path='HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Accounts'
+        $mdm=if(Test-Path -LiteralPath $path -ErrorAction Stop){ @(Get-ChildItem -LiteralPath $path -ErrorAction Stop).Count -gt 0 }else{$false}
+    } catch { $issues.Add('Indicador MDM desconhecido') }
+    $browsers=@{}
+    foreach($name in @('Edge','Chrome')) {
+        try { $browsers[$name]=Get-SkyBrowserMajorVersion $name } catch { $browsers[$name]=$null; $issues.Add("Versao $name desconhecida") }
+    }
+    [pscustomobject]@{ Windows=$os; Cpu=$cpus; Gpu=$gpus; MemoryBytes=$system.TotalPhysicalMemory; UserSid=(Get-SkyUserSid)
+        ChassisCode=$system.PCSystemType; DomainJoined=$system.PartOfDomain; MdmIndicator=$mdm
+        PowerSource=(Get-SkyPowerSource); Browsers=$browsers; Issues=@($issues.ToArray())
+        HybridTopology='Unknown'; X3DTopology='Unknown'; GamingBottleneck='Unknown'; ThermalHeadroom='Unknown' }
+}
+
+function Get-SkyStartupContract {
+    param([ValidateSet('Spotify','Steam')][string]$Name)
+    if($Name -eq 'Spotify') {
+        [pscustomobject]@{ Name=$Name; Path=(Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'Spotify\Spotify.exe')
+            Arguments='--autostart --minimized'; Publishers=@('Spotify AB'); Product='Spotify'
+            Impact='Spotify deixa de iniciar por esta entrada no proximo login; abertura manual continua disponivel.' }
+    } else {
+        [pscustomobject]@{ Name=$Name; Path=(Join-Path ${env:ProgramFiles(x86)} 'Steam\steam.exe')
+            Arguments='-silent'; Publishers=@('Valve Corp.','Valve Corp'); Product='Steam'
+            Impact='Steam deixa de iniciar por esta entrada: atualizacoes, Remote Play/VR/controlador podem exigir abertura manual.' }
+    }
+}
+
+function Get-SkyStartupCandidate {
+    param([ValidateSet('Spotify','Steam')][string]$Name)
+    $resource=ConvertTo-SkyRegistryResource 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' $Name
+    $state=Get-SkyResourceState $resource
+    if(-not $state.Exists){ return [pscustomobject]@{Name=$Name;Status='Absent';Reason='Entrada Run ausente; outras fontes de arranque nao foram excluidas.'} }
+    $contract=Get-SkyStartupContract $Name
+    if($state.Kind -notin @('String','ExpandString')) { throw 'Tipo Run desconhecido; preservado.' }
+    $command=[string](ConvertFrom-SkyRegistryState $state)
+    if($state.Kind -eq 'ExpandString') { $command=[Environment]::ExpandEnvironmentVariables($command) }
+    $expected='"' + $contract.Path + '" ' + $contract.Arguments
+    if($command -cne $expected) { return [pscustomobject]@{Name=$Name;Status='Deferred';Reason='Comando fora do contrato exato; nenhuma interpretacao ou execucao.'} }
+    Assert-SkyNoReparsePoint $contract.Path
+    $file=Get-Item -LiteralPath $contract.Path -ErrorAction Stop
+    $signature=Get-AuthenticodeSignature -LiteralPath $contract.Path -ErrorAction Stop
+    if($signature.Status -ne 'Valid' -or -not $signature.SignerCertificate -or
+        $signature.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName,$false) -notin $contract.Publishers -or
+        $file.VersionInfo.ProductName -ne $contract.Product) { throw 'Identidade/assinatura do binario fora do contrato; preservado.' }
+    [pscustomobject]@{Name=$Name;Status='Candidate';Reason=$contract.Impact;Resource=$resource;Before=$state
+        FileHash=(Get-FileHash -LiteralPath $contract.Path -Algorithm SHA256 -ErrorAction Stop).Hash
+        FileVersion=$file.VersionInfo.FileVersion;Publisher=$signature.SignerCertificate.Thumbprint}
+}
+
+function Disable-SkyStartupCandidate {
+    param($Candidate)
+    # Never accept a caller-supplied registry path as authority. Rebuild the exact contract.
+    $fresh=Get-SkyStartupCandidate $Candidate.Name
+    if($fresh.Status -ne 'Candidate' -or
+        ($fresh | ConvertTo-Json -Depth 8 -Compress) -cne ($Candidate | ConvertTo-Json -Depth 8 -Compress)) {
+        return New-SkyActionResult -Status Deferred -Reason 'Arranque/identidade mudou desde preview; repetir diagnostico e confirmar novo plano.' -RestartRequired No
+    }
+    $result=Invoke-SkyTrackedChange -Resource $fresh.Resource -Desired (ConvertTo-SkyRegistryState -Exists $false) -ExpectedBefore $fresh.Before
+    $result.RestartRequired='No'
+    $result.Reason += ' Apenas entrada Run removida; processo atual, dados, jogos e atualizador intactos. Efeito no proximo login; aplicacao pode recriar a entrada.'
+    $result
+}
+
+function Get-SkyMaxPlan {
+    param($Context = (Get-SkyMaxContext))
+    $supported=Test-SkyClientPolicySupport -SystemInfo $Context.Windows -AllowHome
+    $unmanaged=($Context.DomainJoined -is [bool] -and -not $Context.DomainJoined -and $Context.MdmIndicator -is [bool] -and -not $Context.MdmIndicator)
+    $selected=@(); $decisions=@()
+    $rules=@{
+        9='Captura Win10: desativar gravacao; beneficio apenas com carga de captura.'
+        16='Widgets: impedir experiencia por politica; preservar WebView e dependencias.'
+        41='Browsers: impedir background apos fechar e Startup Boost; pode perder notificacoes/extensoes.'
+        58='Impedir experiencias de consumidor; nao desinstala pacotes existentes.'
+        70='Impedir obtencao de dicas online; debloat, sem ganho gaming demonstrado.'
+        79='Configurar Game Mode na conta atual; comportamento por jogo ainda por validar.'
+        84='Impedir Spotlight na conta atual; perde funcionalidades associadas.'
+    }
+    foreach($id in 1..90) {
+        $status='NotSelected'; $reason='Preferencia ou experiencia sem fundamento para aplicacao automatica; Laboratory preservado.'
+        if($id -notin (Get-SkyMigratedActionIds)) { $status='Deferred';$reason='Acao bloqueada, retirada ou manutencao separada; ver catalogo.' }
+        elseif($rules.ContainsKey($id)) {
+            $reason=$rules[$id];$compatible=$supported
+            if($id -ne 79 -and -not $unmanaged) { $compatible=$false; $reason+=' Gestao de dominio/MDM detetada ou desconhecida.' }
+            if($compatible) {
+                switch($id) {
+                    9 { $compatible=Test-SkyClientPolicySupport -SystemInfo $Context.Windows -MaximumBuild 21999 }
+                    16 { $compatible=Test-SkyClientPolicySupport -SystemInfo $Context.Windows -MinimumBuild 22000 }
+                    41 { $compatible=($Context.Browsers.Edge -ge 88 -or $Context.Browsers.Chrome -ge 19) }
+                    {$_ -in @(58,70,84)} { $spec=Get-SkyCloudPolicySpec $id; $compatible=Test-SkyClientPolicySupport -SystemInfo $Context.Windows -MinimumBuild $spec.MinimumBuild -EnterpriseOnly:$spec.EnterpriseOnly }
+                }
+            }
+            if($compatible) { $status='Selected';$selected+=$id } else { $status='Incompatible';$reason+=' Requisitos nao confirmados; nenhuma alternativa especulativa.' }
+        }
+        $decisions += [pscustomobject]@{Id=$id;Decision=$status;Reason=$reason}
+    }
+    $startup=@()
+    if($supported -and $unmanaged) {
+        foreach($name in @('Spotify','Steam')) {
+            try { $startup += Get-SkyStartupCandidate $name }
+            catch { $startup += [pscustomobject]@{Name=$name;Status='Unknown';Reason='Leitura/identidade indisponivel; preservar arranque.'} }
+        }
+    }
+    $notes=@('Inventario pontual; FPS/input lag e gargalo durante jogos desconhecidos.',
+        'HAGS/MSI/HPET/afinidades/MMCSS/energia exigem contrato e ensaio; nao inferidos pela marca.',
+        'Overlays, Reflex/Anti-Lag, cap/VRR: testar por jogo/driver; nao simular aplicacao no registo.',
+        'OEM pode controlar refrigeracao/MUX/perifericos; servicos e tarefas nao sao dispensaveis pelo nome.',
+        'AppX/provisionamento/features: recuperacao de dados/payload nao comprovada; nao removidos.',
+        'Identidade HKCU pertence ao operador elevado; confirmar a conta do cliente.',
+        'Ausencia de indicador de dominio/MDM nao certifica ausencia de gestao externa.')
+    if($Context.PowerSource -ne 'AC') { $notes += 'Alimentacao DC/Unknown: nao forcar politica AC; medir autonomia e termica.' }
+    if($Context.MemoryBytes -and $Context.MemoryBytes -le 8GB) { $notes += 'Capacidade RAM reduzida: medir commit/faults durante o jogo; nao esvaziar working sets nem desativar pagefile.' }
+    [pscustomobject]@{SchemaVersion=1;Mode='MAX';Context=$Context;SelectedIds=@($selected);Decisions=$decisions
+        Startup=$startup;Recommendations=$notes;PerformanceEvidence='NotMeasured';FunctionValidation='PendingRealWindows'}
+}
+
+function Invoke-SkyMax {
+    $script:SkyLastExitCode=1
+    $run=[ordered]@{RunId=[guid]::NewGuid().ToString();Started=(Get-Date).ToString('o');Ended=$null;ExitCode=$null;State='Started'}
+    $path=Join-Path $Global:SkyBackupDir 'max_run.json'
+    Write-SkyAtomicFile -Path $path -Content ($run | ConvertTo-Json)
+    try { Invoke-SkyMaxCore }
+    catch { $script:SkyLastExitCode=1; throw }
+    finally {
+        $run.Ended=(Get-Date).ToString('o');$run.ExitCode=$script:SkyLastExitCode
+        $run.State=if($script:SkyLastExitCode -eq 0){'ConfigurationVerified'}else{'IncompleteOrFailed'}
+        Write-SkyAtomicFile -Path $path -Content ($run | ConvertTo-Json)
+    }
+}
+
+function Invoke-SkyMaxCore {
+    $script:SkyLastExitCode=1
+    if($ExperimentalActions) { throw 'MAX nao aceita experiencias adicionais; usar Laboratory.' }
+    $plan=Get-SkyMaxPlan
+    Write-Host "SKYOPTIMIZER MAX | IDs: $($plan.SelectedIds -join ', ')" -ForegroundColor Cyan
+    $plan.Decisions | Where-Object Decision -eq Selected | ForEach-Object { Write-Host "[$($_.Id)] $($_.Reason)" }
+    $candidates=@($plan.Startup | Where-Object Status -eq Candidate)
+    $candidates | ForEach-Object { Write-Host $_.Reason -ForegroundColor Yellow }
+    $plan.Recommendations | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
+    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'max_plan.json') -Content ($plan | ConvertTo-Json -Depth 10)
+    if(-not $plan.SelectedIds.Count -and -not $candidates.Count) { $script:SkyLastExitCode=2; return }
+    if(@($plan.SelectedIds | Where-Object {$_ -ne 79 -and $_ -ne 70}).Count -or $candidates.Count) {
+        if((Read-Host 'Confirmar perda das funcionalidades listadas nesta conta e ausencia de gestao externa? (S/N)') -notmatch '^(s|sim|y|yes)$') {
+            $script:SkyLastExitCode=2; return
+        }
+    }
+    # Context changes invalidate the whole plan; never adopt extra mutations after approval.
+    $fresh=Get-SkyMaxPlan
+    if(($fresh | ConvertTo-Json -Depth 10 -Compress) -cne ($plan | ConvertTo-Json -Depth 10 -Compress)) {
+        Write-Warning 'Contexto/plano mudou; nenhuma acao aplicada. Repetir dry-run.'; $script:SkyLastExitCode=2; return
+    }
+    $Profile='MAX'
+    Invoke-SkyOptimize -SelectedActionIds $plan.SelectedIds -OperatorMode
+    if($script:SkyLastExitCode -eq 1) { return }
+    $startupResults=@()
+    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'max_startup_results.json') -Content '[]'
+    if((@($plan.Context.Issues | Where-Object {$_}).Count -or @($plan.Startup | Where-Object Status -eq Unknown).Count) -and $script:SkyLastExitCode -eq 0) { $script:SkyLastExitCode=2 }
+    foreach($candidate in $candidates) {
+        $result=Invoke-SkyAction { Disable-SkyStartupCandidate $candidate }
+        $startupResults += [pscustomobject]@{Name=$candidate.Name;Status=$result.Status;Reason=$result.Reason;RestartRequired=$result.RestartRequired}
+        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'max_startup_results.json') -Content (ConvertTo-Json -InputObject @($startupResults) -Depth 6)
+        if($result.Status -eq 'Failed') { $script:SkyLastExitCode=1 }
+        elseif($result.Status -notin @('Applied','AlreadyCompliant') -and $script:SkyLastExitCode -eq 0) { $script:SkyLastExitCode=2 }
+        Write-Host "[Arranque/$($candidate.Name)] $($result.Status): $($result.Reason)"
+    }
+    Write-Host "MAX terminado. Exit code: $script:SkyLastExitCode. Ganhos nao medidos; consultar max_plan/execution_results/max_startup_results e Undo."
+}
 
 function Get-SkyWindowsBuild {
     [Environment]::OSVersion.Version.Build
@@ -3771,7 +3957,7 @@ function Invoke-SkyHardwareAudit {
              |___/      |_|                                    
 '@ -ForegroundColor Cyan
     Write-Host "         Inspeção do Técnico - Hardware, Frequências & Arranque" -ForegroundColor White
-    Write-Host "                          Versão: 2.7.0" -ForegroundColor White
+    Write-Host "                          Versão: 2.8.0" -ForegroundColor White
     Write-Host "================================================================================" -ForegroundColor Cyan
     Write-Host "`nA analisar componentes do cliente para diagnóstico técnico...`n" -ForegroundColor Gray
 
@@ -3881,6 +4067,14 @@ function Invoke-SkyHardwareAudit {
 # 7. MENU INTERATIVO & DESPACHO DE EXECUÇÃO
 # ==============================================================================
 
+# Read-only commands bypass storage creation, locks and the Apply entry point.
+if ($DryRun -or $Diagnose) {
+    if ($Profile -ne 'MAX' -or $ExperimentalActions) { throw 'DryRun/Diagnose preparam MAX; Laboratory usa o fluxo tecnico separado.' }
+    Get-SkyMaxPlan | ConvertTo-Json -Depth 10
+    exit 0
+}
+if ($DebloatPreview) { Get-SkyAppxPreview | ConvertTo-Json -Depth 8; exit 0 }
+
 # Se invocado com parâmetros diretos de linha de comando:
 try { Initialize-SkyStorage }
 catch { Write-Error "Armazenamento recusado; nenhuma acao executada: $($_.Exception.Message)"; exit 1 }
@@ -3890,7 +4084,7 @@ catch { Write-Error $_; exit 1 }
 try {
 
 if ($Apply) {
-    Invoke-SkyOptimize
+    if ($Profile -eq 'MAX') { Invoke-SkyMax } else { Invoke-SkyOptimize -OperatorMode }
     exit $script:SkyLastExitCode
 }
 
@@ -3928,89 +4122,10 @@ if ($Audit) {
     exit 0
 }
 
-# Modo Interativo Padrão
-while ($true) {
-    Clear-Host
-    Write-Host "================================================================================" -ForegroundColor Cyan
-    Write-Host @'
-  ____  _            ___        _   _           _              
- / ___|| | _____   _/ _ \ _ __ | |_(_)_ __ ___ (_)_______ _ __ 
- \___ \| |/ / | | | | | | '_ \| __| | '_ ` _ \| |_  / _ \ '__|
-  ___) |   <| |_| | |_| | |_) | |_| | | | | | | |/ /  __/ |   
- |____/|_|\_\\__, |\___/| .__/ \__|_|_| |_| |_|_/___\___|_|   
-             |___/      |_|                                    
-'@ -ForegroundColor Cyan
-    Write-Host "                 Windows 10/11 Performance Toolkit" -ForegroundColor White
-    Write-Host "                          Versão: 2.8.0" -ForegroundColor White
-    Write-Host "================================================================================" -ForegroundColor Cyan
-    Show-SystemHardwareInfo
-    Write-Host "[1] Aplicar Gaming - $Profile (apenas ações selecionadas e migradas)" -ForegroundColor Green
-    Write-Host "[2] Gerar 'Painel do Cliente' no Ambiente de Trabalho" -ForegroundColor Magenta
-    Write-Host "[3] Inspeção do Técnico (Hardware, XMP, Hz do Ecrã & Arranque)" -ForegroundColor Yellow
-    Write-Host "[4] Limpeza de Caches e Shaders" -ForegroundColor Cyan
-    Write-Host "[5] Reverter alterações com baseline verificável" -ForegroundColor DarkYellow
-    Write-Host "[6] Reparar Integridade do Windows (DISM / SFC)" -ForegroundColor Blue
-    Write-Host "[7] Sair" -ForegroundColor Red
-    Write-Host "[8] Selecionar perfil / experiências de laboratório" -ForegroundColor Cyan
-    Write-Host "================================================================================" -ForegroundColor Cyan
-    
-    Write-Host "[9] Preview AppX da conta elevada (sem remocao)" -ForegroundColor Cyan
-    $choice = Read-Host "Escolha uma opção (1-9)"
-
-    switch ($choice.Trim()) {
-        "1" {
-            Invoke-SkyOptimize
-        }
-        "2" {
-            Clear-Host
-            Write-Host ">>> A gerar 'Painel do Cliente' no Ambiente de Trabalho..." -ForegroundColor Cyan
-            Deploy-ClientPanel
-            Read-Host "`nPressione ENTER para regressar ao menu principal..."
-        }
-        "3" {
-            Invoke-SkyHardwareAudit
-        }
-        "4" {
-            Clear-Host
-            Write-Host ">>> Limpeza de diagnóstico de shaders..." -ForegroundColor Cyan
-            Clear-ShaderCache
-            Read-Host "`nPressione ENTER para regressar ao menu principal..."
-        }
-        "5" {
-            Invoke-SkyUndo
-        }
-        "6" {
-            Repair-WindowsSystemIntegrity
-            Read-Host "`nPressione ENTER para regressar ao menu principal..."
-        }
-        "7" {
-            Write-Host "`nA sair do SkyOptimizer." -ForegroundColor Gray
-            Start-Sleep -Seconds 1
-            exit 0
-        }
-        "8" {
-            Write-Host 'Balanced: Game Mode. Performance: solicita capturas (so contrato Win10) e browsers em fundo.'
-            Write-Host 'Extreme: herda Performance e acrescenta IDs escolhidos. E laboratorio, nao promessa de maior desempenho.'
-            Write-Host 'Nenhum perfil garante ganhos; captura incompativel fica intacta e e comunicada. Rever perda de funcionalidades.' -ForegroundColor Yellow
-            Write-Host 'Laboratory: selecao exata; dependencias 1 para 3/8 visiveis antes de Apply. Nao herda capturas/browsers.'
-            $candidate = Read-Host 'Perfil (Balanced/Performance/Extreme/Laboratory)'
-            if ($candidate -in @('Balanced', 'Performance', 'Extreme', 'Laboratory')) {
-                $requested = if ($candidate -in @('Extreme','Laboratory')) { Read-Host 'IDs separados por virgula (Laboratory exige pelo menos um)' } else { '' }
-                try {
-                    if ($requested -notmatch '^(\d{1,2}(,\d{1,2})*)?$') { throw 'Lista de IDs inválida.' }
-                    $ids = if ($requested) { [int[]]$requested.Split(',') } else { @() }
-                    $null = Get-SkyProfileActionIds -Profile $candidate -Experiments $ids
-                    $Profile = $candidate; $ExperimentalActions = $requested
-                } catch { Write-Host $_.Exception.Message -ForegroundColor Red; Start-Sleep -Seconds 2 }
-            }
-        }
-        "9" { Show-SkyDebloatPreview; Read-Host "ENTER para regressar" }
-        Default {
-            Write-Host "`nOpção inválida! Escolha de 1 a 9." -ForegroundColor Red
-            Start-Sleep -Seconds 1
-        }
-    }
-}
+# Default operator experience: one MAX run, then release the session lock and exit.
+if ($Profile -eq 'MAX') { Invoke-SkyMax }
+else { Invoke-SkyOptimize -OperatorMode }
+exit $script:SkyLastExitCode
 } finally { $skySession.Dispose() }
 
 
