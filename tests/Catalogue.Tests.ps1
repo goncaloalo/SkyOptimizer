@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 
 Describe 'Catalogue and dispatcher agree without executing action bodies' {
     $catalogue = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\docs\ACOES-ESTADO.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -45,5 +45,21 @@ Describe 'Catalogue and dispatcher agree without executing action bodies' {
             (Invoke-SkyEligibleAction -Id $record.Id -SelectedIds @($record.Id) -Action { throw 'Blocked body must not execute.' }).Status | Should Be Deferred
         }
         Assert-MockCalled Invoke-SkyNativeProcess -Times 0 -Exactly -Scope It
+    }
+}
+
+Describe 'Catalogue records MAX policy scope without promoting blocked actions' {
+    Mock Get-SkyStartupCandidate { [pscustomobject]@{Name=$Name;Status='Absent'} }
+    It 'matches the union of supported Win10 and Win11 enterprise selections' {
+        $selected=@(foreach($build in @(19045,22631)) {
+            $context=[pscustomobject]@{Windows=[pscustomobject]@{Version="10.0.$build";BuildNumber="$build";ProductType=1;OperatingSystemSKU=4}
+                DomainJoined=$false;MdmIndicator=$false;Browsers=@{Edge=130;Chrome=0};PowerSource='AC';MemoryBytes=16GB;Issues=@()}
+            (Get-SkyMaxPlan $context).SelectedIds
+        })
+        $catalogue=Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\docs\ACOES-ESTADO.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $automatic=@($catalogue | Where-Object { $_.PerfisAtuais -contains 'MAX: condicional' })
+        (($automatic.Id | Sort-Object) -join ',') | Should Be (($selected | Sort-Object -Unique) -join ',')
+        @($automatic | Where-Object { -not $_.ElegivelApply -or $_.GanhoMedido }).Count | Should Be 0
+        $automatic.Count | Should Be 7
     }
 }

@@ -199,6 +199,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Performance",
       "Extreme",
       "Laboratory: selecao explicita"
@@ -211,7 +212,9 @@
       "LacunasERiscos": "Matriz de edição/consumo de todas as flags não está comprovada. Desativa captura; não prova fim dos processos Game Bar.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Windows 10 cliente conhecido, SKU admitido Pro/Enterprise/Education; sem indicadores de gestao; impacto confirmado.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 10,
@@ -359,6 +362,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Extreme: selecao explicita",
       "Laboratory: selecao explicita"
     ],
@@ -370,7 +374,9 @@
       "LacunasERiscos": "Não remove pacote nem comprova terminação WebView; perde Widgets.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Windows 11 cliente conhecido Pro/Enterprise/Education; sem indicadores de gestao; impacto confirmado.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 17,
@@ -924,6 +930,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Performance",
       "Extreme",
       "Laboratory: selecao explicita"
@@ -936,7 +943,9 @@
       "LacunasERiscos": "Pode retardar abertura; browsers existentes podem não reler política. Instalações não padrão ficam de fora.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Cliente conhecido; Edge >=88 ou Chrome >=19 localizado; sem indicadores de gestao; impacto confirmado.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 42,
@@ -1304,6 +1313,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Extreme: selecao explicita",
       "Laboratory: selecao explicita"
     ],
@@ -1315,7 +1325,9 @@
       "LacunasERiscos": "Não cobre todas as sugestões nem desinstala apps; Pro/Home recusadas. GPO/MDM/consumo pendentes.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Enterprise/Education cliente conhecida, build >=17134; sem indicadores de gestao; impacto confirmado.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 59,
@@ -1577,6 +1589,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Extreme: selecao explicita",
       "Laboratory: selecao explicita"
     ],
@@ -1588,7 +1601,9 @@
       "LacunasERiscos": "Preferência das Definições; DisableSoftLanding e CDM preservados; benefício de jogo não estabelecido.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Pro/Enterprise/Education cliente conhecida, build >=16299; sem indicadores de gestao.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 71,
@@ -1787,6 +1802,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Balanced",
       "Performance",
       "Extreme",
@@ -1800,7 +1816,9 @@
       "LacunasERiscos": "Flags não certificam Game Mode efetivo; falta matriz funcional por edição/build/jogo. Perfil Balanced é apenas seleção de desenvolvimento.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Windows cliente conhecido na matriz, incluindo Home; estado conforme nao cria ownership.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 80,
@@ -1902,6 +1920,7 @@
     "GanhoMedido": false,
     "ElegivelApply": true,
     "PerfisAtuais": [
+      "MAX: condicional",
       "Extreme: selecao explicita",
       "Laboratory: selecao explicita"
     ],
@@ -1913,7 +1932,9 @@
       "LacunasERiscos": "Conta elevada é o alvo; sobreposição semântica com 58 não equivale a mesmo recurso. Pro/Home recusadas.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "SelecaoMAX": "Enterprise/Education cliente conhecida, build >=15063; sem indicadores de gestao; impacto confirmado.",
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
   },
   {
     "Id": 85,
