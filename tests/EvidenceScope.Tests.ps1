@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 
 Describe 'Default validation scope covers every registry write in Performance' {
     Mock Write-SkyLog {}
@@ -7,6 +7,8 @@ Describe 'Default validation scope covers every registry write in Performance' {
     It 'covers Game Mode, DVR and both browser branches without changing Windows' {
         $script:writes=@()
         $null=Enable-WindowsGameMode
+        Mock Test-SkyClientPolicySupport { $true }
+        Mock Get-SkyWindowsBuild { 19045 }
         $null=Disable-GameDVR
         $null=Disable-BrowserBackgroundTasks
         $specs=Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\integration\evidence-performance.json') -Raw -Encoding UTF8 | ConvertFrom-Json

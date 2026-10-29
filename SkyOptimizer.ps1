@@ -11,9 +11,9 @@
 .PARAMETER Apply
     Aplica o perfil selecionado e gera o painel existente.
 .PARAMETER Profile
-    Balanced (padrão), Performance ou Extreme. Consultar docs/PERFIS.md.
+    Balanced (padrão), Performance, Extreme ou Laboratory (selecao exata). Consultar docs/PERFIS.md.
 .PARAMETER ExperimentalActions
-    IDs adicionais separados por vírgula, apenas para Extreme. Ações não migradas não são executadas.
+    IDs adicionais separados por vírgula, para Extreme ou Laboratory. Ações não migradas não são executadas.
 .PARAMETER Clean
     Limpeza explícita de diagnóstico de shaders, com confirmação e sem Undo dos ficheiros eliminados.
 .PARAMETER Undo
@@ -61,7 +61,7 @@ param(
     [Parameter(ParameterSetName = "AuditDirect")]
     [switch]$Audit,
 
-    [ValidateSet('Balanced', 'Performance', 'Extreme')]
+    [ValidateSet('Balanced', 'Performance', 'Extreme', 'Laboratory')]
     [string]$Profile = 'Balanced',
 
     [ValidatePattern('^(\d{1,2}(,\d{1,2})*)?$')]
@@ -1664,6 +1664,9 @@ function Disable-USBSelectiveSuspend {
 function Disable-GameDVR {
     [CmdletBinding()]
     param()
+    if (-not (Test-SkyClientPolicySupport -MinimumBuild 15063 -MaximumBuild 21999)) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Captura preservada: receita 9 limitada a Windows 10 cliente/edicao suportada. Windows 11 exige contrato funcional; AllowGameDVR nao comprova controlo de captura.' -RestartRequired No
+    }
 
     $configStore = "HKCU:\System\GameConfigStore"
     Set-SkyRegistryValue -Path $configStore -Name "GameDVR_Enabled" -Value 0 -Type DWord -Force
@@ -1811,7 +1814,7 @@ function Disable-AppArchival {
 
 function Test-SkyClientPolicySupport {
     [CmdletBinding()]
-    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [switch]$AllowHome, [switch]$EnterpriseOnly)
+    param([ValidateRange(10240,99999)][int]$MinimumBuild = 15063, [ValidateRange(10240,99999)][int]$MaximumBuild = 99999, [switch]$AllowHome, [switch]$EnterpriseOnly)
     $systems = @(Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, BuildNumber, ProductType, OperatingSystemSKU -ErrorAction Stop)
     if ($systems.Count -ne 1) { return $false }
     $os = $systems[0]
@@ -1821,7 +1824,7 @@ function Test-SkyClientPolicySupport {
     if ($EnterpriseOnly -and $AllowHome) { throw 'Requisitos de edicao contraditorios.' }
     $skus = if ($EnterpriseOnly) { @(4,27,121,122,125,126) } else { @(4,27,48,49,121,122,125,126) }
     if ($AllowHome) { $skus += @(98,99,100,101) }
-    return ($os.Version -match '^10\.0\.' -and $build -ge $MinimumBuild -and $os.ProductType -eq 1 -and
+    return ($os.Version -match '^10\.0\.' -and $build -ge $MinimumBuild -and $build -le $MaximumBuild -and $os.ProductType -eq 1 -and
         $os.OperatingSystemSKU -in $skus)
 }
 
@@ -2305,47 +2308,52 @@ function Set-SvcHostProcessGrouping {
 function Disable-TelemetryServicesDeep {
     [CmdletBinding()]
     param()
-    foreach ($name in @('DiagTrack', 'PcaSvc', 'TrkWks')) { Disable-SkyService -Name $name }
+    New-SkyActionResult -Status Deferred -Reason 'Grupo 48 suspenso: DiagTrack (diagnostico), PcaSvc (compatibilidade) e TrkWks (tracking) exigem contratos individuais e atividade observada.' -RestartRequired No
 }
 
 function Remove-BloatwareAppX {
     [CmdletBinding()]
     param()
+    New-SkyActionResult -Status Deferred -Reason 'Remocao AppX suspensa: usar preview por conta. Reinstalacao nao garante dados/versao; nenhum pacote ou provisionamento alterado.' -RestartRequired No
+}
 
-    $bloatTargets = @(
-        "Clipchamp.Clipchamp",
-        "Disney.37853FC22B2CE",
-        "*TikTok*",
-        "*SpotifyMusic*",
-        "Microsoft.MicrosoftSolitaireCollection",
-        "Microsoft.BingNews",
-        "Microsoft.BingWeather",
-        "Microsoft.WindowsFeedbackHub",
-        "Microsoft.GetHelp",
-        "Microsoft.Getstarted",
-        "Microsoft.PowerAutomateDesktop",
-        "Microsoft.Todos",
-        "Microsoft.Microsoft3DViewer",
-        "Microsoft.MixedReality.Portal",
-        "Microsoft.WindowsMaps",
-        "Microsoft.ZuneVideo",
-        "Microsoft.549981C3F5F10"
-    )
-
-    $removedCount = 0
-    foreach ($target in $bloatTargets) {
-        try {
-            $pkgs = Get-AppxPackage -Name $target -AllUsers -ErrorAction SilentlyContinue
-            if ($pkgs) {
-                $pkgs | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-                $removedCount++
-            }
-            Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like $target } | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-        } catch {}
+function Get-SkyAppxPreview {
+    [CmdletBinding()]
+    param()
+    try { $packages = @(Get-AppxPackage -PackageTypeFilter Main,Framework,Resource,Bundle -ErrorAction Stop) }
+    catch { return [pscustomobject]@{ Status='Unknown'; Scope='CurrentProcessUser'; Items=@(); Reason='Enumeracao AppX falhou; nao significa ausencia.' } }
+    $referenced = @{}
+    foreach ($package in $packages) {
+        foreach ($dependency in @($package.Dependencies)) {
+            if ($dependency.PackageFullName) { $referenced[[string]$dependency.PackageFullName] = $true }
+        }
     }
+    $items = foreach ($package in $packages) {
+        $reason='Identidade/dependencias ou contrato de recuperacao sem validacao.'
+        $classification='Unknown'
+        $complete = $package.PackageFullName -and $package.PublisherId -and $package.Version -and
+            $null -ne $package.IsFramework -and $null -ne $package.IsResourcePackage -and $null -ne $package.NonRemovable -and
+            $null -ne $package.PSObject.Properties['Dependencies']
+        if ($package.IsFramework -or $package.IsResourcePackage -or $package.NonRemovable -or
+            $referenced.ContainsKey([string]$package.PackageFullName) -or
+            $package.Name -match '(WindowsStore|StorePurchase|Gaming|Xbox|WebView|VCLibs|NET.Native|UI.Xaml|WindowsAppRuntime|Shell|SecHealth|AAD|AccountsControl)') {
+            $classification='Protected'; $reason='Componente partilhado, dependencia, sistema ou capacidade protegida.'
+        } elseif ($complete) {
+            $unresolved = @($package.Dependencies | Where-Object { -not $_.PackageFullName -or $_.PackageFullName -notin $packages.PackageFullName })
+            if (-not $unresolved.Count) { $classification='ReviewOnly'; $reason='Rever utilizacao e atividade; instalado nao significa dispensavel. Remocao indisponivel.' }
+        }
+        [pscustomobject]@{ Name=$package.Name; PackageFullName=$package.PackageFullName; PublisherId=$package.PublisherId
+            Version=[string]$package.Version; Architecture=[string]$package.Architecture
+            Classification=$classification; Reason=$reason; ApplyAllowed=$false; Recovery='Unknown'
+            Dependencies=@($package.Dependencies | ForEach-Object { $_.PackageFullName }) }
+    }
+    [pscustomobject]@{ Status='Observed'; Scope='CurrentProcessUser'; Items=@($items); Reason='Preview apenas; outras contas e provisionamento nao enumerados. Dados locais; nao exportar sem revisao.' }
+}
 
-    Write-SkyLog -Message "Debloat de aplicações AppX concluído ($removedCount pacote(s) dispensáveis removidos; Microsoft Store e Xbox protegidas)." -Level "Success"
-    return $true
+function Show-SkyDebloatPreview {
+    $preview = Get-SkyAppxPreview
+    Write-Host "$($preview.Status): $($preview.Reason)" -ForegroundColor Yellow
+    $preview.Items | Select-Object Name,Classification,ApplyAllowed | Format-Table -AutoSize | Out-Host
 }
 
 # ==============================================================================
@@ -2684,11 +2692,8 @@ function Disable-SettingsOnlineTips {
 function Disable-SilentDiagnosticServices {
     [CmdletBinding()]
     param()
-    foreach ($name in @('diagnosticshub.standardcollector.service', 'wercplsupport')) { Disable-SkyService -Name $name }
     # The per-user service template is a registry value, not a running service instance.
-    if (Test-Path -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc') {
-        Set-SkyRegistryValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\OneSyncSvc' -Name Start -Value 4 -Type DWord
-    }
+    New-SkyActionResult -Status Deferred -Reason 'Grupo 71 suspenso: diagnostico, relatorios e OneSyncSvc/sincronizacao nao sao equivalentes. Template e instancias preservados.' -RestartRequired No
 }
 
 function Disable-GameBarPresenceWriter {
@@ -3325,7 +3330,7 @@ function Invoke-SkyOptimize {
         # Categoria 2: Input e Gaming
         [ordered]@{ Id = 7;  Category = "Input & Gaming"; Name = "Desativação de Aceleração de Rato (1:1 Raw Input)"; Action = { Disable-MouseAcceleration } },
         [ordered]@{ Id = 8;  Category = "Input & Gaming"; Name = "USB: experiência AC no plano Sky (sem escritas por dispositivo)"; Action = { Disable-USBSelectiveSuspend } },
-        [ordered]@{ Id = 9;  Category = "Input & Gaming"; Name = "Desativação de Gravação Xbox Game DVR / Game Bar"; Action = { Disable-GameDVR } },
+        [ordered]@{ Id = 9;  Category = "Input & Gaming"; Name = "Captura Game DVR: contrato Windows 10; Win11 preservado"; Action = { Disable-GameDVR } },
 
         # Categoria 3: Otimizações de Rede
         [ordered]@{ Id = 10; Category = "Rede & Latência"; Name = "Algoritmo de Nagle (TCPNoDelay & TCPAckFrequency)"; Action = { Optimize-NetworkLatency } },
@@ -3388,8 +3393,8 @@ function Invoke-SkyOptimize {
 
         # Categoria 14: Debloat Profundo & svchost
         [ordered]@{ Id = 47; Category = "Debloat Profundo"; Name = "Agrupamento de Processos svchost.exe (Redução de Processos e RAM)"; Action = { Set-SvcHostProcessGrouping } },
-        [ordered]@{ Id = 48; Category = "Debloat Profundo"; Name = "Desativação de Serviços de Telemetria (DiagTrack, PcaSvc, TrkWks)"; Action = { Disable-TelemetryServicesDeep } },
-        [ordered]@{ Id = 49; Category = "Debloat Profundo"; Name = "Remoção de Bloatware e Apps Pré-instaladas (Store/Xbox Protegidas)"; Action = { Remove-BloatwareAppX } },
+        [ordered]@{ Id = 48; Category = "Debloat Profundo"; Name = "Grupo suspenso: diagnostico, compatibilidade e tracking"; Action = { Disable-TelemetryServicesDeep } },
+        [ordered]@{ Id = 49; Category = "Debloat Profundo"; Name = "AppX: remocao suspensa; preview separado por conta"; Action = { Remove-BloatwareAppX } },
 
         # Categoria 15: Kernel, Memória & I/O Avançado (Atlas Engine)
         [ordered]@{ Id = 50; Category = "Kernel, Memória & I/O"; Name = "Kernel em RAM & Desativação de Page Combining (DisablePagingExecutive)"; Action = { Optimize-KernelMemoryPaging } },
@@ -3419,11 +3424,11 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 68; Category = "Firmware & Diagnóstico"; Name = "Desativação de Telemetria e Relatórios em Fundo da NVIDIA"; Action = { Disable-NvidiaTelemetry } },
         [ordered]@{ Id = 69; Category = "Firmware & Diagnóstico"; Name = "Desativação de Inquéritos e Pedidos de Feedback do Windows (SIUF)"; Action = { Disable-WindowsFeedbackRequests } },
         [ordered]@{ Id = 70; Category = "Firmware & Diagnóstico"; Name = "Definicoes: impedir obtencao de dicas online"; Action = { Disable-SettingsOnlineTips } },
-        [ordered]@{ Id = 71; Category = "Firmware & Diagnóstico"; Name = "Desativação de Serviços de Diagnóstico Silencioso (Hub, WerCpl, Sync)"; Action = { Disable-SilentDiagnosticServices } },
+        [ordered]@{ Id = 71; Category = "Firmware & Diagnóstico"; Name = "Grupo suspenso: Hub, WER e sincronizacao OneSync"; Action = { Disable-SilentDiagnosticServices } },
         [ordered]@{ Id = 72; Category = "Firmware & Diagnóstico"; Name = "Desativação de GameBarPresenceWriter em Fundo (Anti-Stutter no Arranque)"; Action = { Disable-GameBarPresenceWriter } },
 
         # Categoria 19: Rede Competitiva, Hitreg & Resposta de Movimento
-        [ordered]@{ Id = 73; Category = "Competitivo: Hitreg & Movimento"; Name = "Resposta Rápida de Teclado & Strafe (Delay 0, Speed 31 Nativo)"; Action = { Optimize-KeyboardRepeatResponse } },
+        [ordered]@{ Id = 73; Category = "Competitivo: Hitreg & Movimento"; Name = "Preferencia de repeticao de teclado (sem ganho de strafe demonstrado)"; Action = { Optimize-KeyboardRepeatResponse } },
         [ordered]@{ Id = 74; Category = "Competitivo: Hitreg & Movimento"; Name = "Interrupt Moderation: experiência por NIC, medir CPU/DPC e latência"; Action = { Disable-NetworkInterruptModeration } },
         [ordered]@{ Id = 75; Category = "Competitivo: Hitreg & Movimento"; Name = "RSC/LSO: experiência por NIC, medir throughput e latência"; Action = { Disable-NetworkRscAndLso } },
         [ordered]@{ Id = 76; Category = "Competitivo: Hitreg & Movimento"; Name = "Flow Control: experiência Ethernet, sem promessa de eliminar bufferbloat"; Action = { Disable-NetworkFlowControl } },
@@ -3444,7 +3449,7 @@ function Invoke-SkyOptimize {
         # Categoria 22: Latência Extrema & Resposta de Fundo
         [ordered]@{ Id = 86; Category = "Privacidade & Telemetria"; Name = "Desativação de Telemetria de Localização e Sensores (Serviço lfsvc Off)"; Action = { Disable-LocationAndSensors } },
         [ordered]@{ Id = 87; Category = "Processos em Segundo Plano"; Name = "Desativação de Aplicações Pré-Lançadas Especulativamente (ApplicationPreLaunch Off)"; Action = { Disable-ApplicationPreLaunch } },
-        [ordered]@{ Id = 88; Category = "Armazenamento & I/O"; Name = "Storage Sense: suspender limpeza automatica por politica"; Action = { Disable-StorageSenseBackgroundScans } },
+        [ordered]@{ Id = 88; Category = "Armazenamento & I/O"; Name = "Storage Sense: preferencia manual, sem ganho gaming demonstrado"; Action = { Disable-StorageSenseBackgroundScans } },
         [ordered]@{ Id = 89; Category = "Rede & Latência"; Name = "Desativação de Broadcasts Legados NetBIOS sobre TCP/IP (NetBT Off)"; Action = { Disable-NetBiosOverTcpip } },
         [ordered]@{ Id = 90; Category = "Privacidade & Telemetria"; Name = "Clipboard: impedir sync entre dispositivos, preservar historico"; Action = { Disable-CloudClipboardSync } }
     )
@@ -3664,12 +3669,13 @@ function Enable-WindowedOptimizations {
 }
 
 function Get-SkyProfileActionIds {
-    param([ValidateSet('Balanced', 'Performance', 'Extreme')][string]$Profile = 'Balanced', [int[]]$Experiments = @())
+    param([ValidateSet('Balanced', 'Performance', 'Extreme', 'Laboratory')][string]$Profile = 'Balanced', [int[]]$Experiments = @())
     # An empty pipeline in the CLI/menu arrives as null, not the default empty array.
     $Experiments = @($Experiments | Where-Object { $null -ne $_ })
     if (@($Experiments | Where-Object { $_ -lt 1 -or $_ -gt 90 }).Count) { throw 'IDs de ações devem estar entre 1 e 90.' }
-    if ($Experiments.Count -and $Profile -ne 'Extreme') { throw 'Ações adicionais exigem o perfil Extreme e uma comparação de laboratório.' }
-    $ids = @(79)
+    if ($Experiments.Count -and $Profile -notin @('Extreme','Laboratory')) { throw 'Ações adicionais exigem Extreme ou Laboratory e uma comparação de laboratório.' }
+    if ($Profile -eq 'Laboratory' -and -not $Experiments.Count) { throw 'Laboratory exige IDs explicitos.' }
+    $ids = @(if ($Profile -eq 'Laboratory') { $Experiments } else { 79 })
     if ($Profile -in @('Performance', 'Extreme')) { $ids += @(9, 41) }
     if ($Profile -eq 'Extreme') { $ids += $Experiments }
     if ($ids -contains 3 -or $ids -contains 8) { $ids += 1 }
@@ -3677,7 +3683,7 @@ function Get-SkyProfileActionIds {
 }
 
 function Get-SkyMigratedActionIds {
-    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 48, 58, 59, 60, 70, 71, 74, 75, 76, 79, 84, 86, 88, 90)
+    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 58, 59, 60, 70, 74, 75, 76, 79, 84, 86, 88, 90)
 }
 
 function Get-SkyRetiredActionIds {
@@ -3948,7 +3954,8 @@ while ($true) {
     Write-Host "[8] Selecionar perfil / experiências de laboratório" -ForegroundColor Cyan
     Write-Host "================================================================================" -ForegroundColor Cyan
     
-    $choice = Read-Host "Escolha uma opção (1-8)"
+    Write-Host "[9] Preview AppX da conta elevada (sem remocao)" -ForegroundColor Cyan
+    $choice = Read-Host "Escolha uma opção (1-9)"
 
     switch ($choice.Trim()) {
         "1" {
@@ -3983,11 +3990,12 @@ while ($true) {
         }
         "8" {
             Write-Host 'Balanced: Game Mode. Performance: acrescenta desativação de capturas e tarefas de browsers em fundo.'
-            Write-Host 'Extreme: acrescenta apenas IDs escolhidos para laboratório. Alterações sem migração continuam bloqueadas.'
+            Write-Host 'Extreme: herda Performance e acrescenta IDs escolhidos. E laboratorio, nao promessa de maior desempenho.'
             Write-Host 'Nenhum perfil garante ganhos; Performance desativa funcionalidades de gravação/background.' -ForegroundColor Yellow
-            $candidate = Read-Host 'Perfil (Balanced/Performance/Extreme)'
-            if ($candidate -in @('Balanced', 'Performance', 'Extreme')) {
-                $requested = if ($candidate -eq 'Extreme') { Read-Host 'IDs adicionais separados por vírgula (vazio = nenhum)' } else { '' }
+            Write-Host 'Laboratory: selecao exata; dependencias 1 para 3/8 visiveis antes de Apply. Nao herda capturas/browsers.'
+            $candidate = Read-Host 'Perfil (Balanced/Performance/Extreme/Laboratory)'
+            if ($candidate -in @('Balanced', 'Performance', 'Extreme', 'Laboratory')) {
+                $requested = if ($candidate -in @('Extreme','Laboratory')) { Read-Host 'IDs separados por virgula (Laboratory exige pelo menos um)' } else { '' }
                 try {
                     if ($requested -notmatch '^(\d{1,2}(,\d{1,2})*)?$') { throw 'Lista de IDs inválida.' }
                     $ids = if ($requested) { [int[]]$requested.Split(',') } else { @() }
@@ -3996,8 +4004,9 @@ while ($true) {
                 } catch { Write-Host $_.Exception.Message -ForegroundColor Red; Start-Sleep -Seconds 2 }
             }
         }
+        "9" { Show-SkyDebloatPreview; Read-Host "ENTER para regressar" }
         Default {
-            Write-Host "`nOpção inválida! Escolha de 1 a 8." -ForegroundColor Red
+            Write-Host "`nOpção inválida! Escolha de 1 a 9." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
