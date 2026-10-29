@@ -166,7 +166,6 @@ Describe 'Tracked registry lifecycle without Windows writes' {
     }
     It 'integrates the migrated multi-value Game DVR action with repeated Apply and Undo' {
         Mock Test-SkyClientPolicySupport { $true }
-        Mock Get-SkyWindowsBuild { 19045 }
         (Invoke-SkyAction { Disable-GameDVR }).Status | Should Be Applied
         (Invoke-SkyAction { Disable-GameDVR }).Status | Should Be AlreadyCompliant
         @((Read-SkyMutationState $Global:SkyBackupDir).Entries).Count | Should Be 5

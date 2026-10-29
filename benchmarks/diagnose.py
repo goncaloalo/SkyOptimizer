@@ -78,7 +78,7 @@ def diagnose(session):
                     else:
                         if end < start:
                             raise ValueError("Cumulative counter decreased within one process lifetime.")
-                        rates[output] = (end - start) / elapsed
+                        rates[output] = number((end - start) / elapsed, output)
                 cores = rates["cpu_core_equivalents"]
                 if cores is not None and cores > cpus * 1.01:
                     raise ValueError("CPU delta exceeds machine capacity; check clock and units.")
@@ -88,7 +88,10 @@ def diagnose(session):
                                  "private_bytes": process.get("private_bytes")})
             activity.sort(key=lambda row: (row["cpu_core_equivalents"] is not None,
                                            row["cpu_core_equivalents"] or 0), reverse=True)
+            game_matched = (target in processes and target in previous[1] and
+                            processes[target]['lifetime'] == previous[1][target]['lifetime'])
             windows.append({"start_seconds": previous[0], "end_seconds": time,
+                            "game_observed_at_both_boundaries": game_matched,
                             "activity": activity,
                             "available_bytes": memory.get("available_bytes"),
                             "commit_fraction": None if commit is None or limit is None else commit / limit,
@@ -97,7 +100,8 @@ def diagnose(session):
         previous = (time, processes)
     if not observed_game:
         raise ValueError("Selected game process was never observed.")
-    candidates = sorted({row["id"] for window in windows for row in window["activity"]
+    candidates = sorted({row["id"] for window in windows if window['game_observed_at_both_boundaries']
+                         for row in window["activity"]
                          if row["role"] == "concurrent" and
                          ((row["cpu_core_equivalents"] or 0) >= 0.25 or
                           (row["read_bytes_per_second"] or 0) + (row["write_bytes_per_second"] or 0) >= 1048576)})

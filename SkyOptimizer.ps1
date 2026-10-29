@@ -3989,9 +3989,9 @@ while ($true) {
             exit 0
         }
         "8" {
-            Write-Host 'Balanced: Game Mode. Performance: acrescenta desativação de capturas e tarefas de browsers em fundo.'
+            Write-Host 'Balanced: Game Mode. Performance: solicita capturas (so contrato Win10) e browsers em fundo.'
             Write-Host 'Extreme: herda Performance e acrescenta IDs escolhidos. E laboratorio, nao promessa de maior desempenho.'
-            Write-Host 'Nenhum perfil garante ganhos; Performance desativa funcionalidades de gravação/background.' -ForegroundColor Yellow
+            Write-Host 'Nenhum perfil garante ganhos; captura incompativel fica intacta e e comunicada. Rever perda de funcionalidades.' -ForegroundColor Yellow
             Write-Host 'Laboratory: selecao exata; dependencias 1 para 3/8 visiveis antes de Apply. Nao herda capturas/browsers.'
             $candidate = Read-Host 'Perfil (Balanced/Performance/Extreme/Laboratory)'
             if ($candidate -in @('Balanced', 'Performance', 'Extreme', 'Laboratory')) {

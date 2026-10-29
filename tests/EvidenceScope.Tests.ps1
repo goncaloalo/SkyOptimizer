@@ -8,7 +8,6 @@ Describe 'Default validation scope covers every registry write in Performance' {
         $script:writes=@()
         $null=Enable-WindowsGameMode
         Mock Test-SkyClientPolicySupport { $true }
-        Mock Get-SkyWindowsBuild { 19045 }
         $null=Disable-GameDVR
         $null=Disable-BrowserBackgroundTasks
         $specs=Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\integration\evidence-performance.json') -Raw -Encoding UTF8 | ConvertFrom-Json

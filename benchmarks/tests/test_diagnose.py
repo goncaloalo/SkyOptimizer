@@ -36,6 +36,12 @@ class DiagnosisTests(unittest.TestCase):
         self.assertEqual(r['concurrent_activity_candidates'], [])
         self.assertIsNone(r['windows'][0]['activity'][1]['cpu_core_equivalents'])
 
+    def test_activity_after_game_exit_is_not_called_concurrent(self):
+        self.session['samples'][1]['processes'] = self.session['samples'][1]['processes'][1:]
+        r = d.diagnose(self.session)
+        self.assertFalse(r['windows'][0]['game_observed_at_both_boundaries'])
+        self.assertEqual(r['concurrent_activity_candidates'], [])
+
     def test_invalid_time_counter_capacity_and_memory_fail(self):
         for change in ('time', 'counter', 'capacity', 'memory', 'nan'):
             s = copy.deepcopy(self.session)

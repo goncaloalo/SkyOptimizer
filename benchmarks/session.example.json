@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "clock": "relative_monotonic_seconds",
+  "logical_processors": 8,
+  "game_process_id": "P001",
+  "fixture_note": "SYNTHETIC EXAMPLE ONLY; replace with explicitly collected samples, never a benchmark result",
+  "samples": [
+    {
+      "seconds": 0,
+      "processes": [
+        {
+          "id": "P001",
+          "lifetime": "L001",
+          "cpu_seconds": 0,
+          "read_bytes": null,
+          "write_bytes": null,
+          "private_bytes": null
+        },
+        {
+          "id": "P002",
+          "lifetime": "L002",
+          "cpu_seconds": 0.0,
+          "read_bytes": 0,
+          "write_bytes": null,
+          "private_bytes": null
+        }
+      ],
+      "memory": {
+        "available_bytes": null,
+        "commit_bytes": null,
+        "commit_limit_bytes": null
+      },
+      "game_volume": {
+        "read_bytes_per_second": null,
+        "write_bytes_per_second": null,
+        "latency_ms": null,
+        "queue_length": null
+      }
+    },
+    {
+      "seconds": 2,
+      "processes": [
+        {
+          "id": "P001",
+          "lifetime": "L001",
+          "cpu_seconds": 2,
+          "read_bytes": null,
+          "write_bytes": null,
+          "private_bytes": null
+        },
+        {
+          "id": "P002",
+          "lifetime": "L002",
+          "cpu_seconds": 1.0,
+          "read_bytes": 4000000,
+          "write_bytes": null,
+          "private_bytes": null
+        }
+      ],
+      "memory": {
+        "available_bytes": null,
+        "commit_bytes": null,
+        "commit_limit_bytes": null
+      },
+      "game_volume": {
+        "read_bytes_per_second": null,
+        "write_bytes_per_second": null,
+        "latency_ms": null,
+        "queue_length": null
+      }
+    }
+  ]
+}
