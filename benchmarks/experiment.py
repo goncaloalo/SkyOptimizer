@@ -13,6 +13,10 @@ from analyze import analyze_manifest
 METRICS = {'average_fps': 1, 'one_percent_low_fps': 1, 'p99_ms': -1}
 
 
+def metric_value(row, metric):
+    return row['frametime_percentiles_ms']['99'] if metric == 'p99_ms' else row[metric]
+
+
 def evaluate(analysis, manifest):
     design = manifest['experimental_design']
     primary = design['primary_metric']
@@ -48,9 +52,7 @@ def evaluate(analysis, manifest):
         sequences.append('AB' if group['A'][1] < group['B'][1] else 'BA')
         delta = {}
         for metric, direction in METRICS.items():
-            def value(row):
-                return row['frametime_percentiles_ms']['99'] if metric == 'p99_ms' else row[metric]
-            a, b = value(group['A'][2]), value(group['B'][2])
+            a, b = metric_value(group['A'][2], metric), metric_value(group['B'][2], metric)
             delta[metric] = direction * math.log(b / a)
         blocks.setdefault(block, []).append(delta)
     if len(pairs) < 2 or len(blocks) < 2:
@@ -87,7 +89,9 @@ def evaluate(analysis, manifest):
             status = 'Inconclusive'
         output[metric] = {'oriented_ratio_change_percent': transform(point), 'ci_percent': [lo, hi],
                           'status': status, 'block_log_stddev': statistics.stdev(b[metric] for b in means),
-                          'pair_log_stddev': statistics.stdev(d[metric] for group in blocks.values() for d in group)}
+                          'pair_log_stddev': statistics.stdev(d[metric] for group in blocks.values() for d in group),
+                          'A_run_median': statistics.median(metric_value(group['A'][2], metric) for group in pairs.values()),
+                          'B_run_median': statistics.median(metric_value(group['B'][2], metric) for group in pairs.values())}
     status = ('Regression' if any(x['status'] == 'Regression' for x in output.values()) else
               'BenefitDetected' if output[primary]['status'] == 'BenefitDetected' and
               all(x['ci_percent'][0] > -margin for x in output.values()) else
@@ -105,11 +109,12 @@ def report(result):
     lines = ['# SkyOptimizer — avaliação A/B', '',
              '**DADOS SINTÉTICOS — não são ganhos medidos.**' if result['synthetic'] else
              'Dados fornecidos pelo operador; autenticidade e condições requerem revisão.', '',
-             f"Resultado: {result['status']}. Pares: {result['pairs']}; blocos: {result['blocks']}.", '',
-             '| Métrica | Razão orientada (%) | Intervalo simultâneo aproximado (%) | Estado |',
-             '|---|---:|---|---|']
+             f"Resultado: {result['status']}. Primária: {result['primary_metric']}. Pares: {result['pairs']}; blocos: {result['blocks']}.", '',
+             'A/B são medianas descritivas dos runs (FPS; p99 em ms). A razão inferencial usa blocos com peso igual.', '',
+             '| Métrica | A | B | Razão orientada (%) | Intervalo simultâneo aproximado (%) | Estado |',
+             '|---|---:|---:|---:|---|---|']
     for name, row in result['metrics'].items():
-        lines.append(f"| {name} | {row['oriented_ratio_change_percent']:.3f} | {row['ci_percent'][0]:.3f}, {row['ci_percent'][1]:.3f} | {row['status']} |")
+        lines.append(f"| {name} | {row['A_run_median']:.3f} | {row['B_run_median']:.3f} | {row['oriented_ratio_change_percent']:.3f} | {row['ci_percent'][0]:.3f}, {row['ci_percent'][1]:.3f} | {row['status']} |")
     return '\n'.join(lines + ['', *result['quality_issues'], '', *result['limits']]) + '\n'
 
 

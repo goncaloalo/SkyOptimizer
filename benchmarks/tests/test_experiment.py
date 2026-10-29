@@ -29,6 +29,9 @@ class ExperimentTests(unittest.TestCase):
             r=e.evaluate(a,m)
             self.assertEqual(r['status'],status)
             self.assertAlmostEqual(r['metrics']['average_fps']['oriented_ratio_change_percent'],(ratio-1)*100)
+            self.assertEqual(r['metrics']['average_fps']['A_run_median'],100)
+            self.assertAlmostEqual(r['metrics']['average_fps']['B_run_median'],100*ratio)
+            self.assertAlmostEqual(r['metrics']['p99_ms']['B_run_median'],15/ratio)
             self.assertIn('SINTÉTICOS',e.report(r))
 
     def test_guardrail_prevents_primary_promotion(self):
