@@ -1,0 +1,1442 @@
+{
+  "Date": "2026-10-29T21:15:52.0857985+00:00",
+  "ProductSourceSha256": "6B9997C204F748AC9213559AC05025F655DDCA2A3C0AEFA92D9908FBC0783F8A",
+  "CollectorSourceSha256": "4F5BF61164D433DCB1E5B43BAD0CBDACA7FFCF4912A6392F809453DFB74AA25F",
+  "PowerShell": "5.1.26100.9711",
+  "Pester": "3.4.0",
+  "Total": 234,
+  "Passed": 234,
+  "Failed": 0,
+  "Skipped": 0,
+  "Pending": 0,
+  "WindowsChangesApplied": false,
+  "LiveCaptureExecuted": false,
+  "Tests": [
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "shares one immutable baseline in either action order and undoes only after the last release",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "treats casing and property order as the same registry resource, not another baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "rejects opposing desired states from another owner before changing the baseline or value",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "does not acquire ownership for an initially compliant resource",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "keeps legacy ownership unknown until full Undo, without inventing an action baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "does not persist a second owner if its journal write fails",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "retries failed ownership release and interrupted final Undo without rewriting the original state twice",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "preserves an external conflict while restoring independent resources for the selected action",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "does not persist a failed owner release through a later independent journal save",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "retries a partial mutation and retains the first baseline across action releases",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Shared resource ownership without Windows changes",
+      "Name": "rejects a duplicate physical resource in reordered journal data and an unsupported schema",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Apply orchestration without host changes",
+      "Name": "includes panel deployment failure in the final exit code while retaining action evidence",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Apply orchestration without host changes",
+      "Name": "returns incomplete when the selected action is incompatible",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Apply orchestration without host changes",
+      "Name": "keeps successful execution distinct from performance validation",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Phase 3B audit remains a complete baseline record",
+      "Name": "contains every originally blocked ID exactly once",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Phase 3B audit remains a complete baseline record",
+      "Name": "provides individual mechanism, risks, dependencies, rollback and baseline evidence without claiming real validation",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Catalogue and dispatcher agree without executing action bodies",
+      "Name": "keeps historical IDs unique and maps names/functions to the existing menu declarations",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Catalogue and dispatcher agree without executing action bodies",
+      "Name": "matches eligible and retired IDs with dispatcher gates and never claims measured gains",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Catalogue and dispatcher agree without executing action bodies",
+      "Name": "quarantines every selected unmigrated or retired action before reaching its body",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Cloud policies use documented scopes without CDM fallback writes",
+      "Name": "supports six execution orders, repeated Apply and exact scoped/global Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Cloud policies use documented scopes without CDM fallback writes",
+      "Name": "preserves internal CDM flags, unrelated CloudContent values and misplaced legacy machine values",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Cloud policies use documented scopes without CDM fallback writes",
+      "Name": "does not invent ownership for policies already configured by the user",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Cloud policies use documented scopes without CDM fallback writes",
+      "Name": "allows only OnlineTips on Pro and refuses Home, Server and unknown editions",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Cloud policies use documented scopes without CDM fallback writes",
+      "Name": "respects minimum builds and does not write a machine consumer policy in the old user-scope window",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Cloud policies use documented scopes without CDM fallback writes",
+      "Name": "recovers independently after a middle action fails to persist intent",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent registry reader contract without registry access",
+      "Name": "preserves existence, kind and literal expandable content and closes handles",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent registry reader contract without registry access",
+      "Name": "distinguishes absence and refuses unsupported kinds while closing handles",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent registry reader contract without registry access",
+      "Name": "refuses invalid hives without opening any handle",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Default validation scope covers every registry write in Performance",
+      "Name": "covers Game Mode, DVR and both browser branches without changing Windows",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Hardware observations do not certify performance or security",
+      "Name": "does not turn unknown VBS into anti-cheat certification or maximum performance",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Hardware observations do not certify performance or security",
+      "Name": "does not infer memory channels, XMP state or percentage gains from module count and WMI speeds",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Hardware observations do not certify performance or security",
+      "Name": "distinguishes missing inventory from a clean system or a detected VM",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AC-only capability checks fail closed",
+      "Name": "permits only an explicit online status",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AC-only capability checks fail closed",
+      "Name": "does not classify an API failure as desktop or AC",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AC-only capability checks fail closed",
+      "Name": "skips the USB plan experiment when AC is unknown or offline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AC-only capability checks fail closed",
+      "Name": "keeps unknown separate from DC and refuses malformed API results",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AC-only capability checks fail closed",
+      "Name": "blocks core parking and direct AC policy writes before backup access on unknown power",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AC-only capability checks fail closed",
+      "Name": "compiles the power status declaration without invoking its native API",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Unsupported device operations cannot reach legacy writes",
+      "Name": "blocks HAGS and MSI even when invoked directly",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Unsupported device operations cannot reach legacy writes",
+      "Name": "retires the broad WDF hub operation in the dispatcher and direct function",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Unsupported device operations cannot reach legacy writes",
+      "Name": "adds only the power plan dependency for the explicit USB experiment",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "restores absence after Apply Apply Undo Undo without claiming an untouched value",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "preserves original type and literal expansion strings across different desired values",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "does not own already compliant values and never undoes their later changes",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "makes no write when persisting intent fails",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "recovers a write interrupted before completion",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "recovers a write interrupted after the state changed",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "detects no-effect success and keeps a recoverable journal",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "preserves external changes during Apply and Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "retries interrupted Undo and leaves unrelated values alone",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "starts a fresh baseline only after completed Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "does not create a new baseline over legacy exports, including empty files",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "rejects corrupted and wrong-machine journals before any write",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "rejects a journal from a different user even for the same machine",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "serializes concurrent access",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "rejects duplicate active resources before Undo writes any value",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "rejects missing identity before a new baseline or a system write",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "restores a deleted value with the exact binary bytes",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "integrates the migrated multi-value Game DVR action with repeated Apply and Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "writes browser policies once per machine without redundant user policies",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "preserves unrelated graphics flags and restores the exact original string",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "journals the background default without overwriting per-app or user exceptions",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "applies the four software options twice and restores absence without managing unrelated preferences",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "restores unexpected original types for every migrated software policy",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "recovers an after-write failure in each software option without inventing defaults",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "never writes any software option if the initial journal persistence fails",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "restores update policies after repeated Apply without touching other driver and peer settings",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "does not overwrite a composed value changed after its preparation",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "recovers when the final Apply journal update fails after a successful write",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Tracked registry lifecycle without Windows writes",
+      "Name": "retries after Undo changed the value but failed to persist completion",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Registry state encoding",
+      "Name": "round trips signed DWORD and full QWORD without JSON precision loss",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Registry state encoding",
+      "Name": "preserves empty and multi-element strings, binaries and multi-strings",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Registry state encoding",
+      "Name": "canonicalizes provider paths and keeps the default value name empty",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Auxiliary log failures remain visible without exposing exception content",
+      "Name": "warns once per destination even with NoConsole and retains failure evidence",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Auxiliary log failures remain visible without exposing exception content",
+      "Name": "does not mark a successful append as a failed log",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Integrity repair never certifies success from exit codes alone",
+      "Name": "runs nothing when cancelled",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Integrity repair never certifies success from exit codes alone",
+      "Name": "does not run SFC after DISM fails or omits its exit code",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Integrity repair never certifies success from exit codes alone",
+      "Name": "reports restart required and defers SFC after DISM returns 3010",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Integrity repair never certifies success from exit codes alone",
+      "Name": "reports a launch exception without proceeding",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Integrity repair never certifies success from exit codes alone",
+      "Name": "reports nonzero or missing SFC exit codes as unconfirmed failures",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Integrity repair never certifies success from exit codes alone",
+      "Name": "requires diagnostic review even after both commands return zero",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VBS observations distinguish configured, running and unknown",
+      "Name": "identifies only runtime status 2 as running",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VBS observations distinguish configured, running and unknown",
+      "Name": "identifies explicit status 0 as disabled",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VBS observations distinguish configured, running and unknown",
+      "Name": "keeps missing, null and future status values unknown",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VBS observations distinguish configured, running and unknown",
+      "Name": "does not translate provider failure into disabled security",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "parses the GUID independently of localized plan names and automatic matches",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "rejects ambiguous active-plan output",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "persists the baseline before mutation and reuses the owned GUID on Apply Apply Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "never writes DC indices or global setting attributes",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "stops an AC group if power becomes unknown or offline after its first write and keeps Undo usable",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "blocks configuration without an active owned plan",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "detects a successful native command that did not change the setting",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "detects a successful activation command that did not activate the plan",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "recovers after duplication succeeded but activation failed",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "can undo an interrupted Prepared transaction without activating the owned plan",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "recovers from a crash between activation and the final journal write",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "restores the original after an intermediate setting write fails",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "classifies an unsupported setting without changing any index",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "does not enter device writes when selective suspend is unsupported",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "changes only USB AC on the owned copy and restores the original after repetition",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "does not mutate Windows if persisting the baseline fails",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "rejects malformed baseline JSON without making a native call",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "rejects a baseline from another machine",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "preserves an external choice of active plan",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "does not delete external edits inside the Sky copy during Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "refuses to choose a default when the original plan disappeared",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "preserves the copy rather than attempting unverified plan deletion",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "allows a new cycle after completed Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "does nothing on Undo without any baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "blocks legacy baseline overwrite and never changes a plan from incomplete evidence",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "rejects concurrent access to the power transaction",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Owned power plan lifecycle",
+      "Name": "reads all capabilities before changing any index",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Standalone panel parity",
+      "Name": "embeds the same restoration functions and parses without errors",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Standalone panel parity",
+      "Name": "parses the complete generated Undo after shared functions are inserted",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Undo entry guard",
+      "Name": "returns before confirmation or system operations when no backups exist",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Undo entry guard",
+      "Name": "does not mistake execution reports and lock files for an original baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Panel shares the original backup directory without copying",
+      "Name": "accepts equivalent paths without rewriting the existing baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Panel shares the original backup directory without copying",
+      "Name": "refuses distinct backup directories without replacing either baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Panel shares the original backup directory without copying",
+      "Name": "refuses missing directories and empty paths",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "keeps all automatic profile selections within the eligible set and resolves eligible dependencies",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "keeps Balanced small and does not disable captures, services or offloads",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "adds only documented background mechanisms to Performance",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "requires explicit experimental IDs and resolves the owned-power dependency",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "never executes unmigrated experiments or actions outside the selection",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "executes a selected migrated action without interpreting legacy booleans as success",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Evidence-scoped development profiles",
+      "Name": "rejects duplicate managed graphics flags rather than losing unknown settings",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Explicit shader maintenance without filesystem deletion",
+      "Name": "preserves caches when diagnostic deletion is not confirmed",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Explicit shader maintenance without filesystem deletion",
+      "Name": "reports locked files as failures instead of counting false success",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Explicit shader maintenance without filesystem deletion",
+      "Name": "deletes only enumerated literal files and confirms their absence",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Research capture contract with no host writes",
+      "Name": "refuses Windows 11 before any registry mutation",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Research capture contract with no host writes",
+      "Name": "refuses unknown builds, Home and Server",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Research capture contract with no host writes",
+      "Name": "retains the five tracked writes for the declared Win10 client contract",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Suspended groups cannot mutate even when directly invoked",
+      "Name": "refuses 48, 71 and 49 at both action and dispatcher boundaries",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AppX current-account preview with dependency protection",
+      "Name": "distinguishes failed enumeration from an empty installed set",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "AppX current-account preview with dependency protection",
+      "Name": "protects frameworks, reverse dependencies and gaming components; unknown metadata never authorizes removal",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Exact laboratory selection",
+      "Name": "has no hidden Performance actions and resolves only required power dependency",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Retired and quarantined operations never reach Windows mutations",
+      "Name": "makes every retired dispatcher decision traceable and blocks direct legacy entry points",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Retired and quarantined operations never reach Windows mutations",
+      "Name": "preserves the MMCSS and prelaunch hypotheses without writing unused or unrelated settings",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Checked native commands",
+      "Name": "rejects a nonzero exit code even with success-like output",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Checked native commands",
+      "Name": "rejects a missing exit code",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Checked native commands",
+      "Name": "returns output only after a zero exit code",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "does not count legacy true as verified success",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "does not count legacy false as success or invent an incompatibility reason",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "does not count missing output as success",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "reports exceptions as failures",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "reports a nonterminating error as failure",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "rejects a claimed success when the action logged an error",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "preserves structured verification and reboot requirements",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "restores caller logging context after failure",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "preserves Deferred and NotSelected instead of misreporting conformity",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "reports partial application and keeps the restart requirement when a child remains unverified or skipped",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "retains failed child details and restart requirements after partial mutation",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "keeps completed child evidence when a later child throws",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Action reporting",
+      "Name": "reports incomplete mixed compatibility rather than full application",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Atomic files and registry export barriers",
+      "Name": "atomically creates and replaces UTF-8 content",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Atomic files and registry export barriers",
+      "Name": "stops the action after an export failure and removes a partial export",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Atomic files and registry export barriers",
+      "Name": "rejects a success exit code without an exported file",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Atomic files and registry export barriers",
+      "Name": "preserves the first export across repeated applications",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Atomic files and registry export barriers",
+      "Name": "refuses to overwrite an existing empty backup",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Production task actions remain quarantined",
+      "Name": "does not enumerate, disable or modify system/vendor resources through legacy entry points",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "applies twice and restores only the original Enabled flag with a version 2 journal",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "does not own a task originally disabled",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "refuses running, queued or unknown tasks and an unapproved fingerprint",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "blocks task replacement during Apply and Undo without creating a second baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "does not write if initial persistence fails and recovers after an after-write exception",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "rejects no-effect success and retries interrupted Undo after the original flag was restored",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "rejects system/third-party names and invalid states before backend access",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Scheduled task journal with a mocked Task Scheduler backend",
+      "Name": "refuses task entries in schema 1 and includes task restoration in the standalone panel source",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Mixed task and registry recovery with isolated mocked resources",
+      "Name": "restores independent registry state even if a changed task refuses Undo, then retries the task",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Mixed task and registry recovery with isolated mocked resources",
+      "Name": "does not let policy-scoped Undo release an unrelated task baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Task fingerprint and COM adapter using fake objects only",
+      "Name": "ignores only Enabled while hashing definition and security",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Task fingerprint and COM adapter using fake objects only",
+      "Name": "rejects DTDs, absent/duplicate Enabled and XML/runtime inconsistency",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Task fingerprint and COM adapter using fake objects only",
+      "Name": "gets the literal task and writes only Enabled without starting, stopping or registering it",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Task fingerprint and COM adapter using fake objects only",
+      "Name": "rejects a changed definition or task path and never stops a running task",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "restores delayed automatic startup and running state after Apply Apply Undo",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "preserves manual and originally stopped services without starting them",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "does not own an already disabled and stopped service",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "restores runtime after stopping succeeded but disabling failed",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "refuses active dependents and paused or transitional services",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "restores only the changed NIC property and its exact string value",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "preserves user changes to a NIC property instead of resetting defaults",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service and network journal lifecycles",
+      "Name": "filters panel Undo to its service without changing NIC settings",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service native declarations and standalone parity",
+      "Name": "compiles SCM declarations without invoking any native function",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Service native declarations and standalone parity",
+      "Name": "parses the generated service panel with the same journal and SCM helpers",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "NIC binding and capability guards",
+      "Name": "resolves the adapter by GUID even after a friendly-name change",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "NIC binding and capability guards",
+      "Name": "rejects a changed driver or substituted device",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "NIC binding and capability guards",
+      "Name": "rejects a missing property and skips wireless for Ethernet-only changes",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "NIC binding and capability guards",
+      "Name": "refuses ambiguous multiple physical adapters before reading driver settings",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "NIC binding and capability guards",
+      "Name": "reports a partial multi-property NIC action when one requested property is unsupported",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Synthetic process collector fixtures; no live readers",
+      "Name": "anonymizes identities and preserves unsupported metrics as null",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Synthetic process collector fixtures; no live readers",
+      "Name": "rejects missing target identity",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Documented software policies with conservative compatibility",
+      "Name": "checks each documented minimum build before any write",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Documented software policies with conservative compatibility",
+      "Name": "allows known Home SKUs only for the native long-path feature",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Documented software policies with conservative compatibility",
+      "Name": "rejects Server, unknown editions and unavailable OS detection before writes",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Documented software policies with conservative compatibility",
+      "Name": "requests validation after reboot for cached long-path state and preserves clipboard history",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Documented software policies with conservative compatibility",
+      "Name": "keeps all four choices explicit and respects long-path support in the dispatcher",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage trust decisions using in-memory security descriptors",
+      "Name": "accepts administrator-owned storage and optional read-only user access",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage trust decisions using in-memory security descriptors",
+      "Name": "builds a protected administrator and SYSTEM descriptor without applying it to the host",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage trust decisions using in-memory security descriptors",
+      "Name": "allows parent child-creation but refuses parent permissions that permit replacing protected storage",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage trust decisions using in-memory security descriptors",
+      "Name": "rejects untrusted ownership even with a restrictive DACL",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage trust decisions using in-memory security descriptors",
+      "Name": "rejects write, delete-child and permission takeover grants independently",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage trust decisions using in-memory security descriptors",
+      "Name": "rejects a null DACL and does not treat deny rules as a reason to accept broad allow rules",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage initialization with mocked ACL and creation adapters",
+      "Name": "creates only the dedicated root, backup and log directories and is repeatable",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage initialization with mocked ACL and creation adapters",
+      "Name": "refuses unsafe existing evidence before creating or replacing anything",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage initialization with mocked ACL and creation adapters",
+      "Name": "uses atomic ASCII panel files without a BOM or truncating the existing content on failure",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Storage initialization with mocked ACL and creation adapters",
+      "Name": "generates fixed executable launchers with child exit status and no CMD elevation command",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Path redirection guard without real junctions or links",
+      "Name": "rejects an ancestor junction before writing a panel file",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Generated recovery includes the storage boundary",
+      "Name": "embeds and invokes storage validation in the service panel",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Generated recovery includes the storage boundary",
+      "Name": "excludes a second app or panel session and permits recovery after the handle closes",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Update policy compatibility without Windows mutations",
+      "Name": "accepts only enumerated client editions on supported builds",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Update policy compatibility without Windows mutations",
+      "Name": "does not write either policy on Home, unknown editions or Server",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Update policy compatibility without Windows mutations",
+      "Name": "rejects old or unknown builds, another OS version and missing data",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Update policy compatibility without Windows mutations",
+      "Name": "reports capability query failures and never treats them as applied",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Update policy compatibility without Windows mutations",
+      "Name": "keeps both policies opt-in and out of Balanced and Performance",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "exports neither identity, paths, values nor key and survives JSON roundtrip",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "detects changed type, content, absence and array ordering",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "never treats two failed reads as equality and exports no exception",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "refuses changed scope, key, source or identity",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "refuses missing coverage and duplicate or malformed entries",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "validates all specifications before any Windows read",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Independent privacy-scoped validation evidence",
+      "Name": "ignores resource and specification property ordering but detects scope coverage differences",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "refuses entry without explicit system-change opt-in before querying the machine",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "accepts a matching explicit guest declaration and constructs only its fixed fixture paths",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "rejects a physical Hyper-V host or unknown guest instead of trusting a hypervisor flag",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "rejects mismatched identity, missing elevation and modified source",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "rejects absent snapshot acknowledgement and RunId traversal",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "loads only function declarations and omits application entry points",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "Disposable VM guard without system mutations",
+      "Name": "rejects files where a lab directory is required",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VM scenario transitions using mocked Windows resources only",
+      "Name": "checks repeated Apply, distinct boot, exact Undo and a second boot without owning the untouched value",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VM scenario transitions using mocked Windows resources only",
+      "Name": "exercises after-write faults in Apply and Undo and leaves a retryable baseline",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VM scenario transitions using mocked Windows resources only",
+      "Name": "confirms an expected external conflict and preserves that external value for review",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VM scenario transitions using mocked Windows resources only",
+      "Name": "blocks mutation when real file sharing prevents atomic journal replacement",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VM scenario transitions using mocked Windows resources only",
+      "Name": "refuses invalid stage order before making a change",
+      "Result": "Passed",
+      "FailureMessage": ""
+    },
+    {
+      "Describe": "VM scenario transitions using mocked Windows resources only",
+      "Name": "persists scenario reports and restores caller globals across separate invocations with mocked registry access",
+      "Result": "Passed",
+      "FailureMessage": ""
+    }
+  ],
+  "InvocationHead": "353601021bc35604eec34d6f3b5fcf87cb314c56",
+  "TestedSourceCommit": "c787bf70b454dbbe5f8813809d13843cf79eadd8",
+  "WorkingTreeSourcesAtInvocation": true,
+  "PythonPassed": 34,
+  "PythonFailed": 0,
+  "Python": "3.12.14",
+  "PythonCommand": "python -B -m unittest discover -s benchmarks/tests -v",
+  "SourceHashes": {
+    "benchmarks/analyze.py": "5C11AC7E0B7BE5E52A0FE15D8B6BDA3A46828B07FBFB66B2437ADF6A553E4E1B",
+    "benchmarks/capture.py": "3912F96692D9D1E8B743EBC18FC212B89D3FE74F0440BA456ABE6678BA590A74",
+    "benchmarks/diagnose.py": "74DD4AD746B0714FA1CF360DEBEB69877EDBA0C1AF2403146AE31CAAD25B8459",
+    "benchmarks/experiment.py": "A36D2137DF1B8CA7205146A313C9DEB99F4B73E2364E290E2E489E96D576D6B9",
+    "benchmarks/normalize.py": "DC5BECE8FC359CA446D9C642845803D15FC19C1AF2BF969785251262F38A3126",
+    "benchmarks/tests/test_analyze.py": "88B39076788558D6FF2AEDC4F29FEACB320D820C11965C9F42BC27BA1674D0DE",
+    "benchmarks/tests/test_capture.py": "75CE3C285B9430A3AC869A7C21357AA6089EB98268CAC4C8AE9673EED84371E1",
+    "benchmarks/tests/test_diagnose.py": "244D5FCED6491E395D21A30D059DE85BA535DF3783FE515B8331AED1CB48103A",
+    "benchmarks/tests/test_experiment.py": "78F5389B103AD2625BE8F931164115B350102A0B04A1AE6965F448A4DB3D1362",
+    "benchmarks/tests/test_pipeline.py": "595CF154F260478BB1692D5829B9030F73FE0F48B69F68FEEBF4BDB72FAEA265",
+    "benchmarks/Collect-SkySession.ps1": "4F5BF61164D433DCB1E5B43BAD0CBDACA7FFCF4912A6392F809453DFB74AA25F",
+    "tests/SessionCollector.Tests.ps1": "45DF9F1BE3EDD4D346EECF278EF5CFFA030075A2E4639BD105D397E7A00F1E4A"
+  },
+  "PythonTestedSourceCommit": "d49f38610a8d0195e1a246cad502589610a766a5"
+}

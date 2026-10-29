@@ -2,6 +2,8 @@
 
 Estado: preparado, ainda não executado. Não aplicar otimizações no Windows usado para desenvolver o projeto.
 
+A [Fase 5D](FASE5D.md) acrescenta adaptadores de captura autorizada, normalização e inferência por pares/blocos. Apenas o percurso offline foi testado. O protocolo e as definições abaixo continuam aplicáveis; disponibilidade da API não demonstra compatibilidade real nem overhead aceitável.
+
 ## Analisador offline implementado
 
 `benchmarks/analyze.py` lê capturas CSV já recolhidas. Usa apenas a biblioteca padrão de Python 3.10+; não lança jogos, capturadores nem tweaks. Copiar `benchmarks/manifest.example.json`, preencher a identificação do sistema, a semântica da medição e os runs planeados. O exemplo não contém medições e é recusado enquanto faltarem os campos obrigatórios. O [protocolo da investigação](investigacao-2026-10-28/05_Protocolo_benchmarks.md) define o desenho futuro; cinco runs não garantem poder estatístico.
@@ -107,4 +109,4 @@ Promover uma alteração apenas quando a melhoria ultrapassa a variabilidade ent
 
 Resultados inconclusivos permanecem experimentais. Falhas de boot, sleep/resume, áudio, USB, rede, anti-cheat ou recuperação bloqueiam a promoção, mesmo com maior FPS médio. Arquivar resultados brutos, manifestos, gráficos e falhas, incluindo resultados negativos.
 
-Esta versão inclui análise descritiva de CSV e diagnóstico de amostras JSON. A recolha automática, integração de sensores e inferência estatística por pares/blocos continuam por implementar. [Entrega e limites da Fase 5C](FASE5C.md).
+Esta versão inclui análise descritiva de CSV e diagnóstico de amostras JSON. A Fase 5D implementa recolha autorizada de frames/processos e inferência exploratória por blocos, com validação real pendente. Integração de sensores e latência física continuam por implementar. [Entrega da Fase 5D](FASE5D.md) e [histórico da Fase 5C](FASE5C.md).

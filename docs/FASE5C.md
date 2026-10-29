@@ -1,5 +1,7 @@
 # Fase 5C — implementação orientada pela investigação
 
+> Registo histórico. A instrumentação e inferência por blocos posteriores estão documentadas na [Fase 5D](FASE5D.md); a ausência de validação real mantém-se.
+
 Base: `ab55736`, branch `dev/phase2-execution-power-safety`. Os cinco documentos de `investigacao-2026-10-28` foram lidos integralmente antes de editar ficheiros. Eram os únicos ficheiros não versionados; ficam preservados sem alterações. Consultadas as entregas 2–5A. Aplicam-se as skills lean-build e surgical-patch já usadas na fase anterior.
 
 ## Plano priorizado e dependências

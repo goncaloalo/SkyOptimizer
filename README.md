@@ -1,6 +1,6 @@
 # SkyOptimizer
 
-**Branch de desenvolvimento — Fase 5C — diagnóstico e contratos orientados pela investigação. Não distribuir como versão validada para clientes.**
+**Branch de desenvolvimento — Fase 5D — instrumentação e avaliação A/B. Não distribuir como versão validada para clientes.**
 
 O SkyOptimizer mantém o programa PowerShell existente, destinado a instalações Windows já em uso. O objetivo é melhorar desempenho real em jogos; ainda não foram medidos ganhos de FPS, 1% lows ou latência.
 
@@ -9,6 +9,7 @@ O SkyOptimizer mantém o programa PowerShell existente, destinado a instalaçõe
 - O catálogo conserva **90 IDs históricos**: 26 elegíveis para Apply, 58 bloqueados, manutenção 24 separada e cinco retirados (12/14/30/39/54). Elegíveis: **1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 58, 59, 60, 70, 74, 75, 76, 79, 84, 86, 88 e 90**.
 - As restantes ações ficam bloqueadas no dispatcher enquanto faltam baseline, reversão ou compatibilidade. As escritas indiscriminadas USB/HAGS/MSI foram retiradas; o catálogo regista as decisões.
 - A ação 24 é manutenção de diagnóstico separada, com confirmação explícita. Não existe limpeza automática de shaders nos perfis.
+- [Entrega da Fase 5D](docs/FASE5D.md): adaptador autorizado PresentMon, coletor de processos, normalização rastreável, comparação por pares/blocos e relatórios. Percurso validado com dados sintéticos; captura real e overhead ainda por testar.
 - [Entrega da Fase 5C](docs/FASE5C.md): diagnóstico temporal offline, semântica de frametimes, seleção exata Laboratory e preview AppX. Ação 9 limitada ao contrato Windows 10 conhecido; grupos 48/71 suspensos; 49 continua bloqueada. Nenhuma nova ação desbloqueada.
 - [Preparação final da Fase 5A](docs/FASE5A.md): instalação, recolha privada de evidências, comparação independente e gates de aceitação.
 - [Auditoria global da Fase 4](docs/FASE4.md), [checklist de validação real](docs/VALIDACAO-FASE4.md), [maturidade histórica das 28 elegíveis](docs/FASE4-ELEGIVEIS.json) e [classificação histórica das 56 bloqueadas](docs/FASE4-BLOQUEADAS.json). Para o estado atual, consultar o catálogo e a Fase 5C.
@@ -82,9 +83,11 @@ python -B -m unittest discover -s benchmarks/tests -v
 
 Os testes PowerShell carregam declarações por AST e usam mocks/ficheiros temporários. O comando fixa Windows PowerShell 5.1; a política Bypass aplica-se apenas ao processo. Pester 3.4 não foi validado em PowerShell 7. Os testes Python usam dados sintéticos. O [analisador offline](benchmarks/analyze.py) lê CSV com manifesto de formato 2 e semântica explícita; o [diagnóstico temporal](benchmarks/diagnose.py) importa amostras anónimas de CPU, memória e I/O. Ambos são ferramentas offline: não recolhem jogos nem alteram Windows. Integração em Windows descartável e benchmarks físicos continuam necessários.
 
-Última suite offline: **232 testes Pester e 19 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
+Última suite offline: **234 testes Pester e 34 Python aprovados**. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
 
-A [prova detalhada Pester](docs/FASE5C-TESTES.json) identifica o código testado. Nenhuma ação foi desbloqueada nesta fase.
+A [prova detalhada Pester](docs/FASE5D-TESTES.json) identifica o código testado. Nenhuma ação foi desbloqueada nesta fase.
+
+O [procedimento A/B da Fase 5D](docs/FASE5D.md) explica a primeira experiência reproduzível. `benchmarks/capture.py` apenas planeia por defeito e exige binário PresentMon 2.3.1 de origem verificada, hash aprovado e autorização explícita para capturar. `benchmarks/Collect-SkySession.ps1` também exige autorização explícita. `benchmarks/experiment.py` cria análise JSON e relatório Markdown, com bootstrap por blocos e classificação de regressões/inconclusivos. Nenhuma destas ferramentas aplica ações ou lança jogos. Aplicar a intervenção continua a usar Laboratory e o Undo do programa existente.
 
 O [protocolo de VM](docs/INTEGRACAO-VM.md) inclui o harness de registo com reinícios manuais, falhas intermédias e conflitos externos. O harness está preparado e testado com mocks; ainda não foi executado num guest real. Só o utilizar num Windows descartável com snapshot confirmado e autorização para alterações. A [preparação de tarefas 3C](docs/TAREFAS-LAB-3C.md) acrescenta fixtures isoladas, fingerprint e Enabled, sem allowlist de tarefas reais.
 
