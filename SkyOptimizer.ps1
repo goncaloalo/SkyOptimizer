@@ -3785,6 +3785,80 @@ function Get-SkyDebloatInventory {
             Startup='Exact Run contracts only';Uninstall='Blocked: reinstall does not restore data';Deprovision='Blocked: independent payload/license contract required';FeatureDisable='Blocked: dependencies/payload/reboot recovery required'}}
 }
 
+# Declaration fragment: CPU Set readers only; import does not invoke the native API.
+# Sources: Microsoft GetSystemCpuSetInformation and SYSTEM_CPU_SET_INFORMATION documentation.
+function Invoke-SkyCpuSetNativeQuery {
+    param([AllowNull()][byte[]]$Buffer, [uint32]$Length)
+    if(-not ('SkyCpuSetNativeV1' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SkyCpuSetNativeV1 {
+    [DllImport("kernel32.dll", SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetSystemCpuSetInformation([Out] byte[] information, uint bufferLength,
+        out uint returnedLength, IntPtr process, uint flags);
+}
+'@
+    }
+    [uint32]$returned=0
+    $success=[SkyCpuSetNativeV1]::GetSystemCpuSetInformation($Buffer,$Length,[ref]$returned,[IntPtr]::Zero,0)
+    $errorCode=if($success){0}else{[Runtime.InteropServices.Marshal]::GetLastWin32Error()}
+    [pscustomobject]@{Success=$success;ErrorCode=$errorCode;ReturnedLength=$returned}
+}
+
+function Get-SkyCpuSetBuffer {
+    $size=Invoke-SkyCpuSetNativeQuery -Buffer $null -Length 0
+    if(($size.Success -eq $false -and $size.ErrorCode -ne 122) -or $size.ReturnedLength -le 0 -or $size.ReturnedLength -gt 16777216) {
+        throw 'CPU Set size query failed or exceeded the bounded buffer.'
+    }
+    $buffer=New-Object byte[] ([int]$size.ReturnedLength)
+    $read=Invoke-SkyCpuSetNativeQuery -Buffer $buffer -Length $buffer.Length
+    # Do not retry/adopt a changing topology: caller reports Unknown and can repeat inventory later.
+    if(-not $read.Success -or $read.ReturnedLength -le 0 -or $read.ReturnedLength -gt $buffer.Length) {
+        throw 'CPU Set read failed or the topology changed during enumeration.'
+    }
+    if($read.ReturnedLength -lt $buffer.Length) {$buffer=[byte[]]$buffer[0..([int]$read.ReturnedLength-1)]}
+    ,$buffer
+}
+
+function ConvertFrom-SkyCpuSetBuffer {
+    param([Parameter(Mandatory=$true)][AllowEmptyCollection()][byte[]]$Buffer)
+    if(-not [BitConverter]::IsLittleEndian -or -not $Buffer.Length -or $Buffer.Length -gt 16777216) {throw 'Unsupported or empty CPU Set buffer.'}
+    $offset=0;$records=@();$unknown=0;$count=0;$ids=@{};$locations=@{}
+    while($offset -lt $Buffer.Length) {
+        if(++$count -gt 65536 -or $Buffer.Length-$offset -lt 8){throw 'Malformed or oversized CPU Set sequence.'}
+        [uint32]$size=[BitConverter]::ToUInt32($Buffer,$offset)
+        [uint32]$type=[BitConverter]::ToUInt32($Buffer,$offset+4)
+        if($size -lt 8 -or $size -gt $Buffer.Length-$offset){throw 'Invalid CPU Set record size.'}
+        if($type -eq 0) {
+            # Fixed-width layout: DWORD size/type/id; WORD group; BYTE logical/core/cache/NUMA/efficiency/flags;
+            # DWORD reserved/scheduling; DWORD64 allocation tag. Require the complete 32-byte known structure.
+            if($size -lt 32){throw 'Truncated known CPU Set record.'}
+            $id=[BitConverter]::ToUInt32($Buffer,$offset+8)
+            $group=[BitConverter]::ToUInt16($Buffer,$offset+12)
+            $logical=$Buffer[$offset+14];$location="$group/$logical"
+            if($ids.ContainsKey($id) -or $locations.ContainsKey($location)){throw 'Duplicate CPU Set ID or processor location.'}
+            $ids[$id]=$true;$locations[$location]=$true
+            $records += [pscustomobject]@{CpuSetId=$id;Group=$group;LogicalProcessorIndex=$logical;CoreIndex=$Buffer[$offset+15]
+                LastLevelCacheIndex=$Buffer[$offset+16];NumaNodeIndex=$Buffer[$offset+17];EfficiencyClass=$Buffer[$offset+18]}
+        } else {$unknown++}
+        $offset += [int]$size
+    }
+    if(-not $records.Count){throw 'No recognized CPU Set records.'}
+    $classes=@($records.EfficiencyClass | Sort-Object -Unique)
+    [pscustomobject]@{Status='Observed';Source='GetSystemCpuSetInformation';LogicalProcessors=$records;UnknownRecordTypesSkipped=$unknown
+        EfficiencyClasses=$classes;HeterogeneousEfficiencyClasses=($classes.Count -gt 1);X3DTopology='Unknown';CcdTopology='Unknown'
+        Limitation='OS-reported CPU Sets only; one efficiency class does not prove homogeneous silicon. Cache/group indices do not identify X3D/CCD. No scheduling policy inferred.'}
+}
+
+function Get-SkyCpuTopology {
+    try {ConvertFrom-SkyCpuSetBuffer -Buffer (Get-SkyCpuSetBuffer)}
+    catch {[pscustomobject]@{Status='Unknown';Source='GetSystemCpuSetInformation';LogicalProcessors=@();UnknownRecordTypesSkipped=0
+        EfficiencyClasses=@();HeterogeneousEfficiencyClasses=$null;X3DTopology='Unknown';CcdTopology='Unknown'
+        Limitation='API unavailable, failed, changed or malformed; no topology or scheduling policy inferred.'}}
+}
+
 function Get-SkyHardwareDiagnostics {
     $cpu=Get-SkyInventorySection -Scope 'CPU inventory; no inferred CCD/X3D/hybrid topology' -Reader {
         Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Manufacturer,Name,Family,Architecture,ProcessorId,NumberOfCores,NumberOfLogicalProcessors
@@ -3794,7 +3868,7 @@ function Get-SkyHardwareDiagnostics {
     }
     $memory=Get-SkyInventorySection -Scope 'Commit counters at capture, not sustained pressure' -Reader {
         Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop | ForEach-Object {
-            $valid=$null -ne $_.CommittedBytes -and $null -ne $_.CommitLimit -and [double]$_.CommitLimit -gt 0
+            $valid=$null -ne $_.CommittedBytes -and [double]$_.CommittedBytes -ge 0 -and $null -ne $_.CommitLimit -and [double]$_.CommitLimit -gt 0
             [pscustomobject]@{CommittedBytes=$_.CommittedBytes;CommitLimit=$_.CommitLimit;AvailableMBytes=$_.AvailableMBytes
                 PageReadsPersec=$_.PageReadsPersec;CommitRatio=$(if($valid){[double]$_.CommittedBytes/[double]$_.CommitLimit}else{$null})
                 Interpretation='Single snapshot; correlate sustained commit/page reads with game frametimes; pagefile preserved'} }
@@ -3805,7 +3879,7 @@ function Get-SkyHardwareDiagnostics {
     $io=Get-SkyInventorySection -Scope 'Provider interval disk counters; not attribution to game/stutter' -Reader {
         Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -ErrorAction Stop | Select-Object Name,DiskReadBytesPersec,DiskWriteBytesPersec,CurrentDiskQueueLength,AvgDisksecPerTransfer
     }
-    [pscustomobject]@{SchemaVersion=1;Cpu=$cpu;Gpu=$gpu;Memory=$memory;Storage=$storage;DiskActivity=$io
+    [pscustomobject]@{SchemaVersion=1;Cpu=$cpu;CpuTopology=(Get-SkyCpuTopology);Gpu=$gpu;Memory=$memory;Storage=$storage;DiskActivity=$io
         HybridTopology='Unknown';X3DTopology='Unknown';ThermalHeadroom='Unknown';Bottleneck='Unknown'
         NextMeasurement='Use repeated session telemetry and A/A then A/B; inventory never authorizes hardware tweaks'}
 }

@@ -54,6 +54,7 @@ Describe 'Debloat diagnostic coverage is read-only and scope-separated' {
 }
 
 Describe 'Hardware observations do not invent topology, pressure duration or causal bottlenecks' {
+    Mock Get-SkyCpuTopology {[pscustomobject]@{Status='Unknown';LogicalProcessors=@()}}
     Mock Get-CimInstance {
         switch($ClassName) {
             Win32_Processor {[pscustomobject]@{Name='Fixture X3D';Family=198;NumberOfCores=8}}
