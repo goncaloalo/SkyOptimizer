@@ -1,6 +1,6 @@
 # Fase 5A — Preparação final para validação
 
-> Registo histórico desta entrega. O estado atual, as restrições adicionais de captura/serviços e os resultados mais recentes estão na [Fase 5C](FASE5C.md). As contagens abaixo descrevem a Fase 5A.
+> Registo histórico desta entrega; as contagens abaixo descrevem a Fase 5A. A [Fase 5E](FASE5E.md) substituiu o menu por MAX: abrir o BAT/PS1 sem parâmetros inicia Apply, não uma inspeção. Para leitura usar `-DryRun`; para validar MAX substituir o escopo Performance por `integration/evidence-max.json` e seguir a sequência 5E. As restrições de captura/serviços da [Fase 5C](FASE5C.md) continuam válidas.
 
 Entrega offline de 2026-10-28, na branch `dev/phase2-execution-power-safety`, a partir de `1d3d10e`. Não foram executadas otimizações, VM ou benchmarks físicos. Mantêm-se 28 ações elegíveis, 56 bloqueadas, cinco retiradas e manutenção 24. Elegibilidade não equivale a compatibilidade funcional validada.
 

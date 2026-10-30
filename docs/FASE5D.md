@@ -1,5 +1,7 @@
 # Fase 5D — instrumentação e avaliação de desempenho
 
+> Entrega histórica. A [Fase 5E](FASE5E.md) introduziu MAX e novos testes PowerShell; os instrumentos e resultados Python desta fase permanecem sem alterações.
+
 Base `7d0a285`, branch `dev/phase2-execution-power-safety`, 29/10/2026. Desenvolvimento offline com a skill lean-build: reutilizar análise/diagnóstico existentes, completar um percurso de captura autorizada até relatório e testar falhas sem executar leitores Windows ou binários externos. Nenhuma expansão das 90 ações: permanecem 26 elegíveis, 58 bloqueadas, cinco retiradas e manutenção 24.
 
 ## Blocos entregues

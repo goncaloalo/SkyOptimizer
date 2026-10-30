@@ -1,10 +1,10 @@
 {
-  "Date": "2026-10-29T21:15:52.0857985+00:00",
+  "Date": "2026-10-29T22:22:06.6878354+00:00",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
   "Command": "Windows PowerShell 5.1 -NoProfile -ExecutionPolicy Bypass: Invoke-Pester -Script .\\tests -PassThru -Quiet",
-  "Total": 234,
-  "Passed": 234,
+  "Total": 254,
+  "Passed": 254,
   "Failed": 0,
   "Skipped": 0,
   "Pending": 0,
@@ -23,7 +23,7 @@
     39,
     54
   ],
-  "ProductSourceSha256": "6B9997C204F748AC9213559AC05025F655DDCA2A3C0AEFA92D9908FBC0783F8A",
+  "ProductSourceSha256": "BE09B47F0E98385F94793D7C7965371701A1CE1D2B0D2D6801B6CA9B7BE9B0D2",
   "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
   "BlockedActions": 58,
   "OriginalBlockedActionsAudited3B": 67,
@@ -35,10 +35,10 @@
     2
   ],
   "ProductionScheduledTasksEligible": false,
-  "Phase": "5D offline",
-  "ValidationScope": "Pester: declarations only, mocked Windows readers/effects and temporary files. Python: 34 synthetic CSV/session/capture/inference tests including local Python report CLI; external tool runners mocked. No product entry point, live process/CIM/AppX capture, external binary execution, Windows configuration changes, VM, games or physical benchmarks.",
-  "SourceCommit": "d49f38610a8d0195e1a246cad502589610a766a5",
-  "DetailedPesterEvidence": "FASE5D-TESTES.json",
+  "Phase": "5E offline",
+  "ValidationScope": "Pester: 254 tests, declarations only, mocked Windows readers/effects and temporary files. MAX selection, operator lifecycle, strict startup contracts, failure/repetition/Undo/conflict and independent evidence scope. Python: 34 synthetic tests passed in phase 5D; benchmark tree unchanged, no rerun in 5E. No product entry point, live process/CIM/AppX capture, external binary execution, Windows configuration changes, VM, games or physical benchmarks.",
+  "SourceCommit": "1a17ce778c89bee3cd8b435221c8cc980d647e6b",
+  "DetailedPesterEvidence": "FASE5E-TESTES.json",
   "EvidenceSourceSha256": "59AEE5A4F263880FDE65021575D9F4DEF470DC614FAA8315AEDB9313286A60CF",
   "BenchmarkAnalyzerSha256": "5C11AC7E0B7BE5E52A0FE15D8B6BDA3A46828B07FBFB66B2437ADF6A553E4E1B",
   "SessionDiagnosisSha256": "74DD4AD746B0714FA1CF360DEBEB69877EDBA0C1AF2403146AE31CAAD25B8459",
@@ -46,5 +46,25 @@
   "PhysicalInputLatencyMeasured": false,
   "CollectorSourceSha256": "4F5BF61164D433DCB1E5B43BAD0CBDACA7FFCF4912A6392F809453DFB74AA25F",
   "ExperimentSourceSha256": "A36D2137DF1B8CA7205146A313C9DEB99F4B73E2364E290E2E489E96D576D6B9",
-  "CaptureAdapterSourceSha256": "3912F96692D9D1E8B743EBC18FC212B89D3FE74F0440BA456ABE6678BA590A74"
+  "CaptureAdapterSourceSha256": "3912F96692D9D1E8B743EBC18FC212B89D3FE74F0440BA456ABE6678BA590A74",
+  "PythonLastValidatedPhase": "5D",
+  "PythonLastValidationDate": "2026-10-29T21:15:52.0857985+00:00",
+  "PythonSourceCommit": "d49f38610a8d0195e1a246cad502589610a766a5",
+  "PythonRerunIn5E": false,
+  "UnchangedBenchmarkTree": "75926dd5469e7faa9e2a4525b7f0767e5548d573",
+  "MaxConditionalActionIds": [
+    9,
+    16,
+    41,
+    58,
+    70,
+    79,
+    84
+  ],
+  "MaxNamedStartupContracts": [
+    "Spotify",
+    "Steam"
+  ],
+  "MaxStartupContractsRealValidation": false,
+  "MaxEvidenceRegistryValues": 16
 }
