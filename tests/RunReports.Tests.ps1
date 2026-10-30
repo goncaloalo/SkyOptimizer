@@ -45,3 +45,22 @@ Describe 'Per-run evidence isolates completion cancellation and interrupted atte
         ($null -eq $script:SkyReportRun) | Should Be $true
     }
 }
+
+Describe 'Undo evidence belongs to its own run without moving journal baselines' {
+    BeforeEach {$Global:SkyBackupDir=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));$null=[IO.Directory]::CreateDirectory($Global:SkyBackupDir);$script:SkyReportRun=$null}
+    Mock New-SkyProtectedDirectory {$null=[IO.Directory]::CreateDirectory($Path)}
+    Mock Assert-SkyNoReparsePoint {}
+    Mock Get-SkyUndoScope {'Tracked'}
+    Mock Read-Host {'S'}
+    Mock Write-SkyLog {}
+    Mock Invoke-SkyVerifiedUndo {[pscustomobject]@{Status='Restored';Reason='synthetic restoration';RestartRequired='No'}}
+    It 'stores Undo results under the fresh run and reads the central baseline directory' {
+        Invoke-SkyReportRun Undo {Invoke-SkyUndo}
+        $r=Get-Content (Join-Path $Global:SkyBackupDir latest_run.json) -Raw | ConvertFrom-Json
+        $r.Kind | Should Be Undo
+        $r.Artifacts[0] | Should Be undo_results.json
+        $r.ExitCode | Should Be 0
+        Assert-MockCalled Invoke-SkyVerifiedUndo -Times 1 -Exactly -Scope It -ParameterFilter {$BackupDirectory -eq $Global:SkyBackupDir}
+        Test-Path (Join-Path $Global:SkyBackupDir undo_results.json) | Should Be $false
+    }
+}

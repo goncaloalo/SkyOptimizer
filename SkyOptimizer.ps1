@@ -4527,7 +4527,9 @@ function Invoke-SkyUndo {
     }
     $confirm = Read-Host 'Reverter apenas alterações com baseline verificável? (S/N)'
     if ($confirm -notmatch '^(s|sim|y|yes)$') { return }
-    foreach ($result in @(Invoke-SkyVerifiedUndo -BackupDirectory $Global:SkyBackupDir)) {
+    $undoResults=@(Invoke-SkyVerifiedUndo -BackupDirectory $Global:SkyBackupDir)
+    if($script:SkyReportRun){Write-SkyReportArtifact undo_results.json (ConvertTo-Json -InputObject @($undoResults) -Depth 10)}
+    foreach ($result in $undoResults) {
         if ($result.Status -eq 'Failed') { $script:SkyLastExitCode = 1 }
         elseif ($result.Status -eq 'Unverified' -and $script:SkyLastExitCode -eq 0) { $script:SkyLastExitCode = 2 }
         $level = if ($result.Status -eq 'Failed') { 'Error' } else { 'Info' }
@@ -4699,7 +4701,7 @@ if ($Clean) {
 }
 
 if ($Undo) {
-    Invoke-SkyUndo
+    Invoke-SkyReportRun -Kind Undo -Body { Invoke-SkyUndo }
     exit $script:SkyLastExitCode
 }
 
