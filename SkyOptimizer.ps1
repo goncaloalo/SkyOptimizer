@@ -67,8 +67,19 @@ param(
     [Parameter(ParameterSetName = "DiagnoseDirect")]
     [switch]$Diagnose,
 
+    [Parameter(ParameterSetName = "DebloatLabDirect")]
+    [switch]$DebloatLab,
+
+    [Parameter(ParameterSetName = "DebloatLabDirect",Mandatory=$true)]
+    [ValidateSet('EpicGamesLauncher','Discord','DiagTrack','TrkWks','MapsBroker')]
+    [string]$Component,
+
     [Parameter(ParameterSetName = "BackgroundLabDirect")]
     [switch]$BackgroundLab,
+
+    [Parameter(ParameterSetName = "BackgroundLabDirect")]
+    [ValidateSet('NewsWeather','PhoneLink','FeedbackHub')]
+    [string]$BackgroundTarget = 'NewsWeather',
 
     [Parameter(ParameterSetName = "DebloatPreviewDirect")]
     [switch]$DebloatPreview,
@@ -79,6 +90,20 @@ param(
     [ValidatePattern('^(\d{1,2}(,\d{1,2})*)?$')]
     [string]$ExperimentalActions = ''
 )
+
+
+function Assert-SkyDebloatInvocation {
+    param([bool]$DebloatMode,[bool]$BackgroundMode,[bool]$HasComponent,[bool]$HasBackgroundTarget,[string]$SelectedProfile,[string]$Experiments)
+    if(($HasComponent -and -not $DebloatMode) -or ($HasBackgroundTarget -and -not $BackgroundMode)) {
+        throw 'Component/BackgroundTarget exigem o respetivo switch de laboratorio verdadeiro; MAX nao sera iniciado.'
+    }
+    if(($DebloatMode -or $BackgroundMode) -and ($SelectedProfile -ne 'Laboratory' -or $Experiments)) {
+        throw 'Contrato de debloat exige Laboratory sem IDs adicionais.'
+    }
+}
+Assert-SkyDebloatInvocation -DebloatMode ([bool]$DebloatLab) -BackgroundMode ([bool]$BackgroundLab) `
+    -HasComponent ($PSBoundParameters.ContainsKey('Component')) -HasBackgroundTarget ($PSBoundParameters.ContainsKey('BackgroundTarget')) `
+    -SelectedProfile $Profile -Experiments $ExperimentalActions
 
 # ==============================================================================
 # 0. CONFIGURAÇÃO DE CODIFICAÇÃO UTF-8
@@ -103,7 +128,9 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     elseif ($DeployPanel) { $paramString = " -DeployPanel" }
     elseif ($Repair) { $paramString = " -Repair" }
     elseif ($Audit) { $paramString = " -Audit" }
+    elseif ($DebloatLab) { $paramString = " -DebloatLab -Component $Component" }
     elseif ($BackgroundLab) { $paramString = " -BackgroundLab" }
+    if($BackgroundLab) { $paramString += " -BackgroundTarget $BackgroundTarget" }
     $paramString += " -Profile $Profile"
     if ($ExperimentalActions) { $paramString += " -ExperimentalActions $ExperimentalActions" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
@@ -778,6 +805,7 @@ function Disable-SkyScheduledTask {
 
 function Get-SkyResourceState {
     param($Resource)
+    if($Resource.PSObject.Properties.Name -contains 'OptionalServiceIdentity'){Assert-SkyOptionalServiceResourceIdentity $Resource}
     if ($Resource.Type -eq 'ScheduledTaskEnabled') {
         $snapshot=Invoke-SkyTaskBackend $Resource
         if ($snapshot.DefinitionHash -ine $Resource.DefinitionHash -or $snapshot.Enabled -isnot [bool]) { throw 'Tarefa substituida/alterada ou estado indisponivel; baseline preservada para revisao.' }
@@ -809,6 +837,7 @@ function Get-SkyResourceState {
 
 function Set-SkyResourceState {
     param($Resource, $State)
+    if($Resource.PSObject.Properties.Name -contains 'OptionalServiceIdentity'){Assert-SkyOptionalServiceResourceIdentity $Resource}
     if ($Resource.Type -eq 'ScheduledTaskEnabled') {
         $null=Invoke-SkyTaskBackend -Resource $Resource -Operation Write -Enabled $State.Enabled
         return
@@ -1189,6 +1218,7 @@ function Get-SkyPowerRestoreSource {
         'Save-SkyPowerState', 'Get-SkyPowerGuid', 'Get-SkyActivePowerGuid', 'Get-SkyPowerGuids', 'Restore-SkyPowerPlan', 'Get-SkyUndoScope', 'Invoke-SkyVerifiedUndo',
         'Get-SkyUserSid', 'Get-SkyLegacyBackupFiles', 'Enter-SkyMutationLock', 'Read-SkyMutationState', 'Save-SkyMutationState',
         'ConvertTo-SkyRegistryState', 'ConvertFrom-SkyRegistryState', 'Open-SkyRegistryBase',
+        'Get-SkyOptionalServiceSpec','Get-SkyOptionalServiceIdentity','Assert-SkyOptionalServiceResourceIdentity',
         'ConvertTo-SkyRegistryResource', 'Get-SkyResourceIdentity', 'Get-SkyService', 'Set-SkyServiceStartTypeNative', 'Get-SkyNicBinding',
         'Assert-SkyTaskResource', 'Get-SkyTaskDefinitionFingerprint', 'Invoke-SkyTaskBackend',
         'Get-SkyResourceState', 'Set-SkyResourceState', 'Assert-SkyResourceState', 'Test-SkyStateEqual', 'Restore-SkyTrackedChanges',
@@ -3630,16 +3660,202 @@ function Invoke-SkyOptimize {
 # Declaration fragment for integration into SkyOptimizer.ps1; no entry point or live reads on import.
 # Source: https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy#letappsruninbackground_forcedenytheseapps
 # AppPrivacy.admx maps the per-app list to multiText (REG_MULTI_SZ), not the CSP's semicolon transport string.
+# Laboratory-only contracts. No commands found in Run are ever executed.
+# Epic documents Run When My Computer Starts as an optional feature:
+# https://www.epicgames.com/help/en-US/c-Category_EpicGamesStore/c-EpicGamesStore_LauncherSupport/epic-games-launcherpc-a000090995
+# Optional service contracts: declarations only; never enumerate or mutate on import.
+# Mechanism source: https://learn.microsoft.com/windows/iot/iot-enterprise/optimize/services
+# IoT guidance describes service roles; it does not certify Windows gaming performance.
+function Get-SkyOptionalServiceSpec {
+    param([ValidateSet('DiagTrack','TrkWks','MapsBroker')][string]$Name)
+    switch($Name) {
+        DiagTrack {[pscustomobject]@{Name=$Name;Group='utcsvc';Dll='diagtrack.dll';Ready=$true;Impact='Perde experiencias/diagnosticos ligados e envio de dados de diagnostico; nao e ganho FPS demonstrado.'}}
+        TrkWks {[pscustomobject]@{Name=$Name;Group='LocalSystemNetworkRestricted';Dll='trkwks.dll';Ready=$true;Impact='Perde manutencao de links NTFS locais/rede; atalhos e workflows podem deixar de acompanhar movimentos.'}}
+        MapsBroker {[pscustomobject]@{Name=$Name;Group='NetworkService';Dll='';Ready=$false;Impact='Mapas offline podem falhar; contrato binario/recuperacao funcional ainda nao validado.'}}
+    }
+}
+
+function Get-SkyOptionalServiceIdentity {
+    param([ValidateSet('DiagTrack','TrkWks')][string]$Name)
+    $spec=Get-SkyOptionalServiceSpec $Name
+    $system=[Environment]::SystemDirectory
+    $hostPath=Join-Path $system 'svchost.exe';$dllPath=Join-Path $system $spec.Dll
+    $rows=@(Get-CimInstance Win32_Service -Filter "Name='$Name'" -ErrorAction Stop)
+    if($rows.Count -ne 1 -or $rows[0].Name -cne $Name -or $rows[0].StartName -ne 'LocalSystem'){throw 'Unknown service registration/account'}
+    $command=[Environment]::ExpandEnvironmentVariables([string]$rows[0].PathName)
+    $forms=@("$hostPath -k $($spec.Group)","$hostPath -k $($spec.Group) -p",('"'+$hostPath+'" -k '+$spec.Group),('"'+$hostPath+'" -k '+$spec.Group+' -p'))
+    if($command -notin $forms){throw 'Service host command outside exact contract'}
+    $key="HKLM:\SYSTEM\CurrentControlSet\Services\$Name"
+    $flags=Get-SkyResourceState (ConvertTo-SkyRegistryResource $key 'UserServiceFlags')
+    if($flags.Exists){throw 'Per-user template configuration excluded'}
+    $dll=Get-SkyResourceState (ConvertTo-SkyRegistryResource ($key+'\Parameters') 'ServiceDll')
+    if(-not $dll.Exists -or $dll.Kind -notin @('String','ExpandString') -or
+        [Environment]::ExpandEnvironmentVariables([string](ConvertFrom-SkyRegistryState $dll)) -ine $dllPath){throw 'Unknown service DLL'}
+    $files=@(foreach($path in @($hostPath,$dllPath)) {
+        Assert-SkyNoReparsePoint $path
+        $item=Get-Item -LiteralPath $path -ErrorAction Stop
+        $sig=Get-AuthenticodeSignature -LiteralPath $path -ErrorAction Stop
+        if($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate -or
+            $sig.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName,$false) -notin @('Microsoft Windows','Microsoft Corporation','Microsoft Windows Publisher') -or
+            $item.VersionInfo.CompanyName -ne 'Microsoft Corporation'){throw 'Unknown service binary identity'}
+        [pscustomobject]@{Path=$path;Hash=(Get-FileHash -LiteralPath $path -Algorithm SHA256 -ErrorAction Stop).Hash
+            Version=$item.VersionInfo.FileVersion;Signer=$sig.SignerCertificate.Thumbprint}
+    })
+    [pscustomobject]@{Name=$Name;Command=$command;Account=[string]$rows[0].StartName;ServiceDll=$dll;Files=$files}
+}
+
+function Assert-SkyOptionalServiceResourceIdentity {
+    param($Resource)
+    if($Resource.PSObject.Properties.Name -notcontains 'OptionalServiceIdentity'){return}
+    if($Resource.Type -notin @('ServiceRuntime','ServiceStartup') -or $Resource.Name -notin @('DiagTrack','TrkWks')){throw 'Optional service resource outside contract'}
+    $fresh=Get-SkyOptionalServiceIdentity -Name $Resource.Name
+    if(($fresh | ConvertTo-Json -Depth 10 -Compress) -cne ($Resource.OptionalServiceIdentity | ConvertTo-Json -Depth 10 -Compress)) {
+        throw 'Service binary/registration changed; Apply/Undo preserved for review'
+    }
+}
+
+function Get-SkyServiceDebloatPlan {
+    param([ValidateSet('DiagTrack','TrkWks','MapsBroker')][string]$Name,$Context=(Get-SkyMaxContext))
+    $spec=Get-SkyOptionalServiceSpec $Name
+    $plan=[ordered]@{Name=$Name;Status='Deferred';Reason=$spec.Impact;AutomaticApplyAllowed=$false;Validation='PendingRealWindows';Identity=$null;Dependencies=@();RuntimeResource=$null;RuntimeBefore=$null;StartupResource=$null;StartupBefore=$null}
+    if(-not $spec.Ready){return [pscustomobject]$plan}
+    if(-not (Test-SkyClientPolicySupport -SystemInfo $Context.Windows -MinimumBuild 19041 -AllowHome) -or
+        $Context.DomainJoined -isnot [bool] -or $Context.DomainJoined -or $Context.MdmIndicator -isnot [bool] -or $Context.MdmIndicator) {
+        $plan.Reason+=' Windows/gestao fora da matriz cliente conhecida >=19041.';return [pscustomobject]$plan
+    }
+    try {
+        $services=@(Get-Service -ErrorAction Stop | Where-Object Name -eq $Name)
+        if(-not $services.Count){$plan.Status='Absent';$plan.Reason+=' Servico ausente.';return [pscustomobject]$plan}
+        if($services.Count -ne 1){throw 'Ambiguous service'}
+        $svc=$services[0]
+        if($null -eq $svc.PSObject.Properties['DependentServices'] -or $null -eq $svc.PSObject.Properties['ServicesDependedOn'] -or
+            $svc.Status -notin @('Running','Stopped') -or $svc.StartType -notin @('Automatic','Manual','Disabled') -or
+            ($svc.StartType -eq 'Disabled' -and $svc.Status -eq 'Running') -or @($svc.DependentServices | Where-Object Status -ne Stopped).Count -or
+            @(@($svc.DependentServices)+@($svc.ServicesDependedOn) | Where-Object {$_.Name -notmatch '^[a-zA-Z0-9_.-]+$' -or $_.Status -notin @('Running','Stopped')}).Count){
+            $plan.Reason+=' Dependencias/estado desconhecidos, transitorios ou dependentes ativos.';return [pscustomobject]$plan
+        }
+        if($Name -eq 'DiagTrack') {
+            $onboard=Get-SkyResourceState (ConvertTo-SkyRegistryResource 'HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status' 'OnboardingState')
+            if($onboard.Exists){$plan.Reason+=' Estado de onboarding Defender for Endpoint existente; preservar diagnostico.';return [pscustomobject]$plan}
+        }
+        $identity=Get-SkyOptionalServiceIdentity $Name
+        $runtime=[pscustomobject]@{Type='ServiceRuntime';Name=$Name;OptionalServiceIdentity=$identity}
+        $startup=[pscustomobject]@{Type='ServiceStartup';Name=$Name;DelayedResource=(ConvertTo-SkyRegistryResource "HKLM:\SYSTEM\CurrentControlSet\Services\$Name" 'DelayedAutoStart');OptionalServiceIdentity=$identity}
+        $plan.Status='Candidate';$plan.Identity=$identity
+        $plan.Dependencies=@($svc.ServicesDependedOn | Sort-Object Name | Select-Object Name,Status)
+        $plan.DependentServices=@($svc.DependentServices | Sort-Object Name | Select-Object Name,Status)
+        $plan.RuntimeResource=$runtime;$plan.StartupResource=$startup
+        $plan.RuntimeBefore=Get-SkyResourceState $runtime;$plan.StartupBefore=Get-SkyResourceState $startup
+    } catch {$plan.Status='Unknown';$plan.Reason+=' Leitura/identidade indisponivel; nenhuma alteracao autorizada.'}
+    [pscustomobject]$plan
+}
+
+function Disable-SkyOptionalService {
+    param($Plan,[switch]$AllowUnvalidated)
+    if(-not $AllowUnvalidated){return New-SkyActionResult -Status Deferred -Reason 'Contrato de servico restrito a Laboratory; consumo/recuperacao funcional por validar.' -RestartRequired No}
+    $fresh=Get-SkyServiceDebloatPlan -Name $Plan.Name
+    if($fresh.Status -ne 'Candidate' -or ($fresh | ConvertTo-Json -Depth 14 -Compress) -cne ($Plan | ConvertTo-Json -Depth 14 -Compress)) {
+        return New-SkyActionResult -Status Deferred -Reason 'Plano, identidade ou dependencias do servico mudaram; repetir preview.' -RestartRequired No
+    }
+    $journal=Read-SkyMutationState $Global:SkyBackupDir
+    foreach($entry in @($journal.Entries | Where-Object {$_.Status -ne 'Restored' -and $_.Resource.Name -eq $fresh.Name -and $_.Resource.Type -in @('ServiceStartup','ServiceRuntime')})) {
+        if($entry.Resource.PSObject.Properties.Name -notcontains 'OptionalServiceIdentity' -or
+            ($entry.Resource.OptionalServiceIdentity | ConvertTo-Json -Depth 10 -Compress) -cne ($fresh.Identity | ConvertTo-Json -Depth 10 -Compress)) {
+            return New-SkyActionResult -Status Deferred -Reason 'Baseline anterior sem identidade correspondente; nao sera adotada ou substituida.' -RestartRequired No
+        }
+    }
+    # Runtime and startup are independent journal resources. A second-write failure retains recoverable runtime intent.
+    Assert-SkyOptionalServiceResourceIdentity $fresh.RuntimeResource
+    $runtimeResult=Invoke-SkyTrackedChange -Resource $fresh.RuntimeResource -Desired ([pscustomobject]@{Value='Stopped'}) -ExpectedBefore $fresh.RuntimeBefore
+    $runtimeResult
+    if($runtimeResult.Status -notin @('Applied','AlreadyCompliant')){return}
+    Assert-SkyOptionalServiceResourceIdentity $fresh.StartupResource
+    Invoke-SkyTrackedChange -Resource $fresh.StartupResource -Desired ([pscustomobject]@{Value='Disabled';Delayed=$fresh.StartupBefore.Delayed}) -ExpectedBefore $fresh.StartupBefore
+}
+
+function Get-SkyOptionalTaskDebloatPlans {
+    foreach($identity in @('\Microsoft\Windows\Maps\MapsUpdateTask','\Microsoft\Windows\Maps\MapsToastTask','\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser')) {
+        [pscustomobject]@{Identity=$identity;Status='Deferred';AutomaticApplyAllowed=$false;Validation='PendingRealWindows'
+            Reason='Motor permite apenas fixtures de laboratorio. Tarefa produtiva sem matriz de definicao/dependencias/recuperacao validada; nao sera desativada.'}
+    }
+}
+
+function Get-SkyLauncherStartupContract {
+    param([ValidateSet('EpicGamesLauncher','Discord')][string]$Name)
+    if($Name -eq 'Discord') {
+        return [pscustomobject]@{Name=$Name;Status='Deferred';Reason='Discord Update.exe launches a versioned executable. Chain identity, arguments and recovery not validated; no Run removal.'}
+    }
+    [pscustomobject]@{Name=$Name;Status='Contract';Path=(Join-Path ${env:ProgramFiles(x86)} 'Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe')
+        Arguments='-silent';Publishers=@('Epic Games, Inc.','Epic Games Inc.');Product='EpicGamesLauncher'
+        Reason='Retirar apenas Run Epic: deixa de abrir por esta entrada no proximo login. Atualizacoes, downloads e jogos podem exigir abertura manual. Nao termina o processo atual.'}
+}
+
+function Get-SkyLauncherStartupPlan {
+    param([ValidateSet('EpicGamesLauncher','Discord')][string]$Name, $Context=(Get-SkyMaxContext))
+    $contract=Get-SkyLauncherStartupContract $Name
+    if($contract.Status -ne 'Contract'){return $contract}
+    $result=[ordered]@{Name=$Name;Status='Deferred';Reason='Windows/gestao nao confirmados.';Resource=$null;Before=$null
+        FileHash=$null;FileVersion=$null;Publisher=$null;AutomaticApplyAllowed=$false;Validation='PendingRealWindows';UserSid=$Context.UserSid}
+    if(-not (Test-SkyClientPolicySupport -SystemInfo $Context.Windows -AllowHome) -or
+        $Context.DomainJoined -isnot [bool] -or $Context.DomainJoined -or $Context.MdmIndicator -isnot [bool] -or $Context.MdmIndicator){return [pscustomobject]$result}
+    try {
+        $resource=ConvertTo-SkyRegistryResource 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' $Name
+        $before=Get-SkyResourceState $resource
+        if(-not $before.Exists){$result.Status='Absent';$result.Reason='Run ausente; outras fontes de arranque nao excluidas.';return [pscustomobject]$result}
+        if($before.Kind -notin @('String','ExpandString')){throw 'Unsupported Run type'}
+        $command=[string](ConvertFrom-SkyRegistryState $before)
+        if($before.Kind -eq 'ExpandString'){$command=[Environment]::ExpandEnvironmentVariables($command)}
+        if($command -cne ('"'+$contract.Path+'" '+$contract.Arguments)){
+            $result.Reason='Comando/caminho fora do contrato exato; preservado.';return [pscustomobject]$result
+        }
+        Assert-SkyNoReparsePoint $contract.Path
+        $file=Get-Item -LiteralPath $contract.Path -ErrorAction Stop
+        $signature=Get-AuthenticodeSignature -LiteralPath $contract.Path -ErrorAction Stop
+        if($signature.Status -ne 'Valid' -or -not $signature.SignerCertificate -or
+            $signature.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName,$false) -notin $contract.Publishers -or
+            $file.VersionInfo.ProductName -ne $contract.Product){throw 'Unrecognized executable identity'}
+        $result.Status='Candidate';$result.Reason=$contract.Reason;$result.Resource=$resource;$result.Before=$before
+        $result.FileHash=(Get-FileHash -LiteralPath $contract.Path -Algorithm SHA256 -ErrorAction Stop).Hash
+        $result.FileVersion=$file.VersionInfo.FileVersion;$result.Publisher=$signature.SignerCertificate.Thumbprint
+    } catch {$result.Status='Unknown';$result.Reason='Leitura/identidade/assinatura desconhecida; arranque preservado.'}
+    [pscustomobject]$result
+}
+
+function Disable-SkyLauncherStartup {
+    param($Plan,[switch]$AllowUnvalidated)
+    if(-not $AllowUnvalidated){return New-SkyActionResult -Status Deferred -Reason 'Contrato restrito a laboratorio; identidade e efeito funcional exigem ensaio real.' -RestartRequired No}
+    $fresh=Get-SkyLauncherStartupPlan -Name $Plan.Name
+    if($fresh.Status -ne 'Candidate' -or ($fresh | ConvertTo-Json -Depth 10 -Compress) -cne ($Plan | ConvertTo-Json -Depth 10 -Compress)){
+        return New-SkyActionResult -Status Deferred -Reason 'Plano/conta/binario/Run mudou; repetir preview e confirmar.' -RestartRequired No
+    }
+    $result=Invoke-SkyTrackedChange -Resource $fresh.Resource -Desired (ConvertTo-SkyRegistryState -Exists $false) -ExpectedBefore $fresh.Before
+    $result.RestartRequired='No';$result.Reason+=' Apenas entrada Run removida; efeito no proximo login, sem desinstalar, parar ou remover dados. App pode recriar a entrada.'
+    $result
+}
+
+function Get-SkyBackgroundFamilyContracts {
+    # These are package identities, not a list of apps deemed universally unnecessary.
+    # The shared AppPrivacy policy still needs functional validation for each package/version.
+    @(
+        [pscustomobject]@{PackageFamilyName='Microsoft.BingNews_8wekyb3d8bbwe';Role='News';Impact='Perde atualizacoes/notificacoes de noticias';Validation='PendingRealWindows'},
+        [pscustomobject]@{PackageFamilyName='Microsoft.BingWeather_8wekyb3d8bbwe';Role='Weather';Impact='Perde atualizacoes/notificacoes meteorologicas';Validation='PendingRealWindows'},
+        [pscustomobject]@{PackageFamilyName='Microsoft.YourPhone_8wekyb3d8bbwe';Role='PhoneLink';Impact='Pode perder chamadas, mensagens e sincronizacao em background; preservar se utilizadas';Validation='PendingRealWindows'},
+        [pscustomobject]@{PackageFamilyName='Microsoft.WindowsFeedbackHub_8wekyb3d8bbwe';Role='FeedbackHub';Impact='Pode impedir recolha/diagnostico de feedback em background; nao aplicar durante suporte';Validation='PendingRealWindows'}
+    )
+}
+
 function Get-SkyBackgroundPlan {
-    param($Context = (Get-SkyMaxContext))
-    $result=[ordered]@{Status='Deferred';Reason='Compatibilidade/gestao desconhecida ou gerida.';FamilyNames=@();Packages=@();Resource=$null;Before=$null;Desired=$null
+    param($Context = (Get-SkyMaxContext),[ValidateSet('NewsWeather','PhoneLink','FeedbackHub')][string]$Target='NewsWeather')
+    $result=[ordered]@{Target=$Target;Status='Deferred';Reason='Compatibilidade/gestao desconhecida ou gerida.';FamilyNames=@();Packages=@();Resource=$null;Before=$null;Desired=$null
         Validation='PendingRealWindows';AutomaticApplyAllowed=$false;Scope='MachinePolicyCurrentUserDiscovery';GlobalDefault=$null;OtherLists=@()}
     if(-not (Test-SkyClientPolicySupport -SystemInfo $Context.Windows -MinimumBuild 15063) -or
         $Context.DomainJoined -isnot [bool] -or $Context.DomainJoined -or $Context.MdmIndicator -isnot [bool] -or $Context.MdmIndicator) {
         return [pscustomobject]$result
     }
     try {
-        $allowed=@('Microsoft.BingNews_8wekyb3d8bbwe','Microsoft.BingWeather_8wekyb3d8bbwe')
+        $roles=if($Target -eq 'NewsWeather'){@('News','Weather')}else{@($Target)}
+        $contracts=@(Get-SkyBackgroundFamilyContracts | Where-Object {$_.Role -in $roles})
+        $allowed=@($contracts | ForEach-Object PackageFamilyName)
         $packages=@(Get-AppxPackage -PackageTypeFilter Main -ErrorAction Stop | Where-Object { $_.PackageFamilyName -in $allowed })
         foreach($p in $packages) {
             if(-not $p.PackageFullName -or -not $p.Version -or $p.PublisherId -ne '8wekyb3d8bbwe' -or
@@ -3676,6 +3892,7 @@ function Get-SkyBackgroundPlan {
         $merged=@($existing)
         foreach($family in $families) {if($family -notin $merged){$merged+=$family}}
         $result.Status='Candidate';$result.Reason='Contrato seletivo de background; perde atualizacoes/notificacoes destas apps. Escopo de maquina, outras contas tambem podem ser afetadas. Exige ensaio funcional; nao remove apps/dados nem prova FPS.'
+        $result.Reason+=' '+(($contracts | Where-Object {$_.PackageFamilyName -in $families} | ForEach-Object Impact) -join '; ')
         $result.FamilyNames=$families
         $result.Packages=@($packages | Sort-Object PackageFamilyName | Select-Object PackageFamilyName,PackageFullName,Version,PublisherId,Dependencies)
         $result.Resource=ConvertTo-SkyRegistryResource $path 'LetAppsRunInBackground_ForceDenyTheseApps'
@@ -3689,7 +3906,8 @@ function Get-SkyBackgroundPlan {
 function Disable-SkySelectiveBackground {
     param($Plan, [switch]$AllowUnvalidated)
     if(-not $AllowUnvalidated) {return New-SkyActionResult -Status Deferred -Reason 'Contrato ainda restrito a Laboratory autorizado: consumo funcional por validar em Windows.' -RestartRequired No}
-    $fresh=Get-SkyBackgroundPlan
+    $target=if($Plan.Target){$Plan.Target}else{'NewsWeather'}
+    $fresh=Get-SkyBackgroundPlan -Target $target
     if($fresh.Status -ne 'Candidate' -or ($fresh | ConvertTo-Json -Depth 12 -Compress) -cne ($Plan | ConvertTo-Json -Depth 12 -Compress)) {
         return New-SkyActionResult -Status Deferred -Reason 'Plano/pacotes/politicas mudaram; repetir preview e confirmar.' -RestartRequired No
     }
@@ -3707,7 +3925,8 @@ function Invoke-SkyBackgroundLab {
 function Invoke-SkyBackgroundLabCore {
     $script:SkyLastExitCode=2
     if($Profile -ne 'Laboratory' -or $ExperimentalActions){throw 'BackgroundLab exige -Profile Laboratory sem IDs adicionais.'}
-    $plan=Get-SkyBackgroundPlan
+    $target=if($BackgroundTarget){$BackgroundTarget}else{'NewsWeather'}
+    $plan=Get-SkyBackgroundPlan -Target $target
     Write-SkyReportArtifact -Name 'background_lab_plan.json' -Content ($plan | ConvertTo-Json -Depth 12)
     Write-Host "$($plan.Status): $($plan.Reason)" -ForegroundColor Yellow
     if($plan.Status -ne 'Candidate'){return}
@@ -3718,6 +3937,40 @@ function Invoke-SkyBackgroundLabCore {
     Write-Host "[$($result.Status)] $($result.Reason)"
     $script:SkyLastExitCode=if($result.Status -eq 'Failed'){1}else{2}
     # Even a verified registry write stays exit2 until functional consumption is validated.
+}
+
+
+function Get-SkyDebloatLabPlan {
+    param([string]$Name,$Context=(Get-SkyMaxContext))
+    if($Name -in @('EpicGamesLauncher','Discord')){return Get-SkyLauncherStartupPlan -Name $Name -Context $Context}
+    if($Name -in @('DiagTrack','TrkWks','MapsBroker')){return Get-SkyServiceDebloatPlan -Name $Name -Context $Context}
+    throw 'Unknown debloat contract.'
+}
+
+function Get-SkyDebloatLabPlans {
+    $context=Get-SkyMaxContext
+    foreach($name in @('EpicGamesLauncher','Discord','DiagTrack','TrkWks','MapsBroker')){Get-SkyDebloatLabPlan -Name $name -Context $context}
+    Get-SkyOptionalTaskDebloatPlans
+}
+
+function Invoke-SkyDebloatLab {
+    Invoke-SkyReportRun -Kind DebloatLab -Body {
+        $script:SkyLastExitCode=2
+        if($Profile -ne 'Laboratory' -or $ExperimentalActions){throw 'DebloatLab exige Laboratory sem IDs adicionais.'}
+        $plan=Get-SkyDebloatLabPlan $Component
+        Write-SkyReportArtifact plan.json ($plan | ConvertTo-Json -Depth 16)
+        Write-Host "$($plan.Status): $($plan.Reason)" -ForegroundColor Yellow
+        if($plan.Status -ne 'Candidate'){return}
+        if((Read-Host 'Autoriza este contrato nao validado num Windows descartavel e aceita a perda funcional indicada? (S/N)') -notmatch '^(s|sim|y|yes)$'){return}
+        $result=Invoke-SkyAction {
+            if($Component -eq 'EpicGamesLauncher'){Disable-SkyLauncherStartup -Plan $plan -AllowUnvalidated}
+            elseif($Component -in @('DiagTrack','TrkWks')){Disable-SkyOptionalService -Plan $plan -AllowUnvalidated}
+            else{New-SkyActionResult -Status Deferred -Reason 'Contrato ainda bloqueado.' -RestartRequired No}
+        }
+        Write-SkyReportArtifact result.json ($result | ConvertTo-Json -Depth 10)
+        Write-Host "[$($result.Status)] $($result.Reason)"
+        if($result.Status -eq 'Failed'){$script:SkyLastExitCode=1}
+    }
 }
 
 function Get-SkyInventorySection {
@@ -3751,6 +4004,7 @@ function Get-SkyInstalledSoftware {
 function Get-SkyDebloatInventory {
     $sections=[ordered]@{}
     $sections.Appx=Get-SkyAppxPreview
+    $sections.LaboratoryContracts=Get-SkyInventorySection -Scope 'Exact optional component contracts; not automatic MAX' -Reader {Get-SkyDebloatLabPlans}
     $sections.SelectiveBackground=Get-SkyInventorySection -Scope 'Machine policy; laboratory only, current-user discovery' -Reader {Get-SkyBackgroundPlan}
     $sections.Provisioned=Get-SkyInventorySection -Scope 'Image; future users, not current-user removal' -Reader {
         Get-AppxProvisionedPackage -Online -ErrorAction Stop | ForEach-Object {
@@ -4426,6 +4680,8 @@ try { $skySession = Enter-SkySessionLock $Global:SkyBackupDir }
 catch { Write-Error $_; exit 1 }
 
 try {
+
+if ($DebloatLab) { Invoke-SkyDebloatLab; exit $script:SkyLastExitCode }
 
 if ($BackgroundLab) { Invoke-SkyBackgroundLab; exit $script:SkyLastExitCode }
 

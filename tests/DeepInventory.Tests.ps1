@@ -44,7 +44,7 @@ Describe 'Debloat diagnostic coverage is read-only and scope-separated' {
     It 'includes provisioned apps, OEM/software, startup, service, task, feature and process scopes' {
         $r=Get-SkyDebloatInventory
         $r.SchemaVersion | Should Be 2
-        @($r.Sections.PSObject.Properties).Count | Should Be 9
+        @($r.Sections.PSObject.Properties).Count | Should Be 10
         $r.Sections.Appx.Scope | Should Be CurrentProcessUser
         $r.OperationPolicy.Deprovision | Should Match 'Blocked'
         $r.OperationPolicy.Uninstall | Should Match 'Blocked'
@@ -100,6 +100,7 @@ Describe 'Every eligible action has an individual MAX decision and evidence limi
 }
 
 Describe 'Deep inventory executes leaf readers only through mocked OS surfaces' {
+    Mock Get-SkyDebloatLabPlans {[pscustomobject]@{Status='Deferred';Reason='fixture'}}
     Mock Get-SkyAppxPreview {[pscustomobject]@{Status='Observed';Scope='CurrentProcessUser';Items=@()}}
     Mock Get-SkyBackgroundPlan {[pscustomobject]@{Status='Deferred';Reason='fixture'}}
     Mock Get-SkyInstalledSoftware {[pscustomobject]@{Identity='fixture-software';Dependencies='Unknown';ApplyAllowed=$false}}

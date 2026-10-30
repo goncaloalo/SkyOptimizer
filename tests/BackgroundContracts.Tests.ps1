@@ -27,6 +27,15 @@ Describe 'Selective per-app background contract without Windows writes' {
         (Disable-SkySelectiveBackground $p).Status | Should Be Deferred
         $script:writes | Should Be 0
     }
+    It 'uses the shared Phone Link identity contract with explicit calls and sync impact' {
+        $script:packages[0].PackageFamilyName='Microsoft.YourPhone_8wekyb3d8bbwe'
+        $script:packages[0].PackageFullName='Microsoft.YourPhone_1_x64_8wekyb3d8bbwe'
+        $p=Get-SkyBackgroundPlan -Target PhoneLink
+        $p.Status | Should Be Candidate
+        $p.FamilyNames[0] | Should Be 'Microsoft.YourPhone_8wekyb3d8bbwe'
+        $p.Reason | Should Match 'chamadas'
+        $p.AutomaticApplyAllowed | Should Be $false
+    }
     It 'refuses unsupported or unknown management without treating it as an unmanaged PC' {
         $script:context.DomainJoined=$null
         (Get-SkyBackgroundPlan).Status | Should Be Deferred
