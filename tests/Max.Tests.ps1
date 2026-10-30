@@ -71,6 +71,8 @@ Describe 'MAX decisions use compatibility rather than an Extreme alias' {
 }
 
 Describe 'MAX lifecycle without system mutation' {
+    Mock New-SkyProtectedDirectory { $null=[IO.Directory]::CreateDirectory($Path) }
+    Mock Assert-SkyNoReparsePoint {}
     BeforeEach {
         $Global:SkyBackupDir=$TestDrive;$ExperimentalActions='';$script:answer='S';$script:reads=0;$script:drift=$false
         $script:plan=[pscustomobject]@{SelectedIds=@(41,79);Decisions=@();Recommendations=@();Startup=@();Context=@{Issues=@()}}

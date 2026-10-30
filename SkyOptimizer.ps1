@@ -3244,6 +3244,7 @@ function Invoke-SkyOptimize {
     [CmdletBinding()]
     param([int[]]$SelectedActionIds, [switch]$OperatorMode)
     $script:SkyLastExitCode = 1
+    $reportDirectory=if($script:SkyReportRun){$script:SkyReportRun.Path}else{$Global:SkyBackupDir}
 
     $experiments = if ($ExperimentalActions) { [int[]]$ExperimentalActions.Split(',') } else { @() }
     $selectedIds = @(if($PSBoundParameters.ContainsKey('SelectedActionIds')) { $SelectedActionIds } else { Get-SkyProfileActionIds -Profile $Profile -Experiments $experiments })
@@ -3511,7 +3512,7 @@ function Invoke-SkyOptimize {
                 $failureDetails += [pscustomobject]@{ Id = $item.Id; Name = $item.Name; Reason = $result.Reason }
             }
         }
-        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'execution_results.json') -Content (ConvertTo-Json -InputObject @($actionResults) -Depth 5)
+        Write-SkyReportArtifact -Name 'execution_results.json' -Content (ConvertTo-Json -InputObject @($actionResults) -Depth 5)
     }
 
     # Salvaguarda de Estado
@@ -3565,7 +3566,7 @@ function Invoke-SkyOptimize {
   Fora da selecao:            $totalNotSelected
   Migracao pendente:          $totalDeferred
   Falhas:                     $totalFailed
-  Detalhe/reinício por ação:   $Global:SkyBackupDir\execution_results.json
+  Detalhe/reinício por ação:   $reportDirectory\execution_results.json
 ================================================================================
   Comunidade & Suporte SkyOptimizer:
   Dúvidas ou novos setups? Dá um salto no nosso Discord:
@@ -3575,7 +3576,7 @@ function Invoke-SkyOptimize {
 
     $panelCreated = $true
     if($OperatorMode) {
-        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'operator_report.txt') -Content $reportText
+        Write-SkyReportArtifact -Name 'operator_report.txt' -Content $reportText
     } else { $panelCreated = Deploy-ClientPanel -ReportContent $reportText }
     Write-Host $reportText -ForegroundColor Cyan
 
@@ -3596,7 +3597,7 @@ function Invoke-SkyOptimize {
   Ponto de Restauro:           $(if ($restorePointCreated) { "Criado com Sucesso" } else { "Ignorado / Restrito" })
 
   Painel do Cliente:           $(if ($OperatorMode) { 'Nao solicitado; comando tecnico separado' } elseif ($panelCreated -eq $true) { 'Criado' } else { 'Falhou; consultar o log' })
-  Relatório:                  $(if ($OperatorMode) { Join-Path $Global:SkyBackupDir 'operator_report.txt' } else { 'Desktop: SkyOptimizer - Painel de Controlo\Relatorio_Otimizacao.txt' })
+  Relatório:                  $(if ($OperatorMode) { Join-Path $reportDirectory 'operator_report.txt' } else { 'Desktop: SkyOptimizer - Painel de Controlo\Relatorio_Otimizacao.txt' })
   Pasta de Backups:            $Global:SkyBackupDir
   Comando de Reversão:         .\SkyOptimizer.ps1 -Undo
   Discord da Comunidade:       https://discord.gg/cE8ZaDRGV5
@@ -3700,16 +3701,20 @@ function Disable-SkySelectiveBackground {
 
 
 function Invoke-SkyBackgroundLab {
+    Invoke-SkyReportRun -Kind BackgroundLab -Body { Invoke-SkyBackgroundLabCore }
+}
+
+function Invoke-SkyBackgroundLabCore {
     $script:SkyLastExitCode=2
     if($Profile -ne 'Laboratory' -or $ExperimentalActions){throw 'BackgroundLab exige -Profile Laboratory sem IDs adicionais.'}
     $plan=Get-SkyBackgroundPlan
-    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'background_lab_plan.json') -Content ($plan | ConvertTo-Json -Depth 12)
+    Write-SkyReportArtifact -Name 'background_lab_plan.json' -Content ($plan | ConvertTo-Json -Depth 12)
     Write-Host "$($plan.Status): $($plan.Reason)" -ForegroundColor Yellow
     if($plan.Status -ne 'Candidate'){return}
     Write-Host "Pacotes: $($plan.FamilyNames -join ', '). Politica de maquina; pode afetar outras contas. Validacao funcional pendente."
     if((Read-Host 'Autoriza este ensaio nao validado num Windows descartavel, com perda de background/notificacoes? (S/N)') -notmatch '^(s|sim|y|yes)$'){return}
     $result=Invoke-SkyAction {Disable-SkySelectiveBackground -Plan $plan -AllowUnvalidated}
-    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'background_lab_result.json') -Content ($result | ConvertTo-Json -Depth 8)
+    Write-SkyReportArtifact -Name 'background_lab_result.json' -Content ($result | ConvertTo-Json -Depth 8)
     Write-Host "[$($result.Status)] $($result.Reason)"
     $script:SkyLastExitCode=if($result.Status -eq 'Failed'){1}else{2}
     # Even a verified registry write stays exit2 until functional consumption is validated.
@@ -4041,18 +4046,58 @@ function Get-SkyMaxPlan {
         Startup=$startup;Recommendations=$notes;PerformanceEvidence='NotMeasured';FunctionValidation='PendingRealWindows'}
 }
 
-function Invoke-SkyMax {
-    $script:SkyLastExitCode=1
-    $run=[ordered]@{RunId=[guid]::NewGuid().ToString();Started=(Get-Date).ToString('o');Ended=$null;ExitCode=$null;State='Started'}
-    $path=Join-Path $Global:SkyBackupDir 'max_run.json'
-    Write-SkyAtomicFile -Path $path -Content ($run | ConvertTo-Json)
-    try { Invoke-SkyMaxCore }
-    catch { $script:SkyLastExitCode=1; throw }
-    finally {
-        $run.Ended=(Get-Date).ToString('o');$run.ExitCode=$script:SkyLastExitCode
-        $run.State=if($script:SkyLastExitCode -eq 0){'ConfigurationVerified'}else{'IncompleteOrFailed'}
-        Write-SkyAtomicFile -Path $path -Content ($run | ConvertTo-Json)
+
+function New-SkyReportRun {
+    param([string]$Kind)
+    $id=[guid]::NewGuid().ToString()
+    $root=Join-Path $Global:SkyBackupDir 'Runs'
+    Assert-SkyNoReparsePoint $root
+    if(-not (Test-Path -LiteralPath $root)){New-SkyProtectedDirectory $root}
+    $path=Join-Path $root $id
+    if(Test-Path -LiteralPath $path){throw 'RunId collision; never reuse an evidence directory.'}
+    New-SkyProtectedDirectory $path
+    [pscustomobject]@{RunId=$id;Kind=$Kind;Path=$path;Started=[DateTime]::UtcNow.ToString('o');Ended=$null;ExitCode=$null;State='Started';Artifacts=@()}
+}
+
+function Write-SkyRunMetadata {
+    param($Run)
+    Write-SkyAtomicFile -Path (Join-Path $Run.Path 'run.json') -Content ($Run | ConvertTo-Json -Depth 6)
+    # Latest pointer never includes results from any other run. Interrupted sessions remain Started.
+    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'latest_run.json') -Content ($Run | ConvertTo-Json -Depth 6)
+}
+
+function Write-SkyReportArtifact {
+    param([ValidatePattern('^[a-z][a-z0-9_]*\.(json|txt)$')][string]$Name,[string]$Content)
+    if(-not $script:SkyReportRun) {
+        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir $Name) -Content $Content
+        return
     }
+    Write-SkyAtomicFile -Path (Join-Path $script:SkyReportRun.Path $Name) -Content $Content
+    if($Name -notin $script:SkyReportRun.Artifacts){$script:SkyReportRun.Artifacts+= $Name}
+    Write-SkyRunMetadata $script:SkyReportRun
+}
+
+function Invoke-SkyReportRun {
+    param([string]$Kind,[scriptblock]$Body)
+    if($script:SkyReportRun){throw 'Nested report run refused.'}
+    $script:SkyLastExitCode=1
+    $run=New-SkyReportRun $Kind
+    $script:SkyReportRun=$run
+    try {
+        Write-SkyRunMetadata $run
+        & $Body
+    } catch {$script:SkyLastExitCode=1;throw}
+    finally {
+        try {
+            $run.Ended=[DateTime]::UtcNow.ToString('o');$run.ExitCode=$script:SkyLastExitCode
+            $run.State=if($script:SkyLastExitCode -eq 0){'ConfigurationVerified'}else{'IncompleteOrFailed'}
+            Write-SkyRunMetadata $run
+        } finally {$script:SkyReportRun=$null}
+    }
+}
+
+function Invoke-SkyMax {
+    Invoke-SkyReportRun -Kind MAX -Body { Invoke-SkyMaxCore }
 }
 
 function Invoke-SkyMaxCore {
@@ -4064,7 +4109,7 @@ function Invoke-SkyMaxCore {
     $candidates=@($plan.Startup | Where-Object Status -eq Candidate)
     $candidates | ForEach-Object { Write-Host $_.Reason -ForegroundColor Yellow }
     $plan.Recommendations | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
-    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'max_plan.json') -Content ($plan | ConvertTo-Json -Depth 10)
+    Write-SkyReportArtifact -Name 'max_plan.json' -Content ($plan | ConvertTo-Json -Depth 10)
     if(-not $plan.SelectedIds.Count -and -not $candidates.Count) { $script:SkyLastExitCode=2; return }
     if(@($plan.SelectedIds | Where-Object {$_ -ne 79 -and $_ -ne 70}).Count -or $candidates.Count) {
         if((Read-Host 'Confirmar perda das funcionalidades listadas nesta conta e ausencia de gestao externa? (S/N)') -notmatch '^(s|sim|y|yes)$') {
@@ -4080,12 +4125,12 @@ function Invoke-SkyMaxCore {
     Invoke-SkyOptimize -SelectedActionIds $plan.SelectedIds -OperatorMode
     if($script:SkyLastExitCode -eq 1) { return }
     $startupResults=@()
-    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'max_startup_results.json') -Content '[]'
+    Write-SkyReportArtifact -Name 'max_startup_results.json' -Content '[]'
     if((@($plan.Context.Issues | Where-Object {$_}).Count -or @($plan.Startup | Where-Object Status -eq Unknown).Count) -and $script:SkyLastExitCode -eq 0) { $script:SkyLastExitCode=2 }
     foreach($candidate in $candidates) {
         $result=Invoke-SkyAction { Disable-SkyStartupCandidate $candidate }
         $startupResults += [pscustomobject]@{Name=$candidate.Name;Status=$result.Status;Reason=$result.Reason;RestartRequired=$result.RestartRequired}
-        Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'max_startup_results.json') -Content (ConvertTo-Json -InputObject @($startupResults) -Depth 6)
+        Write-SkyReportArtifact -Name 'max_startup_results.json' -Content (ConvertTo-Json -InputObject @($startupResults) -Depth 6)
         if($result.Status -eq 'Failed') { $script:SkyLastExitCode=1 }
         elseif($result.Status -notin @('Applied','AlreadyCompliant') -and $script:SkyLastExitCode -eq 0) { $script:SkyLastExitCode=2 }
         Write-Host "[Arranque/$($candidate.Name)] $($result.Status): $($result.Reason)"
@@ -4385,7 +4430,7 @@ try {
 if ($BackgroundLab) { Invoke-SkyBackgroundLab; exit $script:SkyLastExitCode }
 
 if ($Apply) {
-    if ($Profile -eq 'MAX') { Invoke-SkyMax } else { Invoke-SkyOptimize -OperatorMode }
+    if ($Profile -eq 'MAX') { Invoke-SkyMax } else { Invoke-SkyReportRun -Kind Laboratory -Body { Invoke-SkyOptimize -OperatorMode } }
     exit $script:SkyLastExitCode
 }
 
@@ -4425,7 +4470,7 @@ if ($Audit) {
 
 # Default operator experience: one MAX run, then release the session lock and exit.
 if ($Profile -eq 'MAX') { Invoke-SkyMax }
-else { Invoke-SkyOptimize -OperatorMode }
+else { Invoke-SkyReportRun -Kind Laboratory -Body { Invoke-SkyOptimize -OperatorMode } }
 exit $script:SkyLastExitCode
 } finally { $skySession.Dispose() }
 

@@ -101,6 +101,8 @@ Describe 'Selective per-app background contract without Windows writes' {
 }
 
 Describe 'Background laboratory operator lifecycle' {
+    Mock New-SkyProtectedDirectory { $null=[IO.Directory]::CreateDirectory($Path) }
+    Mock Assert-SkyNoReparsePoint {}
     BeforeEach {$Profile='Laboratory';$ExperimentalActions='';$Global:SkyBackupDir=$TestDrive;$script:answer='N';$script:status='Applied'}
     Mock Get-SkyBackgroundPlan {[pscustomobject]@{Status='Candidate';Reason='Synthetic plan';FamilyNames=@('fixture')}}
     Mock Write-SkyAtomicFile {}
