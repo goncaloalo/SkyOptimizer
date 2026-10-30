@@ -1,0 +1,34 @@
+[
+  {
+    "Id": "R001",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy",
+    "Name": "LetAppsRunInBackground"
+  },
+  {
+    "Id": "R002",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy",
+    "Name": "LetAppsRunInBackground_ForceAllowTheseApps"
+  },
+  {
+    "Id": "R003",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy",
+    "Name": "LetAppsRunInBackground_UserInControlOfTheseApps"
+  },
+  {
+    "Id": "R004",
+    "Type": "Registry",
+    "Hive": "LocalMachine",
+    "View": "Registry64",
+    "Path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy",
+    "Name": "LetAppsRunInBackground_ForceDenyTheseApps"
+  }
+]

@@ -1,5 +1,7 @@
 # MAX e compatibilidade dos perfis técnicos
 
+A [Fase 5F](FASE5F.md) acrescenta inventário, CPU Sets e avaliação individual das 26 ações. Background seletivo é laboratório separado, não um novo perfil nem seleção automática MAX. `-Diagnose` agora inclui estes leitores; `-DryRun` conserva o plano leve.
+
 A Fase 5E substitui o menu de perfis pelo modo MAX. Sem parâmetros ou com `-Apply`, o programa prepara um plano condicionado ao contexto, confirma impactos, usa o motor existente e termina sem instalar painel. MAX não herda Extreme nem seleciona as 26 ações só por terem implementação de Apply/Undo. Ver [decisões, limites e validação](FASE5E.md).
 
 ## Seleção automática

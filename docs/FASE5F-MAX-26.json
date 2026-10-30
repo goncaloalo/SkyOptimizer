@@ -1,0 +1,158 @@
+﻿[
+    {
+        "Id":  1,
+        "Disposition":  "Dependency",
+        "Reason":  "Copia identica do plano original; nao melhora desempenho por si.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  3,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "Core parking AC: boost, calor, topologia e frametimes exigem ensaio.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  6,
+        "Disposition":  "ObservedWorkload",
+        "Reason":  "SysMain: medir atividade, hard faults e loading; SSD nao justifica desativar.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  8,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "USB idle/retoma em AC; nao prova polling ou latencia inferior.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  9,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Captura apenas no contrato Win10; perde clips, depende de carga.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  13,
+        "Disposition":  "Preference",
+        "Reason":  "Telemetria valor 1 pode aumentar estado original 0; sem beneficio gaming demonstrado.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  16,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Widgets Win11 em edicao suportada; politica nao prova fim do WebView.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  17,
+        "Disposition":  "Preference",
+        "Reason":  "Extensoes de ficheiros: usabilidade sem mecanismo de reducao de carga gaming.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  19,
+        "Disposition":  "OperationalChoice",
+        "Reason":  "Exclusao de drivers pode impedir correcoes; decisao de manutencao.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  20,
+        "Disposition":  "ObservedWorkload",
+        "Reason":  "P2P de Delivery Optimization: requer trafego peer observado e consentimento; HTTP permanece.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  25,
+        "Disposition":  "FunctionalRisk",
+        "Reason":  "Default global de background afeta notificacoes/sync; preferir contratos por pacote.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  38,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "EEE da NIC depende de driver, energia e ligacao real.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  41,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Browser conhecido; background/startup boost com perda funcional confirmada.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  42,
+        "Disposition":  "UnsupportedContract",
+        "Reason":  "Armazenamento grafico interno; ensaio por jogo/API/driver antes de promover.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  58,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Politica de consumidor Enterprise/Education; nao desinstala apps.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  59,
+        "Disposition":  "Compatibility",
+        "Reason":  "Long paths exige app opt-in; nao reduz carga de gaming.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  60,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "DMA coalescing depende de driver; custo CPU/energia/latencia exige rede real.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  70,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Dicas online nas Definicoes: debloat de baixa relevancia para gaming.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  74,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "Interrupt moderation pode elevar interrupcoes e piorar CPU/DPC.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  75,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "Offloads RSC/LSO: CPU/throughput/jitter exigem ensaio por NIC.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  76,
+        "Disposition":  "PhysicalValidation",
+        "Reason":  "Flow control depende de congestionamento/perdas na rede fisica.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  79,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Game Mode nativo; consumo e beneficio variam por jogo.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  84,
+        "Disposition":  "AutomaticConditional",
+        "Reason":  "Spotlight na conta elevada; perda funcional sem FPS comprovado.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  86,
+        "Disposition":  "FunctionalRisk",
+        "Reason":  "Grupo localizacao/sensores/servico: separar recursos antes de automatizar.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  88,
+        "Disposition":  "Preference",
+        "Reason":  "Storage Sense preserva espaco; desativar pode favorecer disco cheio.",
+        "MeasuredBenefit":  false
+    },
+    {
+        "Id":  90,
+        "Disposition":  "Preference",
+        "Reason":  "Clipboard entre dispositivos: escolha funcional, sem concorrencia gaming demonstrada.",
+        "MeasuredBenefit":  false
+    }
+]

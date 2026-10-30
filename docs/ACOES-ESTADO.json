@@ -22,6 +22,12 @@
       "LacunasERiscos": "Undo reativa original mas conserva cópia potencialmente alterada: Unverified/exit 2. Histórico RetainedOwnedGuids preservado. Não há prova de benefício de uma cópia idêntica.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 1,
+      "Disposition": "Dependency",
+      "Reason": "Copia identica do plano original; nao melhora desempenho por si.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -69,6 +75,12 @@
       "LacunasERiscos": "Não adapta CPU híbrido/X3D; pode aumentar consumo/temperatura. Sem deteção de todas as alterações externas nos índices da cópia; original/DC preservados.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 3,
+      "Disposition": "PhysicalValidation",
+      "Reason": "Core parking AC: boost, calor, topologia e frametimes exigem ensaio.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -138,6 +150,12 @@
       "LacunasERiscos": "Pode piorar carregamentos/cache. Restore de arranque/runtime não é transação; confirmar dependências e delayed start via SCM real.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 6,
+      "Disposition": "ObservedWorkload",
+      "Reason": "SysMain: medir atividade, hard faults e loading; SSD nao justifica desativar.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -185,6 +203,12 @@
       "LacunasERiscos": "Experiência de diagnóstico, não recomendação geral. Validar idle/resume, energia e periféricos; Undo conserva cópia.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 8,
+      "Disposition": "PhysicalValidation",
+      "Reason": "USB idle/retoma em AC; nao prova polling ou latencia inferior.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -214,7 +238,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Windows 10 cliente conhecido, SKU admitido Pro/Enterprise/Education; sem indicadores de gestao; impacto confirmado.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 9,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Captura apenas no contrato Win10; perde clips, depende de carga.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 10,
@@ -304,6 +334,12 @@
       "LacunasERiscos": "Pode elevar 0 preexistente para 1; finalidade é configuração de privacidade, não redução universal. Compatibilidade Update/Store não está certificada.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 13,
+      "Disposition": "Preference",
+      "Reason": "Telemetria valor 1 pode aumentar estado original 0; sem beneficio gaming demonstrado.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -376,7 +412,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Windows 11 cliente conhecido Pro/Enterprise/Education; sem indicadores de gestao; impacto confirmado.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 16,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Widgets Win11 em edicao suportada; politica nao prova fim do WebView.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 17,
@@ -401,6 +443,12 @@
       "LacunasERiscos": "Preferência Explorer sem ganho de FPS; sessão pode fazer cache.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 17,
+      "Disposition": "Preference",
+      "Reason": "Extensoes de ficheiros: usabilidade sem mecanismo de reducao de carga gaming.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -448,6 +496,12 @@
       "LacunasERiscos": "Não impede todos os métodos de driver update; exige servicing e precedência GPO/MDM reais.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 19,
+      "Disposition": "OperationalChoice",
+      "Reason": "Exclusao de drivers pode impedir correcoes; decisao de manutencao.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -473,6 +527,12 @@
       "LacunasERiscos": "Peering fica desativado; HTTP/Connected Cache não são limitados; não garante menor ping.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 20,
+      "Disposition": "ObservedWorkload",
+      "Reason": "P2P de Delivery Optimization: requer trafego peer observado e consentimento; HTTP permanece.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -585,6 +645,12 @@
       "LacunasERiscos": "Pode perder notificações/sincronização; não controla todos os processos Win32.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 25,
+      "Disposition": "FunctionalRisk",
+      "Reason": "Default global de background afeta notificacoes/sync; preferir contratos por pacote.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -873,6 +939,12 @@
       "LacunasERiscos": "Exige reinício; escrita no registo não prova aplicação pelo driver. Mudança AC/DC durante enumeração não é atómica.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 38,
+      "Disposition": "PhysicalValidation",
+      "Reason": "EEE da NIC depende de driver, energia e ligacao real.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -945,7 +1017,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Cliente conhecido; Edge >=88 ou Chrome >=19 localizado; sem indicadores de gestao; impacto confirmado.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 41,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Browser conhecido; background/startup boost com perda funcional confirmada.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 42,
@@ -970,6 +1048,12 @@
       "LacunasERiscos": "Armazenamento interno não é contrato universal; comparação exata protege flags externas mas Undo recusa restaurar se elas mudarem.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 42,
+      "Disposition": "UnsupportedContract",
+      "Reason": "Armazenamento grafico interno; ensaio por jogo/API/driver antes de promover.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -1327,7 +1411,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Enterprise/Education cliente conhecida, build >=17134; sem indicadores de gestao; impacto confirmado.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 58,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Politica de consumidor Enterprise/Education; nao desinstala apps.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 59,
@@ -1352,6 +1442,12 @@
       "LacunasERiscos": "Apps precisam de opt-in longPathAware; reinício após Apply e Undo; não remove todos os limites.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 59,
+      "Disposition": "Compatibility",
+      "Reason": "Long paths exige app opt-in; nao reduz carga de gaming.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -1377,6 +1473,12 @@
       "LacunasERiscos": "Não inferir semântica de driver só do nome; requer documentação do driver e medidas de CPU/latência/throughput.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 60,
+      "Disposition": "PhysicalValidation",
+      "Reason": "DMA coalescing depende de driver; custo CPU/energia/latencia exige rede real.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -1603,7 +1705,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Pro/Enterprise/Education cliente conhecida, build >=16299; sem indicadores de gestao.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 70,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Dicas online nas Definicoes: debloat de baixa relevancia para gaming.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 71,
@@ -1694,6 +1802,12 @@
       "LacunasERiscos": "Mais interrupções/CPU pode piorar frametime; sem prova de latência até hardware.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 74,
+      "Disposition": "PhysicalValidation",
+      "Reason": "Interrupt moderation pode elevar interrupcoes e piorar CPU/DPC.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -1719,6 +1833,12 @@
       "LacunasERiscos": "Grupo pode ser parcial e exige reinício; perda de throughput/mais CPU. API efetiva de offload não validada.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 75,
+      "Disposition": "PhysicalValidation",
+      "Reason": "Offloads RSC/LSO: CPU/throughput/jitter exigem ensaio por NIC.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -1744,6 +1864,12 @@
       "LacunasERiscos": "Pode aumentar perdas sob congestionamento; testar switch/router, duplex e carga.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 76,
+      "Disposition": "PhysicalValidation",
+      "Reason": "Flow control depende de congestionamento/perdas na rede fisica.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -1818,7 +1944,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Windows cliente conhecido na matriz, incluindo Home; estado conforme nao cria ownership.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 79,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Game Mode nativo; consumo e beneficio variam por jogo.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 80,
@@ -1934,7 +2066,13 @@
       "ValidacaoReal": "Nao executada"
     },
     "SelecaoMAX": "Enterprise/Education cliente conhecida, build >=15063; sem indicadores de gestao; impacto confirmado.",
-    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido."
+    "ValidacaoMAX": "Plano e integracao cobertos por mocks; nenhuma validacao Windows real ou ganho medido.",
+    "AvaliacaoMAX5F": {
+      "Id": 84,
+      "Disposition": "AutomaticConditional",
+      "Reason": "Spotlight na conta elevada; perda funcional sem FPS comprovado.",
+      "MeasuredBenefit": false
+    }
   },
   {
     "Id": 85,
@@ -1981,6 +2119,12 @@
       "LacunasERiscos": "Grupo combina políticas, consentimento e serviço; edições/efeito do ConsentStore e software de sensores exigem integração.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 86,
+      "Disposition": "FunctionalRisk",
+      "Reason": "Grupo localizacao/sensores/servico: separar recursos antes de automatizar.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -2028,6 +2172,12 @@
       "LacunasERiscos": "Perde limpeza automática; risco de disco cheio. Sem prova de scans durante jogos.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 88,
+      "Disposition": "Preference",
+      "Reason": "Storage Sense preserva espaco; desativar pode favorecer disco cheio.",
+      "MeasuredBenefit": false
     }
   },
   {
@@ -2075,6 +2225,12 @@
       "LacunasERiscos": "Preferência de sincronização/privacidade, não otimização de FPS; confirmar sessão/MDM.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
+    },
+    "AvaliacaoMAX5F": {
+      "Id": 90,
+      "Disposition": "Preference",
+      "Reason": "Clipboard entre dispositivos: escolha funcional, sem concorrencia gaming demonstrada.",
+      "MeasuredBenefit": false
     }
   }
 ]

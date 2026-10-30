@@ -1,10 +1,10 @@
 {
-  "Date": "2026-10-29T22:22:06.6878354+00:00",
+  "Date": "2026-10-30T19:57:51.5240782+00:00",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
   "Command": "Windows PowerShell 5.1 -NoProfile -ExecutionPolicy Bypass: Invoke-Pester -Script .\\tests -PassThru -Quiet",
-  "Total": 254,
-  "Passed": 254,
+  "Total": 290,
+  "Passed": 290,
   "Failed": 0,
   "Skipped": 0,
   "Pending": 0,
@@ -23,7 +23,7 @@
     39,
     54
   ],
-  "ProductSourceSha256": "BE09B47F0E98385F94793D7C7965371701A1CE1D2B0D2D6801B6CA9B7BE9B0D2",
+  "ProductSourceSha256": "1A10321191BAA409C7603E5C25D7B9940C5844E786C28129630AC2E1BB0DA0C3",
   "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
   "BlockedActions": 58,
   "OriginalBlockedActionsAudited3B": 67,
@@ -35,10 +35,10 @@
     2
   ],
   "ProductionScheduledTasksEligible": false,
-  "Phase": "5E offline",
-  "ValidationScope": "Pester: 254 tests, declarations only, mocked Windows readers/effects and temporary files. MAX selection, operator lifecycle, strict startup contracts, failure/repetition/Undo/conflict and independent evidence scope. Python: 34 synthetic tests passed in phase 5D; benchmark tree unchanged, no rerun in 5E. No product entry point, live process/CIM/AppX capture, external binary execution, Windows configuration changes, VM, games or physical benchmarks.",
-  "SourceCommit": "1a17ce778c89bee3cd8b435221c8cc980d647e6b",
-  "DetailedPesterEvidence": "FASE5E-TESTES.json",
+  "Phase": "5F offline",
+  "ValidationScope": "Final full suite: Windows readers and writers mocked; journal filesystem operations use temporary files. During an intermediate agent test, a missing AppX mock caused read-only enumeration, subsequently fixed. No policies/packages/OS configuration changed. CPU native query never executed. Python: previous 34 synthetic tests passed in 5D; unchanged benchmark tree; not rerun in 5F.",
+  "SourceCommit": "6007aeddef44314c35e97fc9d6c3f871113c6b10",
+  "DetailedPesterEvidence": "FASE5F-TESTES.json",
   "EvidenceSourceSha256": "59AEE5A4F263880FDE65021575D9F4DEF470DC614FAA8315AEDB9313286A60CF",
   "BenchmarkAnalyzerSha256": "5C11AC7E0B7BE5E52A0FE15D8B6BDA3A46828B07FBFB66B2437ADF6A553E4E1B",
   "SessionDiagnosisSha256": "74DD4AD746B0714FA1CF360DEBEB69877EDBA0C1AF2403146AE31CAAD25B8459",
@@ -66,5 +66,10 @@
     "Steam"
   ],
   "MaxStartupContractsRealValidation": false,
-  "MaxEvidenceRegistryValues": 16
+  "MaxEvidenceRegistryValues": 16,
+  "PythonRerunIn5F": false,
+  "CpuTopologyNativeValidated": false,
+  "SelectiveBackgroundFunctionalValidated": false,
+  "IntermediateAppxReadOnlyOccurred": true,
+  "FinalRunWindowsReadersMocked": true
 }

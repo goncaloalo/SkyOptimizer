@@ -1,5 +1,7 @@
 # Fase 5E — SkyOptimizer MAX
 
+> Entrega histórica parcial. A [Fase 5F](FASE5F.md) acrescenta inventário e diagnóstico; a descrição de Diagnose/DebloatPreview abaixo corresponde à versão 5E.
+
 Base `66b6c76`, branch `dev/phase2-execution-power-safety`. Transição incremental, sem alterar formatos dos diários nem aplicar configurações ao host de desenvolvimento.
 
 ## Plano e critérios de saída
