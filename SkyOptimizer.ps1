@@ -3621,6 +3621,134 @@ function Invoke-SkyOptimize {
 
 
 
+
+function Get-SkyInventorySection {
+    param([scriptblock]$Reader, [string]$Scope)
+    try {
+        $items=@(& $Reader)
+        $status=if(@($items | Where-Object Status -eq Unknown).Count){'Partial'}else{'Observed'}
+        [pscustomobject]@{Status=$status;Scope=$Scope;Items=$items;Reason='Inventario local; presenca nao prova atividade nem autoriza alteracoes.'}
+    }
+    catch { [pscustomobject]@{Status='Unknown';Scope=$Scope;Items=@();Reason='Leitura incompleta/indisponivel; nao significa ausencia.'} }
+}
+
+function Get-SkyInstalledSoftware {
+    # Never query Win32_Product: enumeration may initiate MSI consistency checks.
+    foreach($root in @('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKCU:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
+        try {
+            if(-not (Test-Path -LiteralPath $root -ErrorAction Stop)){continue}
+            foreach($key in @(Get-ChildItem -LiteralPath $root -ErrorAction Stop)) {
+                $app=Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction Stop
+                if($app.DisplayName) { [pscustomobject]@{Identity=$key.PSPath;Name=$app.DisplayName;Publisher=$app.Publisher;Version=$app.DisplayVersion
+                    Scope=$root;SystemComponent=$app.SystemComponent;WindowsInstaller=$app.WindowsInstaller;Dependencies='Unknown'
+                    OemRole='Unknown';ApplyAllowed=$false;Recovery='Installer/version/data not verified; never execute uninstall strings'} }
+            }
+        } catch { [pscustomobject]@{Identity=$root;Status='Unknown';ApplyAllowed=$false;Reason='Enumeration failed; OEM/software coverage incomplete'} }
+    }
+}
+
+function Get-SkyDebloatInventory {
+    $sections=[ordered]@{}
+    $sections.Appx=Get-SkyAppxPreview
+    $sections.Provisioned=Get-SkyInventorySection -Scope 'Image; future users, not current-user removal' -Reader {
+        Get-AppxProvisionedPackage -Online -ErrorAction Stop | ForEach-Object {
+            [pscustomobject]@{Identity=$_.PackageName;Name=$_.DisplayName;Version=[string]$_.Version;Architecture=[string]$_.Architecture
+                Dependencies='Unknown';ApplyAllowed=$false;Recovery='Payload/license/dependencies and user data not verified'} }
+    }
+    $sections.Software=Get-SkyInventorySection -Scope 'HKLM/HKCU uninstall; OEM role requires verification' -Reader {Get-SkyInstalledSoftware}
+    $sections.Startup=Get-SkyInventorySection -Scope 'WMI visible startup registrations; not proof enabled' -Reader {
+        Get-CimInstance Win32_StartupCommand -ErrorAction Stop | Select-Object Name,Command,Location,User,
+            @{n='ApplyAllowed';e={$false}},@{n='Dependencies';e={'Unknown'}},@{n='Recovery';e={'Only exact supported Run contracts can be changed'}}
+    }
+    $sections.Services=Get-SkyInventorySection -Scope 'Service Control Manager; no bulk disable' -Reader {
+        Get-Service -ErrorAction Stop | ForEach-Object {
+            [pscustomobject]@{Identity=$_.Name;Status=[string]$_.Status;StartType=[string]$_.StartType
+                RequiredServices=@($_.RequiredServices | ForEach-Object Name);DependentServices=@($_.DependentServices | ForEach-Object Name)
+                ApplyAllowed=$false;DependenciesNote='SCM edges only; application/driver dependencies unknown';Recovery='Per-service baseline required'} }
+    }
+    $sections.Tasks=Get-SkyInventorySection -Scope 'Scheduled task registration, not task history' -Reader {
+        Get-ScheduledTask -ErrorAction Stop | ForEach-Object {
+            [pscustomobject]@{Identity=($_.TaskPath+$_.TaskName);State=[string]$_.State;Author=$_.Author
+                Executables=@($_.Actions | ForEach-Object Execute);Triggers=@($_.Triggers | ForEach-Object {$_.CimClass.CimClassName})
+                Dependencies='Unknown';ApplyAllowed=$false;Recovery='No production allowlist or functional recovery validation'} }
+    }
+    $sections.Features=Get-SkyInventorySection -Scope 'Online image; no feature changes' -Reader {
+        Get-WindowsOptionalFeature -Online -ErrorAction Stop | Select-Object FeatureName,State,
+            @{n='Dependencies';e={'Unknown; payload and feature graph required'}},@{n='ApplyAllowed';e={$false}},@{n='Recovery';e={'Source payload and reboot recovery not verified'}}
+    }
+    $sections.Processes=Get-SkyInventorySection -Scope 'Point-in-time cumulative counters; no causal inference' -Reader {
+        Get-CimInstance Win32_Process -ErrorAction Stop | Select-Object ProcessId,ParentProcessId,CreationDate,Name,WorkingSetSize,PrivatePageCount,
+            KernelModeTime,UserModeTime,ReadTransferCount,WriteTransferCount,
+            @{n='ApplyAllowed';e={$false}},@{n='Dependencies';e={'Unknown; never terminate by name'}}
+    }
+    [pscustomobject]@{SchemaVersion=2;Scope='Local privileged visibility; current-user AppX separate from image provision';TimestampUtc=[DateTime]::UtcNow.ToString('o')
+        Sections=[pscustomobject]$sections;PerformanceEvidence='NotMeasured';SensitiveData='Local paths, command lines and account names; review before sharing'
+        BackgroundCoverage='AppX inventory and visible processes; Win32/UWP background eligibility is not measured activity'
+        OperationPolicy=@{Temporary='Requires supported pause/resume and ownership; no process killing';Persistent='Exact supported setting with journal'
+            Startup='Exact Run contracts only';Uninstall='Blocked: reinstall does not restore data';Deprovision='Blocked: independent payload/license contract required';FeatureDisable='Blocked: dependencies/payload/reboot recovery required'}}
+}
+
+function Get-SkyHardwareDiagnostics {
+    $cpu=Get-SkyInventorySection -Scope 'CPU inventory; no inferred CCD/X3D/hybrid topology' -Reader {
+        Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Manufacturer,Name,Family,Architecture,ProcessorId,NumberOfCores,NumberOfLogicalProcessors
+    }
+    $gpu=Get-SkyInventorySection -Scope 'Display driver inventory; WMI memory is not VRAM budget' -Reader {
+        Get-CimInstance Win32_VideoController -ErrorAction Stop | Select-Object Name,PNPDeviceID,DriverVersion,DriverDate,VideoProcessor
+    }
+    $memory=Get-SkyInventorySection -Scope 'Commit counters at capture, not sustained pressure' -Reader {
+        Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop | ForEach-Object {
+            $valid=$null -ne $_.CommittedBytes -and $null -ne $_.CommitLimit -and [double]$_.CommitLimit -gt 0
+            [pscustomobject]@{CommittedBytes=$_.CommittedBytes;CommitLimit=$_.CommitLimit;AvailableMBytes=$_.AvailableMBytes
+                PageReadsPersec=$_.PageReadsPersec;CommitRatio=$(if($valid){[double]$_.CommittedBytes/[double]$_.CommitLimit}else{$null})
+                Interpretation='Single snapshot; correlate sustained commit/page reads with game frametimes; pagefile preserved'} }
+    }
+    $storage=Get-SkyInventorySection -Scope 'Disk model/volume; media interface does not prove SSD or bottleneck' -Reader {
+        Get-CimInstance Win32_DiskDrive -ErrorAction Stop | Select-Object Index,Model,InterfaceType,Size,Status
+    }
+    $io=Get-SkyInventorySection -Scope 'Provider interval disk counters; not attribution to game/stutter' -Reader {
+        Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -ErrorAction Stop | Select-Object Name,DiskReadBytesPersec,DiskWriteBytesPersec,CurrentDiskQueueLength,AvgDisksecPerTransfer
+    }
+    [pscustomobject]@{SchemaVersion=1;Cpu=$cpu;Gpu=$gpu;Memory=$memory;Storage=$storage;DiskActivity=$io
+        HybridTopology='Unknown';X3DTopology='Unknown';ThermalHeadroom='Unknown';Bottleneck='Unknown'
+        NextMeasurement='Use repeated session telemetry and A/A then A/B; inventory never authorizes hardware tweaks'}
+}
+
+function Get-SkyMaxActionAssessment {
+    # Every eligible action has an explicit disposition; eligibility alone is not performance evidence.
+    $rows=@(
+        @(1,'Dependency','Copia identica do plano original; nao melhora desempenho por si.'),
+        @(3,'PhysicalValidation','Core parking AC: boost, calor, topologia e frametimes exigem ensaio.'),
+        @(6,'ObservedWorkload','SysMain: medir atividade, hard faults e loading; SSD nao justifica desativar.'),
+        @(8,'PhysicalValidation','USB idle/retoma em AC; nao prova polling ou latencia inferior.'),
+        @(9,'AutomaticConditional','Captura apenas no contrato Win10; perde clips, depende de carga.'),
+        @(13,'Preference','Telemetria valor 1 pode aumentar estado original 0; sem beneficio gaming demonstrado.'),
+        @(16,'AutomaticConditional','Widgets Win11 em edicao suportada; politica nao prova fim do WebView.'),
+        @(17,'Preference','Extensoes de ficheiros: usabilidade sem mecanismo de reducao de carga gaming.'),
+        @(19,'OperationalChoice','Exclusao de drivers pode impedir correcoes; decisao de manutencao.'),
+        @(20,'ObservedWorkload','P2P de Delivery Optimization: requer trafego peer observado e consentimento; HTTP permanece.'),
+        @(25,'FunctionalRisk','Default global de background afeta notificacoes/sync; preferir contratos por pacote.'),
+        @(38,'PhysicalValidation','EEE da NIC depende de driver, energia e ligacao real.'),
+        @(41,'AutomaticConditional','Browser conhecido; background/startup boost com perda funcional confirmada.'),
+        @(42,'UnsupportedContract','Armazenamento grafico interno; ensaio por jogo/API/driver antes de promover.'),
+        @(58,'AutomaticConditional','Politica de consumidor Enterprise/Education; nao desinstala apps.'),
+        @(59,'Compatibility','Long paths exige app opt-in; nao reduz carga de gaming.'),
+        @(60,'PhysicalValidation','DMA coalescing depende de driver; custo CPU/energia/latencia exige rede real.'),
+        @(70,'AutomaticConditional','Dicas online nas Definicoes: debloat de baixa relevancia para gaming.'),
+        @(74,'PhysicalValidation','Interrupt moderation pode elevar interrupcoes e piorar CPU/DPC.'),
+        @(75,'PhysicalValidation','Offloads RSC/LSO: CPU/throughput/jitter exigem ensaio por NIC.'),
+        @(76,'PhysicalValidation','Flow control depende de congestionamento/perdas na rede fisica.'),
+        @(79,'AutomaticConditional','Game Mode nativo; consumo e beneficio variam por jogo.'),
+        @(84,'AutomaticConditional','Spotlight na conta elevada; perda funcional sem FPS comprovado.'),
+        @(86,'FunctionalRisk','Grupo localizacao/sensores/servico: separar recursos antes de automatizar.'),
+        @(88,'Preference','Storage Sense preserva espaco; desativar pode favorecer disco cheio.'),
+        @(90,'Preference','Clipboard entre dispositivos: escolha funcional, sem concorrencia gaming demonstrada.')
+    )
+    foreach($row in $rows){[pscustomobject]@{Id=[int]$row[0];Disposition=$row[1];Reason=$row[2];MeasuredBenefit=$false}}
+}
+
 function Get-SkyMaxContext {
     $issues = New-Object 'Collections.Generic.List[string]'
     $os=$null; $system=$null; $cpus=@(); $gpus=@(); $mdm=$null
@@ -3695,7 +3823,8 @@ function Get-SkyMaxPlan {
     param($Context = (Get-SkyMaxContext))
     $supported=Test-SkyClientPolicySupport -SystemInfo $Context.Windows -AllowHome
     $unmanaged=($Context.DomainJoined -is [bool] -and -not $Context.DomainJoined -and $Context.MdmIndicator -is [bool] -and -not $Context.MdmIndicator)
-    $selected=@(); $decisions=@()
+    $selected=@(); $decisions=@(); $assessments=@{}
+    foreach($item in Get-SkyMaxActionAssessment){$assessments[$item.Id]=$item}
     $rules=@{
         9='Captura Win10: desativar gravacao; beneficio apenas com carga de captura.'
         16='Widgets: impedir experiencia por politica; preservar WebView e dependencias.'
@@ -3708,6 +3837,7 @@ function Get-SkyMaxPlan {
     foreach($id in 1..90) {
         $status='NotSelected'; $reason='Preferencia ou experiencia sem fundamento para aplicacao automatica; Laboratory preservado.'
         if($id -notin (Get-SkyMigratedActionIds)) { $status='Deferred';$reason='Acao bloqueada, retirada ou manutencao separada; ver catalogo.' }
+        elseif(-not $rules.ContainsKey($id) -and $assessments.ContainsKey($id)) { $reason=$assessments[$id].Reason }
         elseif($rules.ContainsKey($id)) {
             $reason=$rules[$id];$compatible=$supported
             if($id -ne 79 -and -not $unmanaged) { $compatible=$false; $reason+=' Gestao de dominio/MDM detetada ou desconhecida.' }
@@ -3721,7 +3851,7 @@ function Get-SkyMaxPlan {
             }
             if($compatible) { $status='Selected';$selected+=$id } else { $status='Incompatible';$reason+=' Requisitos nao confirmados; nenhuma alternativa especulativa.' }
         }
-        $decisions += [pscustomobject]@{Id=$id;Decision=$status;Reason=$reason}
+        $decisions += [pscustomobject]@{Id=$id;Decision=$status;Reason=$reason;Disposition=$(if($assessments.ContainsKey($id)){$assessments[$id].Disposition}else{'NotEligible'})}
     }
     $startup=@()
     if($supported -and $unmanaged) {
@@ -4070,10 +4200,11 @@ function Invoke-SkyHardwareAudit {
 # Read-only commands bypass storage creation, locks and the Apply entry point.
 if ($DryRun -or $Diagnose) {
     if ($Profile -ne 'MAX' -or $ExperimentalActions) { throw 'DryRun/Diagnose preparam MAX; Laboratory usa o fluxo tecnico separado.' }
-    Get-SkyMaxPlan | ConvertTo-Json -Depth 10
+    if($Diagnose) { [pscustomobject]@{Plan=(Get-SkyMaxPlan);Hardware=(Get-SkyHardwareDiagnostics);Debloat=(Get-SkyDebloatInventory)} | ConvertTo-Json -Depth 14 }
+    else { Get-SkyMaxPlan | ConvertTo-Json -Depth 10 }
     exit 0
 }
-if ($DebloatPreview) { Get-SkyAppxPreview | ConvertTo-Json -Depth 8; exit 0 }
+if ($DebloatPreview) { Get-SkyDebloatInventory | ConvertTo-Json -Depth 14; exit 0 }
 
 # Se invocado com parâmetros diretos de linha de comando:
 try { Initialize-SkyStorage }
