@@ -67,6 +67,9 @@ param(
     [Parameter(ParameterSetName = "DiagnoseDirect")]
     [switch]$Diagnose,
 
+    [Parameter(ParameterSetName = "BackgroundLabDirect")]
+    [switch]$BackgroundLab,
+
     [Parameter(ParameterSetName = "DebloatPreviewDirect")]
     [switch]$DebloatPreview,
 
@@ -100,6 +103,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     elseif ($DeployPanel) { $paramString = " -DeployPanel" }
     elseif ($Repair) { $paramString = " -Repair" }
     elseif ($Audit) { $paramString = " -Audit" }
+    elseif ($BackgroundLab) { $paramString = " -BackgroundLab" }
     $paramString += " -Profile $Profile"
     if ($ExperimentalActions) { $paramString += " -ExperimentalActions $ExperimentalActions" }
     $argsList = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"$paramString"
@@ -3622,6 +3626,95 @@ function Invoke-SkyOptimize {
 
 
 
+# Declaration fragment for integration into SkyOptimizer.ps1; no entry point or live reads on import.
+# Source: https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-privacy#letappsruninbackground_forcedenytheseapps
+# AppPrivacy.admx maps the per-app list to multiText (REG_MULTI_SZ), not the CSP's semicolon transport string.
+function Get-SkyBackgroundPlan {
+    param($Context = (Get-SkyMaxContext))
+    $result=[ordered]@{Status='Deferred';Reason='Compatibilidade/gestao desconhecida ou gerida.';FamilyNames=@();Packages=@();Resource=$null;Before=$null;Desired=$null
+        Validation='PendingRealWindows';AutomaticApplyAllowed=$false;Scope='MachinePolicyCurrentUserDiscovery';GlobalDefault=$null;OtherLists=@()}
+    if(-not (Test-SkyClientPolicySupport -SystemInfo $Context.Windows -MinimumBuild 15063) -or
+        $Context.DomainJoined -isnot [bool] -or $Context.DomainJoined -or $Context.MdmIndicator -isnot [bool] -or $Context.MdmIndicator) {
+        return [pscustomobject]$result
+    }
+    try {
+        $allowed=@('Microsoft.BingNews_8wekyb3d8bbwe','Microsoft.BingWeather_8wekyb3d8bbwe')
+        $packages=@(Get-AppxPackage -PackageTypeFilter Main -ErrorAction Stop | Where-Object { $_.PackageFamilyName -in $allowed })
+        foreach($p in $packages) {
+            if(-not $p.PackageFullName -or -not $p.Version -or $p.PublisherId -ne '8wekyb3d8bbwe' -or
+                $null -eq $p.PSObject.Properties['Dependencies'] -or
+                $p.IsFramework -isnot [bool] -or $p.IsResourcePackage -isnot [bool] -or $p.NonRemovable -isnot [bool] -or
+                $p.IsFramework -or $p.IsResourcePackage -or $p.NonRemovable -or
+                @($p.Dependencies | Where-Object {-not $_.PackageFullName}).Count) {
+                $result.Reason='Identidade/protecao/dependencias do pacote incompletas; nenhuma politica alterada.'
+                return [pscustomobject]$result
+            }
+        }
+        if(-not $packages.Count) { $result.Status='Absent';$result.Reason='Nenhum pacote do contrato instalado nesta conta; outras contas nao inventariadas.';return [pscustomobject]$result }
+        if(@($packages.PackageFamilyName | Select-Object -Unique).Count -ne $packages.Count) {throw 'Ambiguous package identity'}
+        $families=@($packages.PackageFamilyName | Sort-Object)
+        $path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy'
+        $states=@{}
+        foreach($name in @('LetAppsRunInBackground','LetAppsRunInBackground_ForceAllowTheseApps','LetAppsRunInBackground_UserInControlOfTheseApps','LetAppsRunInBackground_ForceDenyTheseApps')) {
+            $states[$name]=Get-SkyResourceState (ConvertTo-SkyRegistryResource $path $name)
+            $state=$states[$name]
+            if($state.Exists) {
+                if($name -eq 'LetAppsRunInBackground') {
+                    if($state.Kind -ne 'DWord' -or (ConvertFrom-SkyRegistryState $state) -notin @(0,1,2)){throw 'Unknown global policy'}
+                } elseif($state.Kind -ne 'MultiString') {throw 'Unknown per-app list type'}
+            }
+        }
+        foreach($name in @('LetAppsRunInBackground_ForceAllowTheseApps','LetAppsRunInBackground_UserInControlOfTheseApps')) {
+            if(@((ConvertFrom-SkyRegistryState $states[$name]) | Where-Object {$_ -in $families}).Count) {
+                $result.Reason='Pacote tem excecao ForceAllow/UserInControl; preferencia externa preservada.';return [pscustomobject]$result
+            }
+        }
+        $deny=$states['LetAppsRunInBackground_ForceDenyTheseApps']
+        $existing=@(); if($deny.Exists) {$existing=ConvertFrom-SkyRegistryState $deny}
+        # Preserve order, spelling and duplicates of unmanaged entries. Append only missing PFNs.
+        $merged=@($existing)
+        foreach($family in $families) {if($family -notin $merged){$merged+=$family}}
+        $result.Status='Candidate';$result.Reason='Contrato seletivo de background; perde atualizacoes/notificacoes destas apps. Escopo de maquina, outras contas tambem podem ser afetadas. Exige ensaio funcional; nao remove apps/dados nem prova FPS.'
+        $result.FamilyNames=$families
+        $result.Packages=@($packages | Sort-Object PackageFamilyName | Select-Object PackageFamilyName,PackageFullName,Version,PublisherId,Dependencies)
+        $result.Resource=ConvertTo-SkyRegistryResource $path 'LetAppsRunInBackground_ForceDenyTheseApps'
+        $result.Before=$deny;$result.Desired=ConvertTo-SkyRegistryState -Exists $true -Kind MultiString -Value ([string[]]$merged)
+        $result.GlobalDefault=$states['LetAppsRunInBackground']
+        $result.OtherLists=@($states['LetAppsRunInBackground_ForceAllowTheseApps'],$states['LetAppsRunInBackground_UserInControlOfTheseApps'])
+    } catch {$result.Status='Unknown';$result.Reason='Leitura AppX/politica falhou ou contrato desconhecido; preservar estado.'}
+    [pscustomobject]$result
+}
+
+function Disable-SkySelectiveBackground {
+    param($Plan, [switch]$AllowUnvalidated)
+    if(-not $AllowUnvalidated) {return New-SkyActionResult -Status Deferred -Reason 'Contrato ainda restrito a Laboratory autorizado: consumo funcional por validar em Windows.' -RestartRequired No}
+    $fresh=Get-SkyBackgroundPlan
+    if($fresh.Status -ne 'Candidate' -or ($fresh | ConvertTo-Json -Depth 12 -Compress) -cne ($Plan | ConvertTo-Json -Depth 12 -Compress)) {
+        return New-SkyActionResult -Status Deferred -Reason 'Plano/pacotes/politicas mudaram; repetir preview e confirmar.' -RestartRequired No
+    }
+    $result=Invoke-SkyTrackedChange -Resource $fresh.Resource -Desired $fresh.Desired -ExpectedBefore $fresh.Before
+    $result.RestartRequired='Yes'
+    $result.Reason+=' Apenas lista ForceDeny por PFN; default global e restantes excecoes preservados. Reiniciar apps/Windows e validar comportamento; nenhuma carga/FPS foi medida.'
+    $result
+}
+
+
+function Invoke-SkyBackgroundLab {
+    $script:SkyLastExitCode=2
+    if($Profile -ne 'Laboratory' -or $ExperimentalActions){throw 'BackgroundLab exige -Profile Laboratory sem IDs adicionais.'}
+    $plan=Get-SkyBackgroundPlan
+    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'background_lab_plan.json') -Content ($plan | ConvertTo-Json -Depth 12)
+    Write-Host "$($plan.Status): $($plan.Reason)" -ForegroundColor Yellow
+    if($plan.Status -ne 'Candidate'){return}
+    Write-Host "Pacotes: $($plan.FamilyNames -join ', '). Politica de maquina; pode afetar outras contas. Validacao funcional pendente."
+    if((Read-Host 'Autoriza este ensaio nao validado num Windows descartavel, com perda de background/notificacoes? (S/N)') -notmatch '^(s|sim|y|yes)$'){return}
+    $result=Invoke-SkyAction {Disable-SkySelectiveBackground -Plan $plan -AllowUnvalidated}
+    Write-SkyAtomicFile -Path (Join-Path $Global:SkyBackupDir 'background_lab_result.json') -Content ($result | ConvertTo-Json -Depth 8)
+    Write-Host "[$($result.Status)] $($result.Reason)"
+    $script:SkyLastExitCode=if($result.Status -eq 'Failed'){1}else{2}
+    # Even a verified registry write stays exit2 until functional consumption is validated.
+}
+
 function Get-SkyInventorySection {
     param([scriptblock]$Reader, [string]$Scope)
     try {
@@ -3653,6 +3746,7 @@ function Get-SkyInstalledSoftware {
 function Get-SkyDebloatInventory {
     $sections=[ordered]@{}
     $sections.Appx=Get-SkyAppxPreview
+    $sections.SelectiveBackground=Get-SkyInventorySection -Scope 'Machine policy; laboratory only, current-user discovery' -Reader {Get-SkyBackgroundPlan}
     $sections.Provisioned=Get-SkyInventorySection -Scope 'Image; future users, not current-user removal' -Reader {
         Get-AppxProvisionedPackage -Online -ErrorAction Stop | ForEach-Object {
             [pscustomobject]@{Identity=$_.PackageName;Name=$_.DisplayName;Version=[string]$_.Version;Architecture=[string]$_.Architecture
@@ -4213,6 +4307,8 @@ try { $skySession = Enter-SkySessionLock $Global:SkyBackupDir }
 catch { Write-Error $_; exit 1 }
 
 try {
+
+if ($BackgroundLab) { Invoke-SkyBackgroundLab; exit $script:SkyLastExitCode }
 
 if ($Apply) {
     if ($Profile -eq 'MAX') { Invoke-SkyMax } else { Invoke-SkyOptimize -OperatorMode }

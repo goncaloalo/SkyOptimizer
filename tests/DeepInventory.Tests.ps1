@@ -44,7 +44,7 @@ Describe 'Debloat diagnostic coverage is read-only and scope-separated' {
     It 'includes provisioned apps, OEM/software, startup, service, task, feature and process scopes' {
         $r=Get-SkyDebloatInventory
         $r.SchemaVersion | Should Be 2
-        @($r.Sections.PSObject.Properties).Count | Should Be 8
+        @($r.Sections.PSObject.Properties).Count | Should Be 9
         $r.Sections.Appx.Scope | Should Be CurrentProcessUser
         $r.OperationPolicy.Deprovision | Should Match 'Blocked'
         $r.OperationPolicy.Uninstall | Should Match 'Blocked'
@@ -95,5 +95,39 @@ Describe 'Every eligible action has an individual MAX decision and evidence limi
         ($plan.Decisions | Where-Object Id -eq 20).Reason | Should Match 'trafego peer'
         ($plan.Decisions | Where-Object Id -eq 3).Disposition | Should Be PhysicalValidation
         ($plan.SelectedIds -join ',') | Should Be '16,41,70,79'
+    }
+}
+
+Describe 'Deep inventory executes leaf readers only through mocked OS surfaces' {
+    Mock Get-SkyAppxPreview {[pscustomobject]@{Status='Observed';Scope='CurrentProcessUser';Items=@()}}
+    Mock Get-SkyBackgroundPlan {[pscustomobject]@{Status='Deferred';Reason='fixture'}}
+    Mock Get-SkyInstalledSoftware {[pscustomobject]@{Identity='fixture-software';Dependencies='Unknown';ApplyAllowed=$false}}
+    Mock Get-AppxProvisionedPackage {[pscustomobject]@{PackageName='fixture-provision';DisplayName='fixture';Version='1';Architecture='x64'}}
+    Mock Get-Service {[pscustomobject]@{Name='fixture-service';Status='Running';StartType='Manual';RequiredServices=@([pscustomobject]@{Name='dependency'});DependentServices=@()}}
+    Mock Get-ScheduledTask {[pscustomobject]@{TaskPath='\Fixture\';TaskName='Task';State='Ready';Actions=@([pscustomobject]@{Execute='fixture.exe'});Triggers=@()}}
+    Mock Get-WindowsOptionalFeature {[pscustomobject]@{FeatureName='fixture-feature';State='Enabled'}}
+    Mock Get-CimInstance {
+        switch($ClassName) {
+            Win32_Process {[pscustomobject]@{ProcessId=123;Name='fixture.exe';UserModeTime=1000;WorkingSetSize=2000}}
+            Win32_StartupCommand {[pscustomobject]@{Name='fixture-startup';Command='never-run.exe';Location='fixture';User='fixture'}}
+            default {throw 'Unexpected reader'}
+        }
+    }
+    It 'keeps exact identities, declared SCM edges and cumulative counter semantics' {
+        $r=Get-SkyDebloatInventory
+        $r.Sections.Provisioned.Items[0].Identity | Should Be fixture-provision
+        $r.Sections.Services.Items[0].RequiredServices[0] | Should Be dependency
+        $r.Sections.Tasks.Items[0].Identity | Should Be '\Fixture\Task'
+        $r.Sections.Features.Items[0].ApplyAllowed | Should Be $false
+        $r.Sections.Processes.Items[0].UserModeTime | Should Be 1000
+        $r.Sections.Processes.Scope | Should Match 'cumulative'
+    }
+    It 'isolates feature and task enumeration failures without losing other categories' {
+        Mock Get-WindowsOptionalFeature {throw 'unavailable'}
+        Mock Get-ScheduledTask {throw 'denied'}
+        $r=Get-SkyDebloatInventory
+        $r.Sections.Features.Status | Should Be Unknown
+        $r.Sections.Tasks.Status | Should Be Unknown
+        $r.Sections.Services.Status | Should Be Observed
     }
 }
