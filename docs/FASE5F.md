@@ -1,5 +1,7 @@
 # Fase 5F — MAX Performance e Deep Debloat
 
+> Entrega histórica. A [Fase 5G](FASE5G.md) acrescentou contratos e substituiu relatórios planos por pastas exclusivas RunId.
+
 Base `6a951fb`, branch `dev/phase2-execution-power-safety`. Desenvolvimento incremental; a missão MAX continua parcial. Não foram aplicadas otimizações ao Windows, executados jogos, benchmarks ou VM, nem efetuado push. SkyOS e Packs não foram alterados.
 
 ## Blocos efetivamente entregues

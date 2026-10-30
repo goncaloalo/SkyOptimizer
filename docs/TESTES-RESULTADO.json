@@ -1,10 +1,10 @@
 {
-  "Date": "2026-10-30T19:57:51.5240782+00:00",
+  "Date": "2026-10-30T20:56:38.3631204+00:00",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
   "Command": "Windows PowerShell 5.1 -NoProfile -ExecutionPolicy Bypass: Invoke-Pester -Script .\\tests -PassThru -Quiet",
-  "Total": 290,
-  "Passed": 290,
+  "Total": 331,
+  "Passed": 331,
   "Failed": 0,
   "Skipped": 0,
   "Pending": 0,
@@ -23,7 +23,7 @@
     39,
     54
   ],
-  "ProductSourceSha256": "1A10321191BAA409C7603E5C25D7B9940C5844E786C28129630AC2E1BB0DA0C3",
+  "ProductSourceSha256": "32065BC684DB137019E9F72FFE0786AF9FB7B750107B82B1F8942193E04879C4",
   "VmHarnessSourceSha256": "C71E28CDCA95176F0737573B7B23B5245FD24B8FF7B979E517E749F7974EC960",
   "BlockedActions": 58,
   "OriginalBlockedActionsAudited3B": 67,
@@ -35,10 +35,10 @@
     2
   ],
   "ProductionScheduledTasksEligible": false,
-  "Phase": "5F offline",
-  "ValidationScope": "Final full suite: Windows readers and writers mocked; journal filesystem operations use temporary files. During an intermediate agent test, a missing AppX mock caused read-only enumeration, subsequently fixed. No policies/packages/OS configuration changed. CPU native query never executed. Python: previous 34 synthetic tests passed in 5D; unchanged benchmark tree; not rerun in 5F.",
-  "SourceCommit": "6007aeddef44314c35e97fc9d6c3f871113c6b10",
-  "DetailedPesterEvidence": "FASE5F-TESTES.json",
+  "Phase": "5G offline",
+  "ValidationScope": "331 Pester: declarations loaded by AST, Windows readers/mutators mocked and temporary journals. RunId isolation, Undo reports, launcher and per-PFN policies, identity-bound service resources, native guard/export, preflight and failure/conflict tests. No optimizations, VM or benchmarks. Python remains 34 passed in 5D, unchanged benchmark tree, not rerun.",
+  "SourceCommit": "cd4e7443636a2682c2309ecc4b2c4f9aa5c22138",
+  "DetailedPesterEvidence": "FASE5G-TESTES.json",
   "EvidenceSourceSha256": "59AEE5A4F263880FDE65021575D9F4DEF470DC614FAA8315AEDB9313286A60CF",
   "BenchmarkAnalyzerSha256": "5C11AC7E0B7BE5E52A0FE15D8B6BDA3A46828B07FBFB66B2437ADF6A553E4E1B",
   "SessionDiagnosisSha256": "74DD4AD746B0714FA1CF360DEBEB69877EDBA0C1AF2403146AE31CAAD25B8459",
@@ -71,5 +71,7 @@
   "CpuTopologyNativeValidated": false,
   "SelectiveBackgroundFunctionalValidated": false,
   "IntermediateAppxReadOnlyOccurred": true,
-  "FinalRunWindowsReadersMocked": true
+  "FinalRunWindowsReadersMocked": true,
+  "PythonRerunIn5G": false,
+  "NewContractsAutomaticApplyAllowed": false
 }

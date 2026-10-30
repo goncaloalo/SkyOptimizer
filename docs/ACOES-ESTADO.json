@@ -1186,7 +1186,8 @@
       "LacunasERiscos": "São finalidades distintas; compatibilidade e assistência de apps podem perder-se. Grupo não é transação; testar cada serviço e falha intermédia.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "Evolucao5G": "Grupo continua Deferred. DiagTrack/TrkWks separados em contratos nomeados Laboratory com identidade binaria e Undo ligado ao fingerprint. PcaSvc preservado: compatibilidade/instaladores e recuperacao funcional ainda nao validadas."
   },
   {
     "Id": 49,
@@ -1208,7 +1209,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "Evolucao5G": "Remocao/desprovisionamento continuam Deferred. Inventario e politicas de background nao constituem reinstalacao exata de pacote, payload/licenca ou dados por conta."
   },
   {
     "Id": 50,
@@ -1733,7 +1735,8 @@
       "LacunasERiscos": "Alterar template não representa estado das instâncias por utilizador; sincronização pode ser afetada. Requer login/reboot e invariantes por conta.",
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "Evolucao5G": "Grupo continua Deferred. diagnosticshub.standardcollector.service exige contrato de ferramenta/coletor; wercplsupport preserva evidencia de erros; OneSyncSvc exige separar template/instancias e sincronizacao por conta. Nenhum aplicado por grupo."
   },
   {
     "Id": 72,

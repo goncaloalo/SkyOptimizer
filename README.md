@@ -1,6 +1,6 @@
 # SkyOptimizer MAX
 
-**Branch de desenvolvimento — Fase 5F — inventário profundo, CPU Sets e contratos seletivos de laboratório. Não distribuir como versão validada para clientes.**
+**Branch de desenvolvimento — Fase 5G — contratos de debloat individuais e relatórios por RunId. Não distribuir como versão validada para clientes.**
 
 O SkyOptimizer mantém o programa PowerShell existente, destinado a instalações Windows já em uso. O objetivo é melhorar desempenho real em jogos; ainda não foram medidos ganhos de FPS, 1% lows ou latência.
 
@@ -9,6 +9,7 @@ O SkyOptimizer mantém o programa PowerShell existente, destinado a instalaçõe
 - O catálogo conserva **90 IDs históricos**: 26 elegíveis para Apply, 58 bloqueados, manutenção 24 separada e cinco retirados (12/14/30/39/54). Elegíveis: **1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 58, 59, 60, 70, 74, 75, 76, 79, 84, 86, 88 e 90**.
 - As restantes ações ficam bloqueadas no dispatcher enquanto faltam baseline, reversão ou compatibilidade. As escritas indiscriminadas USB/HAGS/MSI foram retiradas; o catálogo regista as decisões.
 - A ação 24 é manutenção de diagnóstico separada, com confirmação explícita. Não existe limpeza automática de shaders nos perfis.
+- [Entrega da Fase 5G](docs/FASE5G.md): Epic/Phone Link/Feedback Hub e DiagTrack/TrkWks em laboratório, proteção de identidade no Undo, preflight de argumentos e relatórios exclusivos por RunId. Sem promoção automática ou ganhos medidos.
 - [Entrega da Fase 5F](docs/FASE5F.md): inventário por categorias, motivos individuais das 26 elegíveis, diagnóstico CPU Sets/commit/I/O e contrato de background News/Weather restrito a laboratório. Sem ganhos medidos; missão MAX continua parcial.
 - [Entrega da Fase 5E](docs/FASE5E.md): MAX por omissão, plano automático condicionado a Windows/software/gestão, comandos de leitura e contratos reversíveis de arranque Spotify/Steam. Sete IDs podem entrar no plano, conforme compatibilidade; não são todos aplicados universalmente. Nenhum ganho medido.
 - [Entrega da Fase 5D](docs/FASE5D.md): adaptador autorizado PresentMon, coletor de processos, normalização rastreável, comparação por pares/blocos e relatórios. Percurso validado com dados sintéticos; captura real e overhead ainda por testar.
@@ -85,12 +86,14 @@ python -B -m unittest discover -s benchmarks/tests -v
 
 Os testes PowerShell carregam declarações por AST e usam mocks/ficheiros temporários. O comando fixa Windows PowerShell 5.1; a política Bypass aplica-se apenas ao processo. Pester 3.4 não foi validado em PowerShell 7. Os testes Python usam dados sintéticos. O [analisador offline](benchmarks/analyze.py) lê CSV com manifesto de formato 2 e semântica explícita; o [diagnóstico temporal](benchmarks/diagnose.py) importa amostras anónimas de CPU, memória e I/O. Ambos são ferramentas offline: não recolhem jogos nem alteram Windows. Integração em Windows descartável e benchmarks físicos continuam necessários.
 
-Última suite Pester offline: **290 testes aprovados**. Os **34 testes Python** foram aprovados na Fase 5D; a pasta benchmarks permanece idêntica e não foi retestada sem alterações nesta fase. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
+Última suite Pester offline: **331 testes aprovados**. Os **34 testes Python** foram aprovados na Fase 5D; a pasta benchmarks permanece idêntica e não foi retestada sem alterações nesta fase. O catálogo distingue implementação, cobertura automatizada e validação real. Nenhuma destas contagens demonstra FPS ou latência melhores.
 
-A [prova detalhada Pester](docs/FASE5F-TESTES.json) identifica o código testado. Os 90 IDs mantêm a elegibilidade. Contratos de arranque e background são recursos nomeados separados; background continua restrito a laboratório, com confirmação e código 2 mesmo após escrita verificada. Ver o relatório 5F antes de testar `-BackgroundLab -Profile Laboratory`.
+A [prova detalhada Pester](docs/FASE5G-TESTES.json) identifica o código testado. Os 90 IDs mantêm a elegibilidade. Contratos de arranque e background são recursos nomeados separados; background continua restrito a laboratório, com confirmação e código 2 mesmo após escrita verificada. Ver o relatório 5F antes de testar `-BackgroundLab -Profile Laboratory`.
 
 O [procedimento A/B da Fase 5D](docs/FASE5D.md) explica a primeira experiência reproduzível. `benchmarks/capture.py` apenas planeia por defeito e exige binário PresentMon 2.3.1 de origem verificada, hash aprovado e autorização explícita para capturar. `benchmarks/Collect-SkySession.ps1` também exige autorização explícita. `benchmarks/experiment.py` cria análise JSON e relatório Markdown, com bootstrap por blocos e classificação de regressões/inconclusivos. Nenhuma destas ferramentas aplica ações ou lança jogos. Aplicar a intervenção continua a usar Laboratory e o Undo do programa existente.
 
 A [validação MAX](docs/FASE5E.md) acrescenta o escopo independente `integration/evidence-max.json`, com 16 valores, e prepara a verificação de login/Undo dos contratos de arranque. O [protocolo de VM](docs/INTEGRACAO-VM.md) inclui o harness de registo com reinícios manuais, falhas intermédias e conflitos externos. O harness está preparado e testado com mocks; ainda não foi executado num guest real. Só o utilizar num Windows descartável com snapshot confirmado e autorização para alterações. A [preparação de tarefas 3C](docs/TAREFAS-LAB-3C.md) acrescenta fixtures isoladas, fingerprint e Enabled, sem allowlist de tarefas reais.
 
 [Comunidade SkyOptimizer](https://discord.gg/cE8ZaDRGV5).
+
+Os relatórios atuais usam `Backups/Runs/<RunId>/run.json` e `latest_run.json`. Ficheiros antigos na raiz são históricos. Para ensaiar os contratos novos, seguir a [Fase 5G](docs/FASE5G.md); requer Laboratory e confirmação individual. Não usar Undo/painéis antigos para as novas baselines de serviços.
