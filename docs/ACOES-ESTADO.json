@@ -2325,5 +2325,76 @@
       "MeasuredBenefit": false
     },
     "PerformanceRebuildConditionalCandidate": false
+  },
+  {
+    "Id": 91,
+    "Nome": "CPU: preferencia de desempenho EPP 0 (AC)",
+    "Funcao": "Set-SkyCpuPerformancePreference",
+    "FinalidadeProposta": "Desempenho condicional",
+    "DecisaoAuditoria": "Implementada com contrato de energia",
+    "RequisitosRiscosValidacao": "AC confirmado, copia isolada do plano com baseline, disponibilidade nativa de cada setting, verificacao AC/DC. Maior consumo/calor; ganho de FPS nao medido.",
+    "EstadoImplementacao": "Implementada: Set-SkyAcPowerSettings e Undo do plano original",
+    "PerfilImplementado": true,
+    "GanhoMedido": false,
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Performance: condicional",
+      "Laboratory: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Contratos e ciclo de energia cobertos por simulacao; nao prova consumo efetivo pelo hardware",
+    "PerformanceRebuildConditionalCandidate": true,
+    "Fontes": [
+      "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-perfenergypreference"
+    ]
+  },
+  {
+    "Id": 92,
+    "Nome": "CPU: boost agressivo e limite maximo 100% (AC)",
+    "Funcao": "Enable-SkyCpuBoost",
+    "FinalidadeProposta": "Desempenho condicional",
+    "DecisaoAuditoria": "Implementada com contrato de energia",
+    "RequisitosRiscosValidacao": "AC confirmado, copia isolada do plano com baseline, disponibilidade nativa de cada setting, verificacao AC/DC. Maior consumo/calor; ganho de FPS nao medido.",
+    "EstadoImplementacao": "Implementada: Set-SkyAcPowerSettings e Undo do plano original",
+    "PerfilImplementado": true,
+    "GanhoMedido": false,
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Performance: condicional",
+      "Laboratory: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Contratos e ciclo de energia cobertos por simulacao; nao prova consumo efetivo pelo hardware",
+    "PerformanceRebuildConditionalCandidate": true,
+    "Fontes": [
+      "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-perfboostmode",
+      "https://learn.microsoft.com/en-us/windows-hardware/customize/power-settings/options-for-perf-state-engine-maxperformance"
+    ]
+  },
+  {
+    "Id": 93,
+    "Nome": "Wi-Fi: politica de desempenho maximo (AC)",
+    "Funcao": "Set-SkyWirelessPerformance",
+    "FinalidadeProposta": "Desempenho condicional",
+    "DecisaoAuditoria": "Implementada com contrato de energia",
+    "RequisitosRiscosValidacao": "AC confirmado, copia isolada do plano com baseline, disponibilidade nativa de cada setting, verificacao AC/DC. Maior consumo/calor; ganho de FPS nao medido. Wi-Fi exige adaptador fisico.",
+    "EstadoImplementacao": "Implementada: Set-SkyAcPowerSettings e Undo do plano original",
+    "PerfilImplementado": true,
+    "GanhoMedido": false,
+    "ElegivelApply": true,
+    "PerfisAtuais": [
+      "Performance: condicional",
+      "Laboratory: selecao explicita"
+    ],
+    "Retirada": false,
+    "ValidacaoReal": "Nao executada",
+    "ValidacaoAutomatizada": "Contratos e ciclo de energia cobertos por simulacao; nao prova consumo efetivo pelo hardware",
+    "PerformanceRebuildConditionalCandidate": true,
+    "Fontes": [
+      "https://www.intel.com/content/www/us/en/support/articles/000046272.html",
+      "https://support.microsoft.com/en-gb/windows/experience/connectivity-networking/fix-wi-fi-connection-issues-in-windows"
+    ]
   }
 ]

@@ -1,3 +1,5 @@
+﻿> Atualização: foram acrescentadas três ações de CPU/Wi-Fi; consultar [POWER-PERFORMANCE](POWER-PERFORMANCE.md). As contagens 13/26/90 abaixo descrevem a primeira entrega.
+
 # Recuperação funcional e perfil de desempenho
 
 Branch `dev/performance-rebuild`, iniciada em main e avançada para o histórico completo de `dev/skyoptimizer-max` antes das correções. Main e a branch anterior permanecem preservadas.

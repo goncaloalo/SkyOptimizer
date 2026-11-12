@@ -3,7 +3,7 @@
     SkyOptimizer - desempenho agressivo, manutencao e painel do cliente.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
-    Mantém o catálogo de 90 ações, mas só executa ações selecionadas e migradas.
+    Mantém os 90 IDs históricos e acrescenta ações de desempenho, mas só executa ações selecionadas e migradas.
     As restantes conservam o código para revisão e ficam bloqueadas no dispatcher.
     Configurações verificadas não são ganhos comprovados de FPS, frametimes ou input lag.
     Backups legados incompletos são preservados para revisão; não se aplicam defaults no Undo.
@@ -92,7 +92,7 @@ param(
     [ValidateSet('MAX', 'Balanced', 'Performance', 'Extreme', 'Laboratory')]
     [string]$Profile = 'Performance',
 
-    [ValidatePattern('^(\d{1,2}(,\d{1,2})*)?$')]
+    [ValidatePattern('^(\d{1,3}(,\d{1,3})*)?$')]
     [string]$ExperimentalActions = ''
 )
 
@@ -1579,6 +1579,38 @@ function Set-UltimatePowerPlan {
         $Global:SkyManifest.PowerPlan = $state.OriginalGuid
         return New-SkyActionResult -Status Applied -Reason 'Cópia isolada do plano original criada e ativada; baseline persistida antes da alteração.' -RestartRequired No
     } finally { $lock.Dispose() }
+}
+
+function Set-SkyCpuPerformancePreference {
+    # EPP 0 favors performance on autonomous CPPC/HWP systems. It does not overclock the CPU.
+    Set-SkyAcPowerSettings -Settings @(
+        @{Subgroup='54533251-82be-4824-96c1-47b60b740d00';Setting='36687f9e-e3a5-4dbf-b1dc-15eb381c6863';Value=0}
+    )
+}
+
+function Enable-SkyCpuBoost {
+    # A 99% processor cap can prevent boost on some platforms; retain the original DC policy.
+    Set-SkyAcPowerSettings -Settings @(
+        @{Subgroup='54533251-82be-4824-96c1-47b60b740d00';Setting='bc5038f7-23e0-4960-96da-33abaf5935ec';Value=100},
+        @{Subgroup='54533251-82be-4824-96c1-47b60b740d00';Setting='be337238-0d82-4146-a960-4f3749d470c7';Value=2}
+    )
+}
+
+function Get-SkyWirelessPresence {
+    try {
+        $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop)
+        return (@($adapters | Where-Object { $_.NdisPhysicalMedium -in @(1,9) }).Count -gt 0)
+    } catch { return $null }
+}
+
+function Set-SkyWirelessPerformance {
+    if ((Get-SkyWirelessPresence) -ne $true) {
+        return New-SkyActionResult -Status Incompatible -Reason 'Adaptador Wi-Fi fisico nao confirmado; politica preservada.' -RestartRequired No
+    }
+    # Use the wireless power policy, not the unrelated device suspend/hibernate checkbox.
+    Set-SkyAcPowerSettings -Settings @(
+        @{Subgroup='19cbb8fa-5279-450e-9fac-8a3d5fedd0c1';Setting='12bbebe6-58d6-4636-95bb-3217ef867c1a';Value=0}
+    )
 }
 
 function Set-TimerResolution {
@@ -3550,7 +3582,10 @@ function Invoke-SkyOptimize {
         [ordered]@{ Id = 87; Category = "Processos em Segundo Plano"; Name = "Desativação de Aplicações Pré-Lançadas Especulativamente (ApplicationPreLaunch Off)"; Action = { Disable-ApplicationPreLaunch } },
         [ordered]@{ Id = 88; Category = "Armazenamento & I/O"; Name = "Storage Sense: preferencia manual, sem ganho gaming demonstrado"; Action = { Disable-StorageSenseBackgroundScans } },
         [ordered]@{ Id = 89; Category = "Rede & Latência"; Name = "Desativação de Broadcasts Legados NetBIOS sobre TCP/IP (NetBT Off)"; Action = { Disable-NetBiosOverTcpip } },
-        [ordered]@{ Id = 90; Category = "Privacidade & Telemetria"; Name = "Clipboard: impedir sync entre dispositivos, preservar historico"; Action = { Disable-CloudClipboardSync } }
+        [ordered]@{ Id = 90; Category = "Privacidade & Telemetria"; Name = "Clipboard: impedir sync entre dispositivos, preservar historico"; Action = { Disable-CloudClipboardSync } },
+        [ordered]@{ Id = 91; Category = "Desempenho de Energia"; Name = "CPU: preferencia de desempenho EPP 0 (AC)"; Action = { Set-SkyCpuPerformancePreference } },
+        [ordered]@{ Id = 92; Category = "Desempenho de Energia"; Name = "CPU: boost agressivo e limite maximo 100% (AC)"; Action = { Enable-SkyCpuBoost } },
+        [ordered]@{ Id = 93; Category = "Desempenho de Energia"; Name = "Wi-Fi: politica de desempenho maximo (AC)"; Action = { Set-SkyWirelessPerformance } }
     )
 
     $currentCategory = ""
@@ -4227,7 +4262,10 @@ function Get-SkyMaxActionAssessment {
         @(84,'AutomaticConditional','Spotlight na conta elevada; perda funcional sem FPS comprovado.'),
         @(86,'FunctionalRisk','Grupo localizacao/sensores/servico: separar recursos antes de automatizar.'),
         @(88,'Preference','Storage Sense preserva espaco; desativar pode favorecer disco cheio.'),
-        @(90,'Preference','Clipboard entre dispositivos: escolha funcional, sem concorrencia gaming demonstrada.')
+        @(90,'Preference','Clipboard entre dispositivos: escolha funcional, sem concorrencia gaming demonstrada.'),
+        @(91,'PerformanceTradeoff','EPP 0 favorece desempenho; consumo, temperatura e clocks reais exigem medicao.'),
+        @(92,'PerformanceTradeoff','Permitir boost e maximo 100%; nao excede limites de firmware/temperatura.'),
+        @(93,'PerformanceTradeoff','Wi-Fi fisico: politica AC de desempenho, dependente do driver.')
     )
     foreach($row in $rows){[pscustomobject]@{Id=[int]$row[0];Disposition=$row[1];Reason=$row[2];MeasuredBenefit=$false}}
 }
@@ -4250,7 +4288,7 @@ function Get-SkyMaxContext {
     [pscustomobject]@{ Windows=$os; Cpu=$cpus; Gpu=$gpus; MemoryBytes=$system.TotalPhysicalMemory; UserSid=(Get-SkyUserSid)
         ChassisCode=$system.PCSystemType; DomainJoined=$system.PartOfDomain; MdmIndicator=$mdm
         PowerSource=(Get-SkyPowerSource); Browsers=$browsers; Issues=@($issues.ToArray())
-        HybridTopology='Unknown'; X3DTopology='Unknown'; GamingBottleneck='Unknown'; ThermalHeadroom='Unknown' }
+        HybridTopology='Unknown'; X3DTopology='Unknown'; GamingBottleneck='Unknown'; ThermalHeadroom='Unknown'; WirelessPresent=(Get-SkyWirelessPresence) }
 }
 
 function Get-SkyStartupContract {
@@ -4317,7 +4355,7 @@ function Get-SkyMaxPlan {
         79='Configurar Game Mode na conta atual; comportamento por jogo ainda por validar.'
         84='Impedir Spotlight na conta atual; perde funcionalidades associadas.'
     }
-    foreach($id in 1..90) {
+    foreach($id in (Get-SkyActionIds)) {
         $status='NotSelected'; $reason='Preferencia ou experiencia sem fundamento para aplicacao automatica; Laboratory preservado.'
         if($id -notin (Get-SkyMigratedActionIds)) { $status='Deferred';$reason='Acao bloqueada, retirada ou manutencao separada; ver catalogo.' }
         elseif(-not $rules.ContainsKey($id) -and $assessments.ContainsKey($id)) { $reason=$assessments[$id].Reason }
@@ -4407,15 +4445,21 @@ function Get-SkyPerformancePlan {
         74 = 'Desativar interrupt moderation; pode aumentar CPU/DPC e piorar desempenho.'
         75 = 'Desativar RSC/LSO suportados; pode reduzir throughput e aumentar CPU.'
         76 = 'Desativar flow control Ethernet; pode aumentar perdas sob congestionamento.'
+        91 = 'CPU EPP 0: favorecer desempenho sobre eficiencia; mais consumo e temperatura.'
+        92 = 'CPU: permitir boost agressivo e maximo 100%; respeita limites termicos/firmware.'
+        93 = 'Wi-Fi fisico: desempenho maximo em AC, preservando bateria e suspend/hibernate.'
     }
     foreach ($decision in $plan.Decisions) {
         if (-not $rules.ContainsKey([int]$decision.Id)) { continue }
         $decision.Reason = $rules[[int]$decision.Id]
         $allowed = $clientSupported -and $unmanaged
         if ($decision.Id -in @(20,25)) { $allowed = $supported -and $unmanaged }
-        if ($decision.Id -in @(1,3,38,60,74,75,76) -and $Context.PowerSource -ne 'AC') {
+        if ($decision.Id -in @(1,3,38,60,74,75,76,91,92,93) -and $Context.PowerSource -ne 'AC') {
             $allowed = $false
             $decision.Reason += ' Alimentacao AC nao confirmada.'
+        }
+        if ($decision.Id -eq 93 -and $Context.WirelessPresent -ne $true) {
+            $allowed = $false; $decision.Reason += ' Adaptador Wi-Fi fisico nao confirmado.'
         }
         $decision.Decision = if ($allowed) { 'Selected' } else { 'Incompatible' }
         if (-not $allowed -and $Context.PowerSource -eq 'AC') { $decision.Reason += ' Windows/edicao ou ausencia de gestao nao confirmados.' }
@@ -4585,18 +4629,22 @@ function Get-SkyProfileActionIds {
     param([ValidateSet('Balanced', 'Performance', 'Extreme', 'Laboratory')][string]$Profile = 'Balanced', [int[]]$Experiments = @())
     # An empty pipeline in the CLI/menu arrives as null, not the default empty array.
     $Experiments = @($Experiments | Where-Object { $null -ne $_ })
-    if (@($Experiments | Where-Object { $_ -lt 1 -or $_ -gt 90 }).Count) { throw 'IDs de ações devem estar entre 1 e 90.' }
+    if (@($Experiments | Where-Object { $_ -notin (Get-SkyActionIds) }).Count) { throw 'IDs de acoes devem existir no catalogo (1 a 93).' }
     if ($Experiments.Count -and $Profile -notin @('Extreme','Laboratory')) { throw 'Ações adicionais exigem Extreme ou Laboratory e uma comparação de laboratório.' }
     if ($Profile -eq 'Laboratory' -and -not $Experiments.Count) { throw 'Laboratory exige IDs explicitos.' }
     $ids = @(if ($Profile -eq 'Laboratory') { $Experiments } else { 79 })
     if ($Profile -in @('Performance', 'Extreme')) { $ids += @(9, 41) }
     if ($Profile -eq 'Extreme') { $ids += $Experiments }
-    if ($ids -contains 3 -or $ids -contains 8) { $ids += 1 }
+    if ($ids -contains 3 -or $ids -contains 8 -or @($ids | Where-Object {$_ -in @(91,92,93)}).Count) { $ids += 1 }
     $ids | Sort-Object -Unique
 }
 
+function Get-SkyActionIds {
+    @(1..93)
+}
+
 function Get-SkyMigratedActionIds {
-    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 58, 59, 60, 70, 74, 75, 76, 79, 84, 86, 88, 90)
+    @(1, 3, 6, 8, 9, 13, 16, 17, 19, 20, 25, 38, 41, 42, 58, 59, 60, 70, 74, 75, 76, 79, 84, 86, 88, 90, 91, 92, 93)
 }
 
 function Get-SkyRetiredActionIds {

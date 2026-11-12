@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 
 Describe 'Research capture contract with no host writes' {
     BeforeEach {
@@ -85,7 +85,7 @@ Describe 'Exact laboratory selection' {
         (@(Get-SkyProfileActionIds Laboratory -Experiments @(8,8)) -join ',') | Should Be '1,8'
         (@(Get-SkyProfileActionIds Laboratory -Experiments @(3,42)) -join ',') | Should Be '1,3,42'
         { Get-SkyProfileActionIds Laboratory } | Should Throw
-        { Get-SkyProfileActionIds Laboratory -Experiments @(91) } | Should Throw
+        { Get-SkyProfileActionIds Laboratory -Experiments @(94) } | Should Throw
         (@(Get-SkyProfileActionIds Extreme -Experiments @(74)) -join ',') | Should Be '9,41,74,79'
     }
 }

@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 
 Describe 'Panel shares the original backup directory without copying' {
     It 'accepts equivalent paths without rewriting the existing baseline' {
@@ -47,7 +47,7 @@ Describe 'Evidence-scoped development profiles' {
         (@(Get-SkyProfileActionIds Extreme) -join ',') | Should Be '9,41,79'
         (@(Get-SkyProfileActionIds Extreme -Experiments @(3,3,74)) -join ',') | Should Be '1,3,9,41,74,79'
         { Get-SkyProfileActionIds Balanced -Experiments @(3) } | Should Throw
-        { Get-SkyProfileActionIds Extreme -Experiments @(91) } | Should Throw
+        { Get-SkyProfileActionIds Extreme -Experiments @(94) } | Should Throw
     }
     It 'never executes unmigrated experiments or actions outside the selection' {
         (Invoke-SkyEligibleAction -Id 78 -SelectedIds @(78) -Action { throw 'must not execute' }).Status | Should Be Deferred

@@ -1,14 +1,19 @@
 {
-  "Date": "2026-11-12T15:43:34.8429694Z",
+  "Date": "2026-11-12T15:51:33.8957059Z",
   "PowerShell": "5.1.26100.9711",
   "Pester": "3.4.0",
-  "ProductSourceSha256": "7B2F0E4611B445BEA5752201951AD7E316526D4EEB35ABB886C89501E9CEA15B",
+  "ProductSourceSha256": "7EBE6B04B8E23E8F8E1741195EAB0F5EC978917E042F6F8F645D65D69268E8A6",
   "SourceUnchangedDuringRun": true,
-  "Total": 342,
-  "Passed": 342,
+  "Total": 347,
+  "Passed": 347,
   "Failed": 0,
   "Skipped": 0,
-  "Scope": "Declarations loaded by AST, mocked Windows readers/mutators, workspace-local temporary journals. Includes plan expansion, menu dispatch, panel source/shortcuts/report, temp-file cancellation, age revalidation and deletion failures.",
+  "Scope": "AST declarations, mocked Windows readers/mutators and workspace-local journals. Includes EPP/boost/Wi-Fi Apply, repeat Apply, original plan preservation, DC preservation, missing settings, AC refusal, Undo, expanded catalogue and client workflow.",
+  "NewActionIds": [
+    91,
+    92,
+    93
+  ],
   "WindowsChangesApplied": false,
   "IntegrationVmExecuted": false,
   "PhysicalBenchmarksPerformed": false

@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 
 Describe 'Performance plan expands selection without bypassing recovery contracts' {
     BeforeEach {
@@ -9,17 +9,17 @@ Describe 'Performance plan expands selection without bypassing recovery contract
     Mock Set-SkyResourceState { throw 'Plans cannot mutate the host' }
     It 'selects energy background and network tradeoffs on unmanaged Pro AC' {
         $plan=Get-SkyPerformancePlan $script:context
-        ($plan.SelectedIds -join ',') | Should Be '1,3,16,20,25,38,41,60,70,74,75,76,79'
+        ($plan.SelectedIds -join ',') | Should Be '1,3,16,20,25,38,41,60,70,74,75,76,79,91,92'
         $plan.Mode | Should Be Performance
         @($plan.SelectedIds | Where-Object {$_ -notin (Get-SkyMigratedActionIds)}).Count | Should Be 0
-        $plan.Decisions.Count | Should Be 90
+        $plan.Decisions.Count | Should Be 93
         ($plan.Decisions | Where-Object Id -eq 74).Reason | Should Match 'piorar'
         Assert-MockCalled Set-SkyResourceState -Times 0 -Exactly -Scope It
     }
     It 'preserves battery and refuses extra changes on managed or unknown systems' {
         $script:context.PowerSource='DC'
         $p=Get-SkyPerformancePlan $script:context
-        @($p.SelectedIds | Where-Object {$_ -in @(1,3,38,60,74,75,76)}).Count | Should Be 0
+        @($p.SelectedIds | Where-Object {$_ -in @(1,3,38,60,74,75,76,91,92,93)}).Count | Should Be 0
         $script:context.DomainJoined=$true
         ((Get-SkyPerformancePlan $script:context).SelectedIds -join ',') | Should Be '79'
         $script:context.Windows=$null
@@ -27,10 +27,20 @@ Describe 'Performance plan expands selection without bypassing recovery contract
     }
     It 'leaves Home policies and unsupported device writes excluded' {
         $script:context.Windows.OperatingSystemSKU=101
-        ((Get-SkyPerformancePlan $script:context).SelectedIds -join ',') | Should Be '1,3,38,41,60,74,75,76,79'
+        ((Get-SkyPerformancePlan $script:context).SelectedIds -join ',') | Should Be '1,3,38,41,60,74,75,76,79,91,92'
         foreach($id in @(8,37,40,48,49,71)) {
             (Get-SkyPerformancePlan $script:context).SelectedIds -contains $id | Should Be $false
         }
+    }
+    It 'adds Wi-Fi only when physical wireless presence is confirmed and resolves power dependencies' {
+        $script:context | Add-Member NoteProperty WirelessPresent $true
+        (Get-SkyPerformancePlan $script:context).SelectedIds -contains 93 | Should Be $true
+        $script:context.PowerSource='Unknown'
+        (Get-SkyPerformancePlan $script:context).SelectedIds -contains 93 | Should Be $false
+        foreach($id in @(91,92,93)) {
+            (@(Get-SkyProfileActionIds Laboratory -Experiments @($id)) -join ',') | Should Be "1,$id"
+        }
+        {Get-SkyProfileActionIds Laboratory -Experiments @(94)} | Should Throw
     }
 }
 

@@ -81,9 +81,9 @@ Describe 'Hardware observations do not invent topology, pressure duration or cau
 
 Describe 'Every eligible action has an individual MAX decision and evidence limitation' {
     Mock Get-SkyStartupCandidate {[pscustomobject]@{Name=$Name;Status='Absent'}}
-    It 'covers all 26 IDs exactly and distinguishes operational choices from hardware experiments' {
+    It 'covers all 29 eligible IDs exactly and distinguishes operational choices from hardware experiments' {
         $rows=@(Get-SkyMaxActionAssessment)
-        $rows.Count | Should Be 26
+        $rows.Count | Should Be 29
         (($rows.Id | Sort-Object) -join ',') | Should Be ((Get-SkyMigratedActionIds | Sort-Object) -join ',')
         @($rows | Where-Object MeasuredBenefit).Count | Should Be 0
         ($rows | Where-Object Id -eq 20).Disposition | Should Be ObservedWorkload

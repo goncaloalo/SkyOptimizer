@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
+﻿. (Join-Path $PSScriptRoot 'Import-SkyFunctions.ps1')
 
 Describe 'Apply orchestration without host changes' {
     BeforeEach {
@@ -33,7 +33,7 @@ Describe 'Apply orchestration without host changes' {
         $null=Invoke-SkyOptimize
         $script:SkyLastExitCode | Should Be 1
         $rows=Get-Content (Join-Path $Global:SkyBackupDir 'execution_results.json') -Raw | ConvertFrom-Json
-        @($rows).Count | Should Be 90
+        @($rows).Count | Should Be 93
         @($rows | Where-Object Status -eq 'Applied').Count | Should Be 1
         Assert-MockCalled Enable-WindowsGameMode -Times 1 -Exactly -Scope It
         Assert-MockCalled Stop-Process -Times 0 -Exactly -Scope It

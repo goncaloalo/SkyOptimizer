@@ -288,6 +288,40 @@ Describe 'Owned power plan lifecycle' {
         { Disable-CoreParking } | Should Throw
         $script:fake.Plans[$state.OwnedGuid][$script:minimum].AC | Should Be 23
     }
+    It 'applies EPP boost and wireless policy on the isolated copy and restores original indices' {
+        Mock Get-SkyWirelessPresence { $true }
+        $settings=@('36687f9e-e3a5-4dbf-b1dc-15eb381c6863','bc5038f7-23e0-4960-96da-33abaf5935ec','be337238-0d82-4146-a960-4f3749d470c7','12bbebe6-58d6-4636-95bb-3217ef867c1a')
+        foreach($setting in $settings) { $script:fake.Plans[$script:original][$setting]=[pscustomobject]@{AC=50;DC=70} }
+        $null=Set-UltimatePowerPlan
+        $state=Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir
+        (Set-SkyCpuPerformancePreference).Status | Should Be Applied
+        (Enable-SkyCpuBoost).Status | Should Be Applied
+        (Set-SkyWirelessPerformance).Status | Should Be Applied
+        (Set-SkyCpuPerformancePreference).Status | Should Be AlreadyCompliant
+        (Enable-SkyCpuBoost).Status | Should Be AlreadyCompliant
+        $script:fake.Plans[$state.OwnedGuid][$settings[0]].AC | Should Be 0
+        $script:fake.Plans[$state.OwnedGuid][$settings[1]].AC | Should Be 100
+        $script:fake.Plans[$state.OwnedGuid][$settings[2]].AC | Should Be 2
+        $script:fake.Plans[$state.OwnedGuid][$settings[3]].AC | Should Be 0
+        foreach($setting in $settings) {
+            $script:fake.Plans[$state.OwnedGuid][$setting].DC | Should Be 70
+            $script:fake.Plans[$script:original][$setting].AC | Should Be 50
+        }
+        $null=Restore-SkyPowerPlan -BackupDirectory $Global:SkyBackupDir
+        $script:fake.Active | Should Be $script:original
+        foreach($setting in $settings) { $script:fake.Plans[$script:fake.Active][$setting].AC | Should Be 50 }
+        @($script:fake.Calls | Where-Object {$_ -match '/setdcvalueindex|/attributes'}).Count | Should Be 0
+    }
+    It 'checks boost and processor cap together before making any partial write' {
+        $maximum='bc5038f7-23e0-4960-96da-33abaf5935ec'
+        $script:fake.Plans[$script:original][$maximum]=[pscustomobject]@{AC=99;DC=60}
+        $null=Set-UltimatePowerPlan
+        $state=Read-SkyPowerState -BackupDirectory $Global:SkyBackupDir
+        $script:fake.UnsupportedSetting='be337238-0d82-4146-a960-4f3749d470c7'
+        (Enable-SkyCpuBoost).Status | Should Be Incompatible
+        $script:fake.Plans[$state.OwnedGuid][$maximum].AC | Should Be 99
+        @($script:fake.Calls | Where-Object {$_ -match '/setacvalueindex'}).Count | Should Be 0
+    }
 }
 
 Describe 'Standalone panel parity' {

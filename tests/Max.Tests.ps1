@@ -43,7 +43,7 @@ Describe 'MAX decisions use compatibility rather than an Extreme alias' {
     It 'selects documented Win11 Pro background contracts without capture or hardware experiments' {
         $plan=Get-SkyMaxPlan $script:context
         ($plan.SelectedIds -join ',') | Should Be '16,41,70,79'
-        $plan.Decisions.Count | Should Be 90
+        $plan.Decisions.Count | Should Be 93
         @($plan.SelectedIds | Where-Object {$_ -in @(1,3,8,25,37,40,42,48,49,71,74,75,76,81,88)}).Count | Should Be 0
         Assert-MockCalled Set-SkyResourceState -Times 0 -Exactly -Scope It
     }
