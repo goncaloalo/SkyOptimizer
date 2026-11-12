@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "Id": 1,
     "Nome": "Plano de Energia Sky (cópia isolada do original)",
@@ -28,7 +28,8 @@
       "Disposition": "Dependency",
       "Reason": "Copia identica do plano original; nao melhora desempenho por si.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 2,
@@ -50,7 +51,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 3,
@@ -81,7 +83,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "Core parking AC: boost, calor, topologia e frametimes exigem ensaio.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 4,
@@ -103,7 +106,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 5,
@@ -125,7 +129,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 6,
@@ -156,7 +161,8 @@
       "Disposition": "ObservedWorkload",
       "Reason": "SysMain: medir atividade, hard faults e loading; SSD nao justifica desativar.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 7,
@@ -178,7 +184,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 8,
@@ -209,7 +216,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "USB idle/retoma em AC; nao prova polling ou latencia inferior.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 9,
@@ -244,7 +252,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Captura apenas no contrato Win10; perde clips, depende de carga.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 10,
@@ -266,7 +275,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 11,
@@ -288,7 +298,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 12,
@@ -309,7 +320,8 @@
       "EstadoRuntime": "Retirada; estado preservado",
       "Evidencia": "FASE4.md",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 13,
@@ -340,7 +352,8 @@
       "Disposition": "Preference",
       "Reason": "Telemetria valor 1 pode aumentar estado original 0; sem beneficio gaming demonstrado.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 14,
@@ -362,7 +375,8 @@
       "EstadoRuntime": "Retirada; estado preservado",
       "Evidencia": "FASE4.md",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 15,
@@ -384,7 +398,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 16,
@@ -418,7 +433,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Widgets Win11 em edicao suportada; politica nao prova fim do WebView.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 17,
@@ -449,7 +465,8 @@
       "Disposition": "Preference",
       "Reason": "Extensoes de ficheiros: usabilidade sem mecanismo de reducao de carga gaming.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 18,
@@ -471,7 +488,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 19,
@@ -502,7 +520,8 @@
       "Disposition": "OperationalChoice",
       "Reason": "Exclusao de drivers pode impedir correcoes; decisao de manutencao.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 20,
@@ -533,7 +552,8 @@
       "Disposition": "ObservedWorkload",
       "Reason": "P2P de Delivery Optimization: requer trafego peer observado e consentimento; HTTP permanece.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 21,
@@ -555,7 +575,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 22,
@@ -577,7 +598,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 23,
@@ -599,7 +621,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 24,
@@ -620,7 +643,8 @@
       "EstadoRuntime": "Manutencao separada",
       "Evidencia": "FASE4.md",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 25,
@@ -651,7 +675,8 @@
       "Disposition": "FunctionalRisk",
       "Reason": "Default global de background afeta notificacoes/sync; preferir contratos por pacote.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 26,
@@ -673,7 +698,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 27,
@@ -695,7 +721,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 28,
@@ -717,7 +744,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 29,
@@ -739,7 +767,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 30,
@@ -760,7 +789,8 @@
       "EstadoRuntime": "Retirada; estado preservado",
       "Evidencia": "FASE4.md",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 31,
@@ -782,7 +812,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 32,
@@ -804,7 +835,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 33,
@@ -826,7 +858,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 34,
@@ -848,7 +881,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 35,
@@ -870,7 +904,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 36,
@@ -892,7 +927,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 37,
@@ -914,7 +950,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 38,
@@ -945,7 +982,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "EEE da NIC depende de driver, energia e ligacao real.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 39,
@@ -966,7 +1004,8 @@
       "EstadoRuntime": "Retirada; estado preservado",
       "Evidencia": "FASE4.md",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 40,
@@ -988,7 +1027,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 41,
@@ -1023,7 +1063,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Browser conhecido; background/startup boost com perda funcional confirmada.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 42,
@@ -1054,7 +1095,8 @@
       "Disposition": "UnsupportedContract",
       "Reason": "Armazenamento grafico interno; ensaio por jogo/API/driver antes de promover.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 43,
@@ -1076,7 +1118,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 44,
@@ -1098,7 +1141,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 45,
@@ -1120,7 +1164,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 46,
@@ -1142,7 +1187,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 47,
@@ -1164,7 +1210,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 48,
@@ -1187,7 +1234,8 @@
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
     },
-    "Evolucao5G": "Grupo continua Deferred. DiagTrack/TrkWks separados em contratos nomeados Laboratory com identidade binaria e Undo ligado ao fingerprint. PcaSvc preservado: compatibilidade/instaladores e recuperacao funcional ainda nao validadas."
+    "Evolucao5G": "Grupo continua Deferred. DiagTrack/TrkWks separados em contratos nomeados Laboratory com identidade binaria e Undo ligado ao fingerprint. PcaSvc preservado: compatibilidade/instaladores e recuperacao funcional ainda nao validadas.",
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 49,
@@ -1210,7 +1258,8 @@
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
     },
-    "Evolucao5G": "Remocao/desprovisionamento continuam Deferred. Inventario e politicas de background nao constituem reinstalacao exata de pacote, payload/licenca ou dados por conta."
+    "Evolucao5G": "Remocao/desprovisionamento continuam Deferred. Inventario e politicas de background nao constituem reinstalacao exata de pacote, payload/licenca ou dados por conta.",
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 50,
@@ -1232,7 +1281,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 51,
@@ -1254,7 +1304,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 52,
@@ -1276,7 +1327,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 53,
@@ -1298,7 +1350,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 54,
@@ -1319,7 +1372,8 @@
       "EstadoRuntime": "Retirada; estado preservado",
       "Evidencia": "FASE4.md",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 55,
@@ -1341,7 +1395,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 56,
@@ -1363,7 +1418,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 57,
@@ -1385,7 +1441,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 58,
@@ -1419,7 +1476,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Politica de consumidor Enterprise/Education; nao desinstala apps.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 59,
@@ -1450,7 +1508,8 @@
       "Disposition": "Compatibility",
       "Reason": "Long paths exige app opt-in; nao reduz carga de gaming.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 60,
@@ -1481,7 +1540,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "DMA coalescing depende de driver; custo CPU/energia/latencia exige rede real.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 61,
@@ -1503,7 +1563,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 62,
@@ -1525,7 +1586,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 63,
@@ -1547,7 +1609,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 64,
@@ -1569,7 +1632,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 65,
@@ -1591,7 +1655,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 66,
@@ -1613,7 +1678,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 67,
@@ -1635,7 +1701,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 68,
@@ -1657,7 +1724,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 69,
@@ -1679,7 +1747,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 70,
@@ -1713,7 +1782,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Dicas online nas Definicoes: debloat de baixa relevancia para gaming.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 71,
@@ -1736,7 +1806,8 @@
       "Evidencia": "FASE4-ELEGIVEIS.json",
       "ValidacaoReal": "Nao executada"
     },
-    "Evolucao5G": "Grupo continua Deferred. diagnosticshub.standardcollector.service exige contrato de ferramenta/coletor; wercplsupport preserva evidencia de erros; OneSyncSvc exige separar template/instancias e sincronizacao por conta. Nenhum aplicado por grupo."
+    "Evolucao5G": "Grupo continua Deferred. diagnosticshub.standardcollector.service exige contrato de ferramenta/coletor; wercplsupport preserva evidencia de erros; OneSyncSvc exige separar template/instancias e sincronizacao por conta. Nenhum aplicado por grupo.",
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 72,
@@ -1758,7 +1829,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 73,
@@ -1780,7 +1852,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 74,
@@ -1811,7 +1884,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "Interrupt moderation pode elevar interrupcoes e piorar CPU/DPC.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 75,
@@ -1842,7 +1916,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "Offloads RSC/LSO: CPU/throughput/jitter exigem ensaio por NIC.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 76,
@@ -1873,7 +1948,8 @@
       "Disposition": "PhysicalValidation",
       "Reason": "Flow control depende de congestionamento/perdas na rede fisica.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 77,
@@ -1895,7 +1971,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 78,
@@ -1917,7 +1994,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 79,
@@ -1953,7 +2031,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Game Mode nativo; consumo e beneficio variam por jogo.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 80,
@@ -1975,7 +2054,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 81,
@@ -1997,7 +2077,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 82,
@@ -2019,7 +2100,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 83,
@@ -2041,7 +2123,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 84,
@@ -2075,7 +2158,8 @@
       "Disposition": "AutomaticConditional",
       "Reason": "Spotlight na conta elevada; perda funcional sem FPS comprovado.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": true
   },
   {
     "Id": 85,
@@ -2097,7 +2181,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 86,
@@ -2128,7 +2213,8 @@
       "Disposition": "FunctionalRisk",
       "Reason": "Grupo localizacao/sensores/servico: separar recursos antes de automatizar.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 87,
@@ -2150,7 +2236,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 88,
@@ -2181,7 +2268,8 @@
       "Disposition": "Preference",
       "Reason": "Storage Sense preserva espaco; desativar pode favorecer disco cheio.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 89,
@@ -2203,7 +2291,8 @@
       "EstadoRuntime": "Continua bloqueada; recomendacao nao altera elegibilidade",
       "Evidencia": "FASE4-BLOQUEADAS.json",
       "ValidacaoReal": "Nao executada"
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   },
   {
     "Id": 90,
@@ -2234,6 +2323,7 @@
       "Disposition": "Preference",
       "Reason": "Clipboard entre dispositivos: escolha funcional, sem concorrencia gaming demonstrada.",
       "MeasuredBenefit": false
-    }
+    },
+    "PerformanceRebuildConditionalCandidate": false
   }
 ]

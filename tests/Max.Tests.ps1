@@ -115,13 +115,13 @@ Describe 'MAX lifecycle without system mutation' {
 }
 
 Describe 'MAX entry points remain finite and dry-run bypasses initialization' {
-    It 'routes default execution to MAX and retains technical commands before storage startup' {
+    It 'retains technical MAX and restores the default Performance menu' {
         $text=Get-Content (Join-Path $PSScriptRoot '..\SkyOptimizer.ps1') -Raw
-        $text | Should Match "\[string\]\`$Profile = 'MAX'"
+        $text | Should Match "\[string\]\`$Profile = 'Performance'"
         $text.IndexOf('if ($DryRun -or $Diagnose)') | Should BeLessThan $text.IndexOf('try { Initialize-SkyStorage }')
-        $text | Should Not Match 'Escolha uma opção|Selecionar perfil /'
+        $text | Should Match 'Show-SkyMenu'
         $text | Should Match 'Invoke-SkyOptimize -OperatorMode'
         $text | Should Match '\} finally \{ \$skySession.Dispose\(\) \}'
-        (Get-Content (Join-Path $PSScriptRoot '..\Executar-SkyOptimizer.bat') -Raw) | Should Not Match '(?im)^\s*pause\s*$'
+        (Get-Content (Join-Path $PSScriptRoot '..\Executar-SkyOptimizer.bat') -Raw) | Should Match '(?im)^\s*pause\s*$'
     }
 }

@@ -1,3 +1,5 @@
+﻿> A seleção por omissão foi substituída nesta branch. Consultar [Performance rebuild](PERFORMANCE-REBUILD.md). O texto abaixo documenta a Fase 5G; MAX explícito conserva esse comportamento.
+
 # MAX e compatibilidade dos perfis técnicos
 
 A [Fase 5F](FASE5F.md) acrescenta inventário, CPU Sets e avaliação individual das 26 ações. Background seletivo é laboratório separado, não um novo perfil nem seleção automática MAX. `-Diagnose` agora inclui estes leitores; `-DryRun` conserva o plano leve.

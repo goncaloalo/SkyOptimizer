@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    SkyOptimizer MAX - execucao pontual com baseline e Undo por recurso.
+    SkyOptimizer - desempenho agressivo, manutencao e painel do cliente.
 .DESCRIPTION
     Ficheiro único consolidado e autocontido (sem dependências externas).
     Mantém o catálogo de 90 ações, mas só executa ações selecionadas e migradas.
@@ -9,29 +9,31 @@
     Backups legados incompletos são preservados para revisão; não se aplicam defaults no Undo.
     Esta branch ainda exige integração num Windows descartável e benchmarks físicos.
 .PARAMETER Apply
-    Executa MAX e termina; modos antigos apenas para compatibilidade tecnica.
+    Apresenta o plano Performance, confirma os custos, aplica e cria o painel do cliente.
 .PARAMETER Profile
-    MAX (padrao) ou Laboratory (selecao exata). Balanced/Performance/Extreme sao aliases tecnicos legados.
+    Performance por omissao. MAX conserva a selecao restrita anterior; Laboratory permite IDs explicitos.
 .PARAMETER ExperimentalActions
     IDs adicionais separados por vírgula, para Extreme ou Laboratory. Ações não migradas não são executadas.
 .PARAMETER Clean
-    Limpeza explícita de diagnóstico de shaders, com confirmação e sem Undo dos ficheiros eliminados.
+    Limpeza de temporarios com mais de sete dias, com confirmacao. Preserva shaders.
+.PARAMETER CleanShaders
+    Limpeza separada de shaders para diagnostico, com confirmacao e sem Undo.
 .PARAMETER Undo
     Reverte apenas recursos com baseline verificável, preservando conflitos externos.
 .PARAMETER DeployPanel
     Gera exclusivamente o 'Painel do Cliente' no Ambiente de Trabalho.
 .EXAMPLE
     .\SkyOptimizer.ps1
-    Executa o planeamento MAX, confirma impactos funcionais e termina apos Apply.
+    Abre o menu de desempenho, painel, manutencao e recuperacao.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Apply
-    Aplica SKYOPTIMIZER MAX e guarda relatorio junto dos backups.
+    Aplica o plano Performance e cria o painel com relatorio no ambiente de trabalho.
 .EXAMPLE
     .\SkyOptimizer.ps1 -DeployPanel
     Instala os atalhos de 1 clique no Ambiente de Trabalho do cliente.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Clean
-    Executa a manutenção e limpeza de caches de shaders.
+    Limpa temporarios antigos. Para shaders, usar -CleanShaders.
 .EXAMPLE
     .\SkyOptimizer.ps1 -Undo
     Restaura as baselines verificáveis e comunica conflitos ou reversões pendentes.
@@ -48,6 +50,9 @@ param(
 
     [Parameter(ParameterSetName = "CleanDirect")]
     [switch]$Clean,
+
+    [Parameter(ParameterSetName = "ShaderDirect")]
+    [switch]$CleanShaders,
 
     [Parameter(ParameterSetName = "UndoDirect")]
     [switch]$Undo,
@@ -85,7 +90,7 @@ param(
     [switch]$DebloatPreview,
 
     [ValidateSet('MAX', 'Balanced', 'Performance', 'Extreme', 'Laboratory')]
-    [string]$Profile = 'MAX',
+    [string]$Profile = 'Performance',
 
     [ValidatePattern('^(\d{1,2}(,\d{1,2})*)?$')]
     [string]$ExperimentalActions = ''
@@ -124,6 +129,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     $paramString = ""
     if ($Apply) { $paramString = " -Apply" }
     elseif ($Clean) { $paramString = " -Clean" }
+    elseif ($CleanShaders) { $paramString = " -CleanShaders" }
     elseif ($Undo) { $paramString = " -Undo" }
     elseif ($DeployPanel) { $paramString = " -DeployPanel" }
     elseif ($Repair) { $paramString = " -Repair" }
@@ -145,6 +151,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 # 2. INICIALIZAÇÃO DE AMBIENTE, DIRETÓRIOS E VARIÁVEIS GLOBAIS
 # ==============================================================================
 $Host.UI.RawUI.WindowTitle = "SkyOptimizer v2.8.0 [Administrador]"
+$script:SkyApplicationPath = $PSCommandPath
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
 
@@ -1979,6 +1986,40 @@ function Get-SkyShaderCacheFiles {
     }
 }
 
+function Get-SkyTemporaryFiles {
+    $cutoff = (Get-Date).AddDays(-7)
+    $roots = @($env:TEMP, (Join-Path $env:SystemRoot 'Temp')) | Select-Object -Unique
+    foreach ($root in $roots) {
+        if (-not $root -or -not [IO.Directory]::Exists($root)) { continue }
+        Assert-SkyNoReparsePoint $root
+        # Match the original bounded, top-level cleanup; never traverse child directories.
+        Get-ChildItem -LiteralPath $root -File -Force -Attributes !ReparsePoint -ErrorAction Stop |
+            Where-Object { $_.LastWriteTime -lt $cutoff } | Select-Object -First 300
+    }
+}
+
+function Clear-SkyTemporaryFiles {
+    $files = @(Get-SkyTemporaryFiles)
+    if (-not $files.Count) { return New-SkyActionResult -Status AlreadyCompliant -Reason 'Sem temporarios com mais de sete dias.' -RestartRequired No }
+    $bytes = ($files | Measure-Object Length -Sum).Sum
+    if ((Read-Host "Eliminar $($files.Count) temporarios antigos ($bytes bytes), sem Undo? (S/N)") -notmatch '^(s|sim|y|yes)$') {
+        return New-SkyActionResult -Status NotSelected -Reason 'Limpeza de temporarios cancelada.' -RestartRequired No
+    }
+    $removed = 0; $failed = 0; $freed = 0
+    foreach ($file in $files) {
+        try {
+            Assert-SkyNoReparsePoint $file.FullName
+            $current = Get-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+            if ($current.PSIsContainer -or $current.LastWriteTime -ge (Get-Date).AddDays(-7)) { continue }
+            Remove-Item -LiteralPath $current.FullName -Force -ErrorAction Stop
+            if (Test-Path -LiteralPath $current.FullName) { throw 'Ficheiro ainda presente.' }
+            $removed++; $freed += $current.Length
+        } catch { $failed++ }
+    }
+    $status = if ($failed) { 'Failed' } elseif ($removed) { 'Applied' } else { 'AlreadyCompliant' }
+    New-SkyActionResult -Status $status -Reason "Temporarios: $removed removidos, $failed falhas, $freed bytes libertados. Shaders preservados." -RestartRequired No
+}
+
 function Clear-ShaderCache {
     [CmdletBinding()]
     param()
@@ -3038,13 +3079,15 @@ function Write-SkyPanelFile {
 }
 
 function Get-SkyPanelLauncher {
-    param([ValidateSet('SkyRevert.ps1','SkyService.ps1')][string]$FileName,
-        [ValidateSet('Spooler','bthserv')][string]$ServiceName)
+    param([ValidateSet('SkyRevert.ps1','SkyService.ps1','SkyOptimizer.ps1')][string]$FileName,
+        [ValidateSet('Spooler','bthserv')][string]$ServiceName,
+        [ValidateSet('Clean','CleanShaders','Repair','Audit')][string]$Action)
     if (($FileName -eq 'SkyService.ps1') -ne [bool]$ServiceName) { throw 'Argumentos de atalho inconsistentes.' }
     $hostPath=Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\powershell.exe'
     $scriptPath=Join-Path (Get-SkyStorageRoot) $FileName
     if ($scriptPath -match '[%"\r\n]') { throw 'Caminho nao representavel com seguranca no atalho CMD.' }
-    $argument=if ($ServiceName) { " -Name $ServiceName" } else { '' }
+    if (($FileName -eq 'SkyOptimizer.ps1') -ne [bool]$Action) { throw 'Acao de manutencao inconsistente.' }
+    $argument=if ($ServiceName) { " -Name $ServiceName" } elseif ($Action) { " -$Action" } else { '' }
     "@echo off`r`n`"$hostPath`" -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"$argument`r`nset `"SkyExit=%errorlevel%`"`r`npause`r`nexit /b %SkyExit%`r`n"
 }
 
@@ -3146,6 +3189,9 @@ exit 0
 
         # Limpar atalhos antigos ou duplicados se existirem
         $obsoleteFiles = @(
+            "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd",
+            "[5] Limpar Shaders e Caches de Jogos.cmd",
+            "[6] Alternar Localizacao e GPS (Ligar-Desligar).cmd",
             "[1] Desfazer Tudo (Reverter Otimizacoes).cmd",
             "[4] Alternar Pesquisa na Barra de Tarefas.cmd",
             "[5] Limpar Shaders e Cache (FiveM e CS2).cmd",
@@ -3162,6 +3208,11 @@ exit 0
             if (Test-Path -LiteralPath $oldPath) { Remove-Item -LiteralPath $oldPath -Force -ErrorAction Stop }
         }
 
+        # Retain the maintenance application in protected storage so shortcuts survive ZIP removal.
+        if (-not $script:SkyApplicationPath) { throw 'Origem da aplicacao indisponivel para instalar manutencao.' }
+        $applicationSource = [IO.File]::ReadAllText($script:SkyApplicationPath)
+        Write-SkyAtomicFile -Path (Join-Path $permDir 'SkyOptimizer.ps1') -Content $applicationSource
+
         # 1. Atalho Reverter Otimizações (Executa exclusivamente o motor SkyRevert.ps1)
         $undoCmd = Get-SkyPanelLauncher -FileName SkyRevert.ps1
         Write-SkyPanelFile -Path (Join-Path $panelDir "[1] Reverter Todas as Otimizacoes.cmd") -Content $undoCmd -Ascii
@@ -3177,16 +3228,18 @@ exit 0
         Write-SkyPanelFile -Path (Join-Path $panelDir "[3] Alternar Bluetooth (Ligar-Desligar).cmd") -Content $btCmd -Ascii
 
         # 4. Atalho Isolamento do Núcleo (VBS e Jogos)
-        $vbsCmd = "@echo off`r`necho VBS: controlo suspenso nesta branch ate validar baseline, arranque e requisitos de anti-cheat.`r`necho Nenhuma configuracao foi alterada. Utilize as Definicoes do Windows.`r`npause"
-        Write-SkyPanelFile -Path (Join-Path $panelDir "[4] Alternar Isolamento do Nucleo (VBS e Jogos).cmd") -Content $vbsCmd -Ascii
-
+        $vbsCmd = "@echo off`r`nstart ms-settings:windowsdefender`r`n"
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[4] Abrir Definicoes de Seguranca.cmd") -Content $vbsCmd -Ascii
         # 5. Atalho Limpeza de Shaders e Caches de Jogos
-        $cleanCmd = "@echo off`r`necho Limpeza automatica de shaders suspensa: reconstruir caches pode causar stuttering.`r`necho Use a limpeza de diagnostico no SkyOptimizer apenas com causa identificada.`r`npause"
-        Write-SkyPanelFile -Path (Join-Path $panelDir "[5] Limpar Shaders e Caches de Jogos.cmd") -Content $cleanCmd -Ascii
-
         # 6. Atalho Alternar Localização e GPS
-        $locCmd = "@echo off`r`necho Localizacao: use Undo para restaurar apenas a baseline gerida pelo SkyOptimizer.`r`necho Alternancia independente pendente de validacao. Nenhuma alteracao aplicada.`r`npause"
-        Write-SkyPanelFile -Path (Join-Path $panelDir "[6] Alternar Localizacao e GPS (Ligar-Desligar).cmd") -Content $locCmd -Ascii
+        $cleanCmd = Get-SkyPanelLauncher -FileName SkyOptimizer.ps1 -Action Clean
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[5] Limpar Temporarios Antigos.cmd") -Content $cleanCmd -Ascii
+        $shaderCmd = Get-SkyPanelLauncher -FileName SkyOptimizer.ps1 -Action CleanShaders
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[6] Limpeza de Shaders (Diagnostico).cmd") -Content $shaderCmd -Ascii
+        $locCmd = "@echo off`r`nstart ms-settings:privacy-location`r`n"
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[7] Abrir Definicoes de Localizacao.cmd") -Content $locCmd -Ascii
+        $repairCmd = Get-SkyPanelLauncher -FileName SkyOptimizer.ps1 -Action Repair
+        Write-SkyPanelFile -Path (Join-Path $panelDir "[8] Reparar Windows.cmd") -Content $repairCmd -Ascii
 
         # Relatório Antes vs. Depois
         if ($ReportContent) {
@@ -3205,9 +3258,11 @@ O relatorio descreve configuracoes verificadas, nao ganhos de FPS/input lag.
 [2]/[3] Impressora/Bluetooth: desativar com baseline; segundo clique restaura
     o estado original desse servico. Dependentes ativos impedem a paragem.
     Nao inventa defaults para um servico originalmente desativado.
-[4] VBS: alternancia suspensa ate validar arranque e requisitos de anti-cheat.
-[5] Shaders: limpeza automatica suspensa; recompilacao pode causar stuttering.
-[6] Localizacao: restaurar pelo Undo geral; alternancia independente pendente.
+[4] Abre as Definicoes de Seguranca do Windows.
+[5] Limpa temporarios antigos; preserva shaders e ficheiros recentes.
+[6] Limpeza de shaders separada, com confirmacao; pode causar recompilacao.
+[7] Abre as Definicoes de Localizacao.
+[8] Executa reparacao DISM/SFC com confirmacao.
 
 Alteracoes NIC exigem reinicio e teste de ligacao. A confirmacao no registo
 nao prova aplicacao pelo driver. Nao ha compatibilidade universal certificada.
@@ -3604,6 +3659,7 @@ function Invoke-SkyOptimize {
 ================================================================================
 "@
 
+    Write-SkyReportArtifact -Name 'operator_report.txt' -Content $reportText
     $panelCreated = $true
     if($OperatorMode) {
         Write-SkyReportArtifact -Name 'operator_report.txt' -Content $reportText
@@ -3647,7 +3703,7 @@ function Invoke-SkyOptimize {
 
     Write-Host "`nSessão terminada: $totalFailed falhas e $totalUnverified ações sem validação completa. Consulte o relatório antes de considerar o sistema validado." -ForegroundColor Cyan
     $script:SkyLastExitCode = if ($totalFailed -or $panelCreated -ne $true) { 1 } elseif ($totalDeferred -or $totalUnverified -or $totalIncompatible) { 2 } else { 0 }
-    if(-not $OperatorMode) { Read-Host "`nPressione ENTER para regressar ao menu principal..." }
+    # The interactive menu owns its pause; direct Apply must return its exit code.
 }
 
 # ==============================================================================
@@ -4301,6 +4357,79 @@ function Get-SkyMaxPlan {
 }
 
 
+function Show-SkyMenu {
+    $script:SkyLastExitCode = 0
+    while ($true) {
+        Write-Host "`nSkyOptimizer - Desempenho e Manutencao" -ForegroundColor Cyan
+        Write-Host '[1] Aplicar desempenho agressivo e criar Painel do Cliente'
+        Write-Host '[2] Criar/atualizar Painel do Cliente'
+        Write-Host '[3] Reverter alteracoes (Undo)'
+        Write-Host '[4] Limpar temporarios antigos'
+        Write-Host '[5] Limpar shaders (diagnostico, pode causar recompilacao)'
+        Write-Host '[6] Reparar Windows (DISM/SFC)'
+        Write-Host '[7] Auditar hardware e arranque'
+        Write-Host '[8] Ver plano: acoes selecionadas e excluidas'
+        Write-Host '[0] Sair'
+        $choice = Read-Host 'Escolha uma opcao'
+        if ($choice -eq '0') { return }
+        try {
+            switch ($choice) {
+                '1' { Invoke-SkyPerformance }
+                '2' { $script:SkyLastExitCode = if(Deploy-ClientPanel){0}else{1} }
+                '3' { Invoke-SkyReportRun -Kind Undo -Body { Invoke-SkyUndo } }
+                '4' { $result=Clear-SkyTemporaryFiles; Write-Host "[$($result.Status)] $($result.Reason)"; $script:SkyLastExitCode=if($result.Status -eq 'Failed'){1}else{0} }
+                '5' { $result=Clear-ShaderCache; Write-Host "[$($result.Status)] $($result.Reason)"; $script:SkyLastExitCode=if($result.Status -eq 'Failed'){1}else{0} }
+                '6' { $result=Repair-WindowsSystemIntegrity; Write-Host "[$($result.Status)] $($result.Reason)"; $script:SkyLastExitCode=if($result.Status -eq 'Failed'){1}elseif($result.Status -eq 'Unverified'){2}else{0} }
+                '7' { Invoke-SkyHardwareAudit }
+                '8' { (Get-SkyPerformancePlan).Decisions | Format-Table Id,Decision,Reason -Wrap }
+                default { Write-Host 'Opcao invalida.'; continue }
+            }
+        } catch { $script:SkyLastExitCode=1; Write-Warning $_.Exception.Message }
+        $null=Read-Host 'ENTER para regressar ao menu'
+    }
+}
+
+function Get-SkyPerformancePlan {
+    param($Context = (Get-SkyMaxContext))
+    $plan = Get-SkyMaxPlan -Context $Context
+    $plan.Mode = 'Performance'
+    $unmanaged = ($Context.DomainJoined -is [bool] -and -not $Context.DomainJoined -and
+        $Context.MdmIndicator -is [bool] -and -not $Context.MdmIndicator)
+    $supported = Test-SkyClientPolicySupport -SystemInfo $Context.Windows
+    $clientSupported = Test-SkyClientPolicySupport -SystemInfo $Context.Windows -AllowHome
+    $rules = @{
+        1 = 'Plano isolado para os ajustes de energia; a copia por si nao melhora FPS.'
+        3 = 'Desativar core parking em AC; pode aumentar consumo e temperatura.'
+        20 = 'Desativar peering de Delivery Optimization; downloads HTTP continuam.'
+        25 = 'Negar background UWP global; pode perder notificacoes e sincronizacao.'
+        38 = 'Desativar EEE na NIC Ethernet reconhecida; ligacao exige validacao.'
+        60 = 'Desativar DMA coalescing Ethernet; pode aumentar CPU e consumo.'
+        74 = 'Desativar interrupt moderation; pode aumentar CPU/DPC e piorar desempenho.'
+        75 = 'Desativar RSC/LSO suportados; pode reduzir throughput e aumentar CPU.'
+        76 = 'Desativar flow control Ethernet; pode aumentar perdas sob congestionamento.'
+    }
+    foreach ($decision in $plan.Decisions) {
+        if (-not $rules.ContainsKey([int]$decision.Id)) { continue }
+        $decision.Reason = $rules[[int]$decision.Id]
+        $allowed = $clientSupported -and $unmanaged
+        if ($decision.Id -in @(20,25)) { $allowed = $supported -and $unmanaged }
+        if ($decision.Id -in @(1,3,38,60,74,75,76) -and $Context.PowerSource -ne 'AC') {
+            $allowed = $false
+            $decision.Reason += ' Alimentacao AC nao confirmada.'
+        }
+        $decision.Decision = if ($allowed) { 'Selected' } else { 'Incompatible' }
+        if (-not $allowed -and $Context.PowerSource -eq 'AC') { $decision.Reason += ' Windows/edicao ou ausencia de gestao nao confirmados.' }
+        $decision.Disposition = 'PerformanceTradeoff'
+    }
+    $plan.SelectedIds = @($plan.Decisions | Where-Object Decision -eq Selected | ForEach-Object { [int]$_.Id })
+    $plan.Recommendations += 'Perfil agressivo: aceita custos funcionais, de energia e de rede. Comparar com Undo; mais ajustes nao garantem maior desempenho.'
+    return $plan
+}
+
+function Invoke-SkyPerformance {
+    Invoke-SkyReportRun -Kind Performance -Body { Invoke-SkyMaxCore -ClientMode }
+}
+
 function New-SkyReportRun {
     param([string]$Kind)
     $id=[guid]::NewGuid().ToString()
@@ -4355,10 +4484,11 @@ function Invoke-SkyMax {
 }
 
 function Invoke-SkyMaxCore {
+    param([switch]$ClientMode)
     $script:SkyLastExitCode=1
     if($ExperimentalActions) { throw 'MAX nao aceita experiencias adicionais; usar Laboratory.' }
-    $plan=Get-SkyMaxPlan
-    Write-Host "SKYOPTIMIZER MAX | IDs: $($plan.SelectedIds -join ', ')" -ForegroundColor Cyan
+    $plan=if($ClientMode){Get-SkyPerformancePlan}else{Get-SkyMaxPlan}
+    Write-Host "SKYOPTIMIZER $($plan.Mode) | IDs: $($plan.SelectedIds -join ', ')" -ForegroundColor Cyan
     $plan.Decisions | Where-Object Decision -eq Selected | ForEach-Object { Write-Host "[$($_.Id)] $($_.Reason)" }
     $candidates=@($plan.Startup | Where-Object Status -eq Candidate)
     $candidates | ForEach-Object { Write-Host $_.Reason -ForegroundColor Yellow }
@@ -4371,12 +4501,12 @@ function Invoke-SkyMaxCore {
         }
     }
     # Context changes invalidate the whole plan; never adopt extra mutations after approval.
-    $fresh=Get-SkyMaxPlan
+    $fresh=if($ClientMode){Get-SkyPerformancePlan}else{Get-SkyMaxPlan}
     if(($fresh | ConvertTo-Json -Depth 10 -Compress) -cne ($plan | ConvertTo-Json -Depth 10 -Compress)) {
         Write-Warning 'Contexto/plano mudou; nenhuma acao aplicada. Repetir dry-run.'; $script:SkyLastExitCode=2; return
     }
-    $Profile='MAX'
-    Invoke-SkyOptimize -SelectedActionIds $plan.SelectedIds -OperatorMode
+    $Profile=if($ClientMode){'Performance'}else{'MAX'}
+    Invoke-SkyOptimize -SelectedActionIds $plan.SelectedIds -OperatorMode:(-not $ClientMode)
     if($script:SkyLastExitCode -eq 1) { return }
     $startupResults=@()
     Write-SkyReportArtifact -Name 'max_startup_results.json' -Content '[]'
@@ -4668,9 +4798,10 @@ function Invoke-SkyHardwareAudit {
 
 # Read-only commands bypass storage creation, locks and the Apply entry point.
 if ($DryRun -or $Diagnose) {
-    if ($Profile -ne 'MAX' -or $ExperimentalActions) { throw 'DryRun/Diagnose preparam MAX; Laboratory usa o fluxo tecnico separado.' }
-    if($Diagnose) { [pscustomobject]@{Plan=(Get-SkyMaxPlan);Hardware=(Get-SkyHardwareDiagnostics);Debloat=(Get-SkyDebloatInventory)} | ConvertTo-Json -Depth 14 }
-    else { Get-SkyMaxPlan | ConvertTo-Json -Depth 10 }
+    if ($Profile -notin @('MAX','Performance') -or $ExperimentalActions) { throw 'DryRun/Diagnose exigem MAX ou Performance sem IDs adicionais.' }
+    $preview = if($Profile -eq 'Performance'){Get-SkyPerformancePlan}else{Get-SkyMaxPlan}
+    if($Diagnose) { [pscustomobject]@{Plan=$preview;Hardware=(Get-SkyHardwareDiagnostics);Debloat=(Get-SkyDebloatInventory)} | ConvertTo-Json -Depth 14 }
+    else { $preview | ConvertTo-Json -Depth 10 }
     exit 0
 }
 if ($DebloatPreview) { Get-SkyDebloatInventory | ConvertTo-Json -Depth 14; exit 0 }
@@ -4688,13 +4819,13 @@ if ($DebloatLab) { Invoke-SkyDebloatLab; exit $script:SkyLastExitCode }
 if ($BackgroundLab) { Invoke-SkyBackgroundLab; exit $script:SkyLastExitCode }
 
 if ($Apply) {
-    if ($Profile -eq 'MAX') { Invoke-SkyMax } else { Invoke-SkyReportRun -Kind Laboratory -Body { Invoke-SkyOptimize -OperatorMode } }
+    if ($Profile -eq 'Performance') { Invoke-SkyPerformance } elseif ($Profile -eq 'MAX') { Invoke-SkyMax } else { Invoke-SkyReportRun -Kind Laboratory -Body { Invoke-SkyOptimize -OperatorMode } }
     exit $script:SkyLastExitCode
 }
 
-if ($Clean) {
+if ($Clean -or $CleanShaders) {
     Clear-Host
-    $result = Clear-ShaderCache
+    $result = if($CleanShaders){Clear-ShaderCache}else{Clear-SkyTemporaryFiles}
     Write-Host "[$($result.Status)] $($result.Reason)"
     if ($result.Status -eq 'Failed') { exit 1 }
     exit 0
@@ -4726,9 +4857,13 @@ if ($Audit) {
     exit 0
 }
 
-# Default operator experience: one MAX run, then release the session lock and exit.
-if ($Profile -eq 'MAX') { Invoke-SkyMax }
-else { Invoke-SkyReportRun -Kind Laboratory -Body { Invoke-SkyOptimize -OperatorMode } }
+# Default operator experience: restore the complete maintenance/support menu.
+if ($Profile -ne 'Performance') {
+    if ($Profile -eq 'MAX') { Invoke-SkyMax }
+    else { Invoke-SkyReportRun -Kind Laboratory -Body { Invoke-SkyOptimize -OperatorMode } }
+    exit $script:SkyLastExitCode
+}
+Show-SkyMenu
 exit $script:SkyLastExitCode
 } finally { $skySession.Dispose() }
 
